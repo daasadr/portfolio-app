@@ -6,9 +6,23 @@ import { BookOpen, Target, Calendar, Users } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen relative">
+      {/* Background Image for entire page */}
+      <div className="fixed inset-0 z-0">
+        <Image
+          src="/images/paradise-bg.webp"
+          alt="Paradise background"
+          fill
+          className="object-cover"
+          priority
+          quality={85}
+        />
+        {/* Lighter overlay for better readability */}
+        <div className="absolute inset-0 bg-white/10"></div>
+      </div>
+
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm shadow-sm relative z-10">
+      <header className="bg-white/95 backdrop-blur-sm shadow-sm relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
@@ -27,40 +41,26 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero section with background image */}
-      <main className="relative">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/paradise-bg.webp"
-            alt="Paradise background"
-            fill
-            className="object-cover"
-            priority
-            quality={85}
-          />
-          {/* Overlay pro lepší čitelnost textu */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/70 to-indigo-900/70"></div>
-        </div>
-
+      {/* Hero section */}
+      <main className="relative z-10">
         {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-6 drop-shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-16 bg-white/80 backdrop-blur-md rounded-2xl p-12 shadow-2xl">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Online Portfolio pro Žáky ZŠ
             </h2>
-            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto drop-shadow-md">
+            <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
               Moderní platforma pro žáky základních škol s individuálním studiem. 
               Sledujte své cíle, vytvářejte portfolio a sdílejte své úspěchy s učiteli.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/register">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100">
+                <Button size="lg" className="w-full sm:w-auto">
                   Začít zdarma
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
                   Přihlásit se
                 </Button>
               </Link>
@@ -69,8 +69,8 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Features section - white background */}
-      <section className="bg-white py-16">
+      {/* Features section */}
+      <section className="relative z-10 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Features */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
@@ -144,7 +144,7 @@ export default function Home() {
         </div>
 
         {/* CTA section */}
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+        <div className="bg-white/90 backdrop-blur-md rounded-lg shadow-2xl p-8 text-center">
           <h3 className="text-2xl font-bold text-gray-900 mb-4">
             Připraveni začít?
           </h3>
@@ -161,7 +161,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
+      <footer className="bg-gray-900/95 backdrop-blur-sm text-white py-8 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <p className="text-gray-400">
