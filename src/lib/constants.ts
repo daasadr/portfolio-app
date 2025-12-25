@@ -5,7 +5,7 @@
  */
 
 // Názvy aplikace
-export const APP_NAME = 'Portfolio Žáků';
+export const APP_NAME = 'Portfolio Paradise';
 export const APP_DESCRIPTION = 'Online portfolio pro žáky základních škol s individuálním studiem';
 
 // API endpoints

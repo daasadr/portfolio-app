@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Portfolio Žáků - Online Portfolio",
+  title: "Portfolio Paradise - Online Portfolio",
   description: "Online portfolio pro žáky základních škol s individuálním studiem",
 };
 
