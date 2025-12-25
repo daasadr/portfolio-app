@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Target, Calendar, Users } from 'lucide-react';
@@ -7,7 +8,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
@@ -26,32 +27,53 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Online Portfolio pro Žáky ZŠ
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Moderní platforma pro žáky základních škol s individuálním studiem. 
-            Sledujte své cíle, vytvářejte portfolio a sdílejte své úspěchy s učiteli.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <Button size="lg" className="w-full sm:w-auto">
-                Začít zdarma
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                Přihlásit se
-              </Button>
-            </Link>
-          </div>
+      {/* Hero section with background image */}
+      <main className="relative">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/paradise-bg.webp"
+            alt="Paradise background"
+            fill
+            className="object-cover"
+            priority
+            quality={85}
+          />
+          {/* Overlay pro lepší čitelnost textu */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/70 to-indigo-900/70"></div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-white mb-6 drop-shadow-lg">
+              Online Portfolio pro Žáky ZŠ
+            </h2>
+            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto drop-shadow-md">
+              Moderní platforma pro žáky základních škol s individuálním studiem. 
+              Sledujte své cíle, vytvářejte portfolio a sdílejte své úspěchy s učiteli.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/register">
+                <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100">
+                  Začít zdarma
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
+                  Přihlásit se
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Features section - white background */}
+      <section className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Features */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           <Card>
             <CardHeader>
               <Target className="h-8 w-8 text-blue-600 mb-2" />
@@ -135,7 +157,7 @@ export default function Home() {
             </Button>
           </Link>
         </div>
-      </main>
+      </section>
 
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
