@@ -173,7 +173,66 @@ async function setup() {
     }
   );
 
-  // 2. Kolekce PERSONAL_GOALS (Osobní cíle)
+  // 2. Kolekce TEACHERS (Učitelé)
+  await createCollectionWithFields(
+    'teachers',
+    [
+      {
+        field: 'id',
+        type: 'uuid',
+        schema: { is_primary_key: true },
+        meta: { hidden: true, readonly: true },
+      },
+      {
+        field: 'user_id',
+        type: 'uuid',
+        meta: {
+          interface: 'select-dropdown-m2o',
+          display: 'related-values',
+          required: true,
+        },
+      },
+      {
+        field: 'first_name',
+        type: 'string',
+        meta: { interface: 'input', required: true },
+        schema: { is_nullable: false },
+      },
+      {
+        field: 'last_name',
+        type: 'string',
+        meta: { interface: 'input', required: true },
+        schema: { is_nullable: false },
+      },
+      {
+        field: 'avatar',
+        type: 'uuid',
+        meta: { interface: 'file-image', display: 'image' },
+      },
+      {
+        field: 'bio',
+        type: 'text',
+        meta: { interface: 'input-multiline' },
+      },
+      {
+        field: 'created_at',
+        type: 'timestamp',
+        meta: { interface: 'datetime', readonly: true, special: ['date-created'] },
+      },
+      {
+        field: 'updated_at',
+        type: 'timestamp',
+        meta: { interface: 'datetime', readonly: true, special: ['date-updated'] },
+      },
+    ],
+    {
+      icon: 'school',
+      note: 'Profily učitelů',
+      display_template: '{{first_name}} {{last_name}}',
+    }
+  );
+
+  // 3. Kolekce PERSONAL_GOALS (Osobní cíle - pro žáky i učitele)
   await createCollectionWithFields(
     'personal_goals',
     [
@@ -184,9 +243,23 @@ async function setup() {
         meta: { hidden: true, readonly: true },
       },
       {
-        field: 'student_id',
+        field: 'user_id',
         type: 'uuid',
         meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'user_type',
+        type: 'string',
+        meta: {
+          interface: 'select-dropdown',
+          options: {
+            choices: [
+              { text: 'Žák', value: 'student' },
+              { text: 'Učitel', value: 'teacher' },
+            ],
+          },
+          required: true,
+        },
       },
       {
         field: 'title',
@@ -243,12 +316,12 @@ async function setup() {
     ],
     {
       icon: 'flag',
-      note: 'Osobní cíle žáků',
+      note: 'Osobní cíle žáků a učitelů',
       display_template: '{{title}} ({{goal_type}})',
     }
   );
 
-  // 3. Kolekce DREAMS (Seznam snů)
+  // 4. Kolekce DREAMS (Seznam snů - pro žáky i učitele)
   await createCollectionWithFields(
     'dreams',
     [
@@ -259,9 +332,22 @@ async function setup() {
         meta: { hidden: true, readonly: true },
       },
       {
-        field: 'student_id',
+        field: 'user_id',
         type: 'uuid',
         meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'user_type',
+        type: 'string',
+        meta: {
+          interface: 'select-dropdown',
+          options: {
+            choices: [
+              { text: 'Žák', value: 'student' },
+              { text: 'Učitel', value: 'teacher' },
+            ],
+          },
+          required: true },
       },
       {
         field: 'title',
@@ -635,6 +721,159 @@ async function setup() {
     }
   );
 
+  // 9. Kolekce MESSAGES (Zprávy mezi uživateli)
+  await createCollectionWithFields(
+    'messages',
+    [
+      {
+        field: 'id',
+        type: 'uuid',
+        schema: { is_primary_key: true },
+        meta: { hidden: true, readonly: true },
+      },
+      {
+        field: 'from_user_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'to_user_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'message_type',
+        type: 'string',
+        meta: {
+          interface: 'select-dropdown',
+          options: {
+            choices: [
+              { text: 'Textová zpráva', value: 'text' },
+              { text: 'Žádost o sdílení', value: 'share_request' },
+              { text: 'Systémová', value: 'system' },
+            ],
+          },
+          required: true,
+        },
+      },
+      {
+        field: 'subject',
+        type: 'string',
+        meta: { interface: 'input' },
+      },
+      {
+        field: 'content',
+        type: 'text',
+        meta: { interface: 'input-multiline', required: true },
+        schema: { is_nullable: false },
+      },
+      {
+        field: 'share_request_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o' },
+      },
+      {
+        field: 'is_read',
+        type: 'boolean',
+        meta: { interface: 'boolean' },
+        schema: { default_value: false },
+      },
+      {
+        field: 'created_at',
+        type: 'timestamp',
+        meta: { interface: 'datetime', readonly: true, special: ['date-created'] },
+      },
+    ],
+    {
+      icon: 'mail',
+      note: 'Zprávy mezi uživateli',
+      display_template: '{{subject}}',
+    }
+  );
+
+  // 10. Kolekce SHARE_REQUESTS (Žádosti o sdílení portfolia s učitelem)
+  await createCollectionWithFields(
+    'share_requests',
+    [
+      {
+        field: 'id',
+        type: 'uuid',
+        schema: { is_primary_key: true },
+        meta: { hidden: true, readonly: true },
+      },
+      {
+        field: 'student_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'teacher_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o', required: true },
+      },
+      {
+        field: 'share_type',
+        type: 'string',
+        meta: {
+          interface: 'select-dropdown',
+          options: {
+            choices: [
+              { text: 'Celé portfolio', value: 'full_portfolio' },
+              { text: 'Kategorie', value: 'category' },
+              { text: 'Jednotlivá stránka', value: 'single_page' },
+            ],
+          },
+          required: true,
+        },
+      },
+      {
+        field: 'category_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o' },
+      },
+      {
+        field: 'page_id',
+        type: 'uuid',
+        meta: { interface: 'select-dropdown-m2o' },
+      },
+      {
+        field: 'message',
+        type: 'text',
+        meta: { interface: 'input-multiline' },
+      },
+      {
+        field: 'status',
+        type: 'string',
+        meta: {
+          interface: 'select-dropdown',
+          options: {
+            choices: [
+              { text: 'Čeká', value: 'pending' },
+              { text: 'Schváleno', value: 'approved' },
+              { text: 'Zamítnuto', value: 'rejected' },
+            ],
+          },
+        },
+        schema: { default_value: 'pending' },
+      },
+      {
+        field: 'created_at',
+        type: 'timestamp',
+        meta: { interface: 'datetime', readonly: true, special: ['date-created'] },
+      },
+      {
+        field: 'updated_at',
+        type: 'timestamp',
+        meta: { interface: 'datetime', readonly: true, special: ['date-updated'] },
+      },
+    ],
+    {
+      icon: 'folder_shared',
+      note: 'Žádosti o sdílení portfolia',
+      display_template: 'Žádost od žáka #{{student_id}}',
+    }
+  );
+
   // Junction tabulka pro many-to-many vztahy: portfolio_pages <-> files (images)
   await createCollectionWithFields(
     'portfolio_pages_files',
@@ -674,13 +913,23 @@ async function setup() {
     on_delete: 'SET NULL',
   });
 
-  // Relace: personal_goals -> students
-  await createRelationship('personal_goals', 'student_id', 'students', {
+  // Relace: teachers -> directus_users
+  await createRelationship('teachers', 'user_id', 'directus_users', {
     on_delete: 'CASCADE',
   });
 
-  // Relace: dreams -> students
-  await createRelationship('dreams', 'student_id', 'students', {
+  // Relace: teachers -> directus_files (avatar)
+  await createRelationship('teachers', 'avatar', 'directus_files', {
+    on_delete: 'SET NULL',
+  });
+
+  // Relace: personal_goals -> directus_users (můžou být pro žáky i učitele)
+  await createRelationship('personal_goals', 'user_id', 'directus_users', {
+    on_delete: 'CASCADE',
+  });
+
+  // Relace: dreams -> directus_users (můžou být pro žáky i učitele)
+  await createRelationship('dreams', 'user_id', 'directus_users', {
     on_delete: 'CASCADE',
   });
 
@@ -743,11 +992,46 @@ async function setup() {
     on_delete: 'SET NULL',
   });
 
+  // Relace: messages -> directus_users (from_user)
+  await createRelationship('messages', 'from_user_id', 'directus_users', {
+    on_delete: 'CASCADE',
+  });
+
+  // Relace: messages -> directus_users (to_user)
+  await createRelationship('messages', 'to_user_id', 'directus_users', {
+    on_delete: 'CASCADE',
+  });
+
+  // Relace: messages -> share_requests
+  await createRelationship('messages', 'share_request_id', 'share_requests', {
+    on_delete: 'SET NULL',
+  });
+
+  // Relace: share_requests -> students
+  await createRelationship('share_requests', 'student_id', 'students', {
+    on_delete: 'CASCADE',
+  });
+
+  // Relace: share_requests -> teachers
+  await createRelationship('share_requests', 'teacher_id', 'teachers', {
+    on_delete: 'CASCADE',
+  });
+
+  // Relace: share_requests -> categories
+  await createRelationship('share_requests', 'category_id', 'categories', {
+    on_delete: 'SET NULL',
+  });
+
+  // Relace: share_requests -> portfolio_pages
+  await createRelationship('share_requests', 'page_id', 'portfolio_pages', {
+    on_delete: 'SET NULL',
+  });
+
   console.log('\n✅ Setup dokončen! Všechny kolekce a relace byly vytvořeny.\n');
   console.log('📋 Další kroky:');
   console.log('   1. Přejdi do Directus admin rozhraní');
   console.log('   2. Zkontroluj vytvořené kolekce');
-  console.log('   3. Nastav oprávnění pro roli "student"');
+  console.log('   3. Nastav oprávnění pro role "student" a "teacher"');
   console.log('   4. (Volitelně) Přidej výchozí šablony stránek');
   console.log('   5. (Volitelně) Přidej předdefinované kategorie\n');
 }
