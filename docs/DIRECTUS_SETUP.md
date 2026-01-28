@@ -134,3 +134,9 @@ Po úspěšném setup můžeš:
 ---
 
 **Potřebuješ pomoc?** Otevři issue na GitHubu!
+
+
+
+
+
+

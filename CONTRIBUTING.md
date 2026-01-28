@@ -35,3 +35,9 @@ Pokud najdete chybu, prosím vytvořte issue s:
 - Screenshoty (pokud je to relevantní)
 
 Děkujeme! 💙
+
+
+
+
+
+

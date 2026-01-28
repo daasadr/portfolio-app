@@ -9,7 +9,11 @@
  * 3. Spusť: node directus-setup.js
  */
 
+import { config } from 'dotenv';
 import { createDirectus, rest, createCollection, createField, createRelation } from '@directus/sdk';
+
+// Načti environment proměnné
+config();
 
 // Konfigurace
 const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
@@ -22,16 +26,19 @@ if (!DIRECTUS_ADMIN_TOKEN) {
 
 // Inicializace Directus klienta
 const directus = createDirectus(DIRECTUS_URL)
-  .with(rest())
-  .with({
-    onRequest: (options) => ({
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${DIRECTUS_ADMIN_TOKEN}`,
-      },
-    }),
-  });
+  .with(rest());
+
+// Helper funkce pro requesty s auth
+async function authenticatedRequest(endpoint, options = {}) {
+  return fetch(`${DIRECTUS_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${DIRECTUS_ADMIN_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+  }).then(res => res.json());
+}
 
 // Pomocné funkce
 async function createCollectionWithFields(collectionName, fields, options = {}) {

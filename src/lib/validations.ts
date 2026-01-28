@@ -81,3 +81,9 @@ export type CategoryInput = z.infer<typeof categorySchema>;
 export type PortfolioPageInput = z.infer<typeof portfolioPageSchema>;
 export type CalendarEntryInput = z.infer<typeof calendarEntrySchema>;
 export type SharedLinkInput = z.infer<typeof sharedLinkSchema>;
+
+
+
+
+
+
