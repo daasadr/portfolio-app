@@ -1,140 +1,114 @@
-import { createDirectus, rest, authentication } from '@directus/sdk';
-import type { Schema } from '@/types';
+import {
+  createDirectus,
+  rest,
+  authentication,
+  readItems,
+  createItem,
+  updateItem,
+  deleteItem,
+  readMe,
+  uploadFiles,
+} from '@directus/sdk';
+import type { Schema, Student } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
-if (!directusUrl) {
-  throw new Error('NEXT_PUBLIC_DIRECTUS_URL není nastavený v environment proměnných');
-}
 
 export const directus = createDirectus<Schema>(directusUrl)
   .with(rest())
   .with(authentication('cookie'));
 
-// Helper funkce pro autentizaci
+export { readItems, createItem, updateItem, deleteItem };
+
 export async function login(email: string, password: string) {
-  try {
-    const result = await directus.login(email, password);
-    return result;
-  } catch (error) {
-    console.error('Chyba při přihlášení:', error);
-    throw error;
-  }
+  return await directus.login({ email, password });
 }
 
 export async function logout() {
-  try {
-    await directus.logout();
-  } catch (error) {
-    console.error('Chyba při odhlášení:', error);
-    throw error;
-  }
+  await directus.logout();
 }
 
-export async function register(email: string, password: string, firstName: string, lastName: string) {
-  try {
-    // Registrace uživatele
-    const user = await directus.request({
-      method: 'POST',
-      path: '/users',
-      body: {
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-        role: 'student', // Předpokládáme, že role 'student' existuje
-      },
-    });
+export async function register(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string
+) {
+  const response = await fetch(`${directusUrl}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      password,
+      first_name: firstName,
+      last_name: lastName,
+    }),
+  });
 
-    // Přihlášení po registraci
-    await directus.login(email, password);
-
-    // Vytvoření profilu žáka
-    const student = await directus.request({
-      method: 'POST',
-      path: '/students',
-      body: {
-        user_id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-      },
-    });
-
-    // Vytvoření předdefinovaných kategorií pro nového žáka
-    const { PREDEFINED_CATEGORIES } = await import('@/types');
-    const categories = PREDEFINED_CATEGORIES.map(cat => ({
-      ...cat,
-      student_id: student.id,
-      is_predefined: true,
-    }));
-
-    await directus.request({
-      method: 'POST',
-      path: '/categories',
-      body: categories,
-    });
-
-    return { user, student };
-  } catch (error) {
-    console.error('Chyba při registraci:', error);
-    throw error;
+  if (!response.ok) {
+    const err = await response.json() as { errors?: { message: string }[] };
+    throw new Error(err?.errors?.[0]?.message || 'Chyba při registraci');
   }
+
+  const { data: user } = await response.json() as { data: { id: string } };
+
+  await directus.login({ email, password });
+
+  const student = await directus.request(
+    createItem('students', {
+      user_id: user.id,
+      first_name: firstName,
+      last_name: lastName,
+    })
+  ) as Student;
+
+  const { PREDEFINED_CATEGORIES } = await import('@/types');
+  const categories = PREDEFINED_CATEGORIES.map((cat) => ({
+    ...cat,
+    student_id: student.id,
+    is_predefined: true,
+  }));
+
+  for (const cat of categories) {
+    await directus.request(createItem('categories', cat));
+  }
+
+  return { user, student };
 }
 
 export async function getCurrentUser() {
   try {
-    const user = await directus.getCurrentUser();
-    return user;
-  } catch (error) {
-    console.error('Chyba při načítání uživatele:', error);
+    return await directus.request(readMe());
+  } catch {
     return null;
   }
 }
 
-export async function getCurrentStudent() {
+export async function getCurrentStudent(): Promise<Student | null> {
   try {
-    const user = await directus.getCurrentUser();
+    const user = await directus.request(readMe());
     if (!user) return null;
 
-    const students = await directus.request({
-      method: 'GET',
-      path: '/students',
-      params: {
-        filter: {
-          user_id: { _eq: user.id },
-        },
-      },
-    });
+    const students = await directus.request(
+      readItems('students', {
+        filter: { user_id: { _eq: user.id } },
+        limit: 1,
+      })
+    ) as Student[];
 
-    return students.data?.[0] || null;
-  } catch (error) {
-    console.error('Chyba při načítání profilu žáka:', error);
+    return students[0] ?? null;
+  } catch {
     return null;
   }
 }
 
-// Helper pro upload souborů
 export async function uploadFile(file: File) {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const result = await directus.request({
-      method: 'POST',
-      path: '/files',
-      body: formData,
-    });
-
-    return result;
-  } catch (error) {
-    console.error('Chyba při uploadu souboru:', error);
-    throw error;
-  }
+  const formData = new FormData();
+  formData.append('file', file);
+  return await directus.request(uploadFiles(formData));
 }
 
-// Helper pro generování sdílecího tokenu
 export function generateShareToken(): string {
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
