@@ -41,6 +41,7 @@ export async function register(
       password,
       first_name: firstName,
       last_name: lastName,
+      role: 'fb459774-5562-4b35-aa90-cc51397aca23',
     }),
   });
 
