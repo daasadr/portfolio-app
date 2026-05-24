@@ -53,7 +53,7 @@ export default function RegisterPage() {
       );
       router.push('/dashboard');
     } catch (err) {
-      setError('Chyba při registraci. Zkuste to znovu.');
+      setError(err instanceof Error ? err.message : 'Chyba při registraci. Zkuste to znovu.');
     } finally {
       setIsLoading(false);
     }

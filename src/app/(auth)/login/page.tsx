@@ -24,7 +24,14 @@ export default function LoginPage() {
       await login(email, password);
       router.push('/dashboard');
     } catch (err) {
-      setError('Nesprávné přihlašovací údaje');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('INVALID_CREDENTIALS') || msg.includes('Invalid user credentials')) {
+        setError('Nesprávný email nebo heslo.');
+      } else if (msg.includes('INVALID_IP') || msg.includes('too many')) {
+        setError('Příliš mnoho pokusů. Zkuste to za chvíli.');
+      } else {
+        setError('Přihlášení se nezdařilo. Zkontrolujte email a heslo.');
+      }
     } finally {
       setIsLoading(false);
     }

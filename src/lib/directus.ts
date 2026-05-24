@@ -33,47 +33,21 @@ export async function register(
   firstName: string,
   lastName: string
 ) {
-  const response = await fetch(`${directusUrl}/users`, {
+  const response = await fetch('/api/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      password,
-      first_name: firstName,
-      last_name: lastName,
-      role: 'fb459774-5562-4b35-aa90-cc51397aca23',
-    }),
+    body: JSON.stringify({ email, password, firstName, lastName }),
   });
 
   if (!response.ok) {
-    const err = await response.json() as { errors?: { message: string }[] };
-    throw new Error(err?.errors?.[0]?.message || 'Chyba při registraci');
+    const err = await response.json() as { code?: string; message?: string };
+    if (err.code === 'RECORD_NOT_UNIQUE') {
+      throw new Error('Účet s tímto emailem již existuje. Přihlaste se nebo použijte jiný email.');
+    }
+    throw new Error(err.message || 'Chyba při registraci');
   }
-
-  const { data: user } = await response.json() as { data: { id: string } };
 
   await directus.login({ email, password });
-
-  const student = await directus.request(
-    createItem('students', {
-      user_id: user.id,
-      first_name: firstName,
-      last_name: lastName,
-    })
-  ) as Student;
-
-  const { PREDEFINED_CATEGORIES } = await import('@/types');
-  const categories = PREDEFINED_CATEGORIES.map((cat) => ({
-    ...cat,
-    student_id: student.id,
-    is_predefined: true,
-  }));
-
-  for (const cat of categories) {
-    await directus.request(createItem('categories', cat));
-  }
-
-  return { user, student };
 }
 
 export async function getCurrentUser() {
