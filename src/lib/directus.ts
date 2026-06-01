@@ -13,9 +13,22 @@ import type { Schema, Student } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 
+const tokenStorage = {
+  get: () => {
+    if (typeof window === 'undefined') return null;
+    try { return JSON.parse(localStorage.getItem('pp_auth') ?? 'null'); } catch { return null; }
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  set: (value: any) => {
+    if (typeof window === 'undefined') return;
+    if (value) localStorage.setItem('pp_auth', JSON.stringify(value));
+    else localStorage.removeItem('pp_auth');
+  },
+};
+
 export const directus = createDirectus<Schema>(directusUrl)
   .with(rest())
-  .with(authentication('cookie'));
+  .with(authentication('json', { storage: tokenStorage }));
 
 export { readItems, createItem, updateItem, deleteItem };
 
@@ -25,6 +38,7 @@ export async function login(email: string, password: string) {
 
 export async function logout() {
   await directus.logout();
+  if (typeof window !== 'undefined') localStorage.removeItem('pp_auth');
 }
 
 export async function register(
