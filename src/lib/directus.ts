@@ -74,17 +74,16 @@ export async function getCurrentUser() {
 
 export async function getCurrentStudent(): Promise<Student | null> {
   try {
-    const user = await directus.request(readMe());
-    if (!user) return null;
+    const token = tokenStorage.get()?.access_token;
+    if (!token) return null;
 
-    const students = await directus.request(
-      readItems('students', {
-        filter: { user_id: { _eq: user.id } },
-        limit: 1,
-      })
-    ) as Student[];
+    const res = await fetch('/api/student', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
 
-    return students[0] ?? null;
+    const { student } = await res.json() as { student: Student | null };
+    return student ?? null;
   } catch {
     return null;
   }
