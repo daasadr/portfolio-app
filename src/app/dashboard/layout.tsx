@@ -4,15 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  BookOpen, 
-  Target, 
-  Calendar, 
-  Settings, 
-  Share2, 
-  Plus,
+import {
+  BookOpen,
+  Target,
+  Calendar,
+  Settings,
+  Share2,
   Menu,
   X,
   LogOut
@@ -27,6 +24,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
 
@@ -35,13 +33,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         const studentData = await getCurrentStudent();
         if (!studentData) {
-          router.push('/login');
+          setAuthError('Nepodařilo se načíst váš profil (403). Zkontrolujte oprávnění v Directus nebo se odhlaste a zkuste znovu.');
+          setIsLoading(false);
           return;
         }
         setStudent(studentData);
       } catch (error) {
         console.error('Chyba při načítání profilu:', error);
-        router.push('/login');
+        setAuthError('Chyba připojení k serveru. Zkuste obnovit stránku.');
+        setIsLoading(false);
       } finally {
         setIsLoading(false);
       }
@@ -65,6 +65,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Načítám...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow">
+          <p className="text-red-600 font-medium mb-4">{authError}</p>
+          <button
+            onClick={() => { router.push('/login'); }}
+            className="text-blue-600 underline text-sm"
+          >
+            Zpět na přihlášení
+          </button>
         </div>
       </div>
     );
