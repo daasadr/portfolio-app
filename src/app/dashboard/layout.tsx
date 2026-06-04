@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         const studentData = await getCurrentStudent();
         if (!studentData) {
-          setAuthError('Nepodařilo se načíst váš profil (403). Zkontrolujte oprávnění v Directus nebo se odhlaste a zkuste znovu.');
+          setAuthError('Nepodařilo se načíst váš profil. Odhlaste se a přihlaste znovu.');
           setIsLoading(false);
           return;
         }
