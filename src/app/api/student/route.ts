@@ -4,32 +4,46 @@ const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json({ student: null }, { status: 401 });
-  }
+  try {
+    console.log('[api/student] directusUrl:', directusUrl);
+    console.log('[api/student] adminToken set:', !!adminToken);
 
-  const userToken = authHeader.replace('Bearer ', '');
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ student: null }, { status: 401 });
+    }
 
-  const meRes = await fetch(`${directusUrl}/users/me`, {
-    headers: { Authorization: `Bearer ${userToken}` },
-  });
+    const userToken = authHeader.replace('Bearer ', '');
 
-  if (!meRes.ok) {
-    return NextResponse.json({ student: null }, { status: 401 });
-  }
+    const meRes = await fetch(`${directusUrl}/users/me`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
 
-  const { data: user } = await meRes.json() as { data: { id: string } };
+    if (!meRes.ok) {
+      const body = await meRes.text();
+      console.error('[api/student] /users/me failed:', meRes.status, body);
+      return NextResponse.json({ student: null }, { status: 401 });
+    }
 
-  const studentsRes = await fetch(
-    `${directusUrl}/items/students?filter[user_id][_eq]=${user.id}&limit=1`,
-    { headers: { Authorization: `Bearer ${adminToken}` } }
-  );
+    const { data: user } = await meRes.json() as { data: { id: string } };
+    console.log('[api/student] user.id:', user?.id);
 
-  if (!studentsRes.ok) {
+    const studentsRes = await fetch(
+      `${directusUrl}/items/students?filter[user_id][_eq]=${user.id}&limit=1`,
+      { headers: { Authorization: `Bearer ${adminToken}` } }
+    );
+
+    if (!studentsRes.ok) {
+      const body = await studentsRes.text();
+      console.error('[api/student] /items/students failed:', studentsRes.status, body);
+      return NextResponse.json({ student: null }, { status: 500 });
+    }
+
+    const { data } = await studentsRes.json() as { data: unknown[] };
+    console.log('[api/student] student found:', !!data?.[0]);
+    return NextResponse.json({ student: data?.[0] ?? null });
+  } catch (e) {
+    console.error('[api/student] unexpected error:', e);
     return NextResponse.json({ student: null }, { status: 500 });
   }
-
-  const { data } = await studentsRes.json() as { data: unknown[] };
-  return NextResponse.json({ student: data?.[0] ?? null });
 }
