@@ -99,6 +99,19 @@ export interface PortfolioPageFile {
   directus_files_id: string;
 }
 
+export interface DreamBoardItem {
+  id: string;
+  file_id: string;
+  dream_id: number;
+  student_id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  z_index: number;
+  on_board: boolean;
+}
+
 // Directus Schema interface
 export interface Schema {
   students: Student[];

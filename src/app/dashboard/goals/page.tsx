@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -29,9 +28,13 @@ import {
   Circle,
   Trash2,
   Pencil,
+  ImagePlus,
+  LayoutDashboard,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
-import type { Student, PersonalGoal, Dream, GoalType } from '@/types';
+import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
+
+const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 
 const GOAL_TYPE_LABELS: Record<GoalType, string> = {
   short_term: 'Krátkodobý',
@@ -44,6 +47,11 @@ const GOAL_TYPE_COLORS: Record<GoalType, string> = {
   long_term: 'bg-blue-100 text-blue-800',
   lifelong: 'bg-purple-100 text-purple-800',
 };
+
+function getToken() {
+  try { return JSON.parse(localStorage.getItem('pp_auth') ?? 'null')?.access_token ?? ''; }
+  catch { return ''; }
+}
 
 export default function GoalsPage() {
   const [student, setStudent] = useState<Student | null>(null);
@@ -68,6 +76,12 @@ export default function GoalsPage() {
   const [editingDream, setEditingDream] = useState<Dream | null>(null);
   const [dreamForm, setDreamForm] = useState({ title: '', description: '' });
   const [dreamSaving, setDreamSaving] = useState(false);
+
+  // Dream images
+  const [dreamImages, setDreamImages] = useState<DreamBoardItem[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -156,13 +170,14 @@ export default function GoalsPage() {
   }
 
   async function toggleGoal(goal: PersonalGoal) {
-    const updated = await directus.request(
-      updateItem('personal_goals', goal.id, {
-        completed: !goal.completed,
-        completed_date: !goal.completed ? new Date().toISOString() : undefined,
-      })
-    ) as PersonalGoal;
-    setGoals((prev) => prev.map((g) => (g.id === goal.id ? updated : g)));
+    try {
+      const updated = await directus.request(
+        updateItem('personal_goals', goal.id, { completed: !goal.completed })
+      ) as PersonalGoal;
+      setGoals((prev) => prev.map((g) => (g.id === goal.id ? updated : g)));
+    } catch (e) {
+      console.error('toggleGoal error:', e);
+    }
   }
 
   async function deleteGoal(id: string) {
@@ -171,43 +186,142 @@ export default function GoalsPage() {
   }
 
   // ── Dreams ─────────────────────────────────────────────
-  function openNewDream() {
+  async function openNewDream() {
     setEditingDream(null);
     setDreamForm({ title: '', description: '' });
+    setDreamImages([]);
+    setPendingFiles([]);
     setDreamDialogOpen(true);
   }
 
-  function openEditDream(dream: Dream) {
+  async function openEditDream(dream: Dream) {
     setEditingDream(dream);
     setDreamForm({ title: dream.title, description: dream.description ?? '' });
+    setPendingFiles([]);
+    // Load existing images
+    try {
+      const token = getToken();
+      const res = await fetch(
+        `${directusUrl}/items/dream_board_items?filter[dream_id][_eq]=${dream.id}&sort[]=z_index`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+      setDreamImages(json.data ?? []);
+    } catch {
+      setDreamImages([]);
+    }
     setDreamDialogOpen(true);
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const total = dreamImages.length + pendingFiles.length + files.length;
+    const allowed = Math.max(0, 10 - dreamImages.length - pendingFiles.length);
+    setPendingFiles(prev => [...prev, ...files.slice(0, allowed)]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (total > 10) alert(`Maximálně 10 obrázků na sen. Přidáno pouze prvních ${allowed}.`);
+  }
+
+  function removePendingFile(idx: number) {
+    setPendingFiles(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  async function deleteImage(id: string) {
+    const token = getToken();
+    await fetch(`${directusUrl}/items/dream_board_items/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setDreamImages(prev => prev.filter(i => i.id !== id));
+  }
+
+  async function toggleOnBoard(item: DreamBoardItem) {
+    const token = getToken();
+    const newVal = !item.on_board;
+    const body: Record<string, unknown> = { on_board: newVal };
+    if (newVal && item.x === 0 && item.y === 0) {
+      body.x = 5 + (dreamImages.indexOf(item) * 5) % 60;
+      body.y = 5 + (dreamImages.indexOf(item) * 8) % 80;
+      body.width = 20;
+      body.height = 15;
+    }
+    await fetch(`${directusUrl}/items/dream_board_items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    setDreamImages(prev => prev.map(i => i.id === item.id ? { ...i, ...body } as DreamBoardItem : i));
   }
 
   async function saveDream() {
     if (!student || !dreamForm.title.trim()) return;
     setDreamSaving(true);
     try {
+      let dream: Dream;
       if (editingDream) {
-        const updated = await directus.request(
+        dream = await directus.request(
           updateItem('dreams', editingDream.id, {
             title: dreamForm.title,
             description: dreamForm.description || undefined,
           })
         ) as Dream;
-        setDreams((prev) => prev.map((d) => (d.id === editingDream.id ? updated : d)));
+        setDreams((prev) => prev.map((d) => (d.id === editingDream.id ? dream : d)));
       } else {
-        const created = await directus.request(
+        dream = await directus.request(
           createItem('dreams', {
             student_id: student.id,
             title: dreamForm.title,
             description: dreamForm.description || undefined,
           })
         ) as Dream;
-        setDreams((prev) => [created, ...prev]);
+        setDreams((prev) => [dream, ...prev]);
       }
+
+      // Upload pending images
+      if (pendingFiles.length > 0) {
+        setUploadingImages(true);
+        const token = getToken();
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const file = pendingFiles[i];
+          const formData = new FormData();
+          formData.append('file', file, file.name);
+          const uploadRes = await fetch(`${directusUrl}/files`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          const uploadJson = await uploadRes.json();
+          const file_id = uploadJson.data?.id;
+          if (!file_id) continue;
+
+          const itemRes = await fetch(`${directusUrl}/items/dream_board_items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              file_id,
+              dream_id: dream.id,
+              student_id: student.id,
+              x: 5 + (i * 5) % 60,
+              y: 5 + (i * 8) % 80,
+              width: 20,
+              height: 15,
+              z_index: i + 1,
+              on_board: false,
+            }),
+          });
+          const itemJson = await itemRes.json();
+          if (itemJson.data) {
+            setDreamImages(prev => [...prev, itemJson.data]);
+          }
+        }
+        setPendingFiles([]);
+        setUploadingImages(false);
+      }
+
       setDreamDialogOpen(false);
     } catch (e) {
       console.error(e);
+      setUploadingImages(false);
     } finally {
       setDreamSaving(false);
     }
@@ -228,6 +342,7 @@ export default function GoalsPage() {
 
   const pendingGoals = goals.filter((g) => !g.completed);
   const doneGoals = goals.filter((g) => g.completed);
+  const totalImages = dreamImages.length + pendingFiles.length;
 
   return (
     <div className="space-y-6">
@@ -325,7 +440,6 @@ export default function GoalsPage() {
             </Dialog>
           </div>
 
-          {/* Aktivní cíle */}
           {pendingGoals.length > 0 && (
             <Card>
               <CardHeader>
@@ -333,19 +447,12 @@ export default function GoalsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {pendingGoals.map((goal) => (
-                  <GoalRow
-                    key={goal.id}
-                    goal={goal}
-                    onToggle={toggleGoal}
-                    onEdit={openEditGoal}
-                    onDelete={deleteGoal}
-                  />
+                  <GoalRow key={goal.id} goal={goal} onToggle={toggleGoal} onEdit={openEditGoal} onDelete={deleteGoal} />
                 ))}
               </CardContent>
             </Card>
           )}
 
-          {/* Splněné cíle */}
           {doneGoals.length > 0 && (
             <Card>
               <CardHeader>
@@ -353,13 +460,7 @@ export default function GoalsPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {doneGoals.map((goal) => (
-                  <GoalRow
-                    key={goal.id}
-                    goal={goal}
-                    onToggle={toggleGoal}
-                    onEdit={openEditGoal}
-                    onDelete={deleteGoal}
-                  />
+                  <GoalRow key={goal.id} goal={goal} onToggle={toggleGoal} onEdit={openEditGoal} onDelete={deleteGoal} />
                 ))}
               </CardContent>
             </Card>
@@ -379,14 +480,14 @@ export default function GoalsPage() {
       {activeTab === 'dreams' && (
         <div className="space-y-4">
           <div className="flex justify-end">
-            <Dialog open={dreamDialogOpen} onOpenChange={setDreamDialogOpen}>
+            <Dialog open={dreamDialogOpen} onOpenChange={(open) => { if (!open) setDreamDialogOpen(false); }}>
               <DialogTrigger asChild>
                 <Button onClick={openNewDream}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nový sen
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingDream ? 'Upravit sen' : 'Nový sen'}</DialogTitle>
                 </DialogHeader>
@@ -405,13 +506,116 @@ export default function GoalsPage() {
                       placeholder="Napište více o svém snu..."
                       value={dreamForm.description}
                       onChange={(e) => setDreamForm((f) => ({ ...f, description: e.target.value }))}
-                      rows={4}
+                      rows={3}
                     />
                   </div>
+
+                  {/* Obrázky */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Obrázky ({totalImages}/10)</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={totalImages >= 10}
+                      >
+                        <ImagePlus className="h-4 w-4 mr-1" />
+                        Přidat obrázky
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileSelect}
+                      />
+                    </div>
+
+                    {/* Existing images */}
+                    {dreamImages.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {dreamImages.map((img) => (
+                          <div key={img.id} className="relative group rounded overflow-hidden border border-gray-200">
+                            <img
+                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover`}
+                              alt=""
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+                            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => toggleOnBoard(img)}
+                                className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${
+                                  img.on_board
+                                    ? 'bg-blue-500 text-white'
+                                    : 'bg-white/90 text-gray-700'
+                                }`}
+                                title={img.on_board ? 'Odebrat z nástěnky' : 'Umístit na nástěnku'}
+                              >
+                                <LayoutDashboard className="h-3 w-3" />
+                                {img.on_board ? 'Na nástěnce' : 'Na nástěnku'}
+                              </button>
+                              <button
+                                onClick={() => deleteImage(img.id)}
+                                className="p-1 bg-red-500/90 text-white rounded"
+                                title="Smazat obrázek"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                            {img.on_board && (
+                              <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-blue-400" title="Na nástěnce" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Pending files (not yet uploaded) */}
+                    {pendingFiles.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500">Čeká na nahrání:</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {pendingFiles.map((file, idx) => (
+                            <div key={idx} className="relative group rounded overflow-hidden border border-dashed border-blue-300 bg-blue-50">
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt=""
+                                className="w-full h-24 object-cover opacity-70"
+                              />
+                              <button
+                                onClick={() => removePendingFile(idx)}
+                                className="absolute top-1 right-1 p-1 bg-red-500/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                              <div className="absolute bottom-0 left-0 right-0 bg-blue-500/80 text-white text-xs text-center py-0.5 truncate px-1">
+                                {file.name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {totalImages === 0 && (
+                      <div
+                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 cursor-pointer hover:border-blue-400 hover:text-blue-400 transition-colors"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <ImagePlus className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-sm">Klikněte pro přidání obrázků</p>
+                        <p className="text-xs mt-1">Max. 10 obrázků</p>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setDreamDialogOpen(false)}>Zrušit</Button>
-                    <Button onClick={saveDream} disabled={dreamSaving || !dreamForm.title.trim()}>
-                      {dreamSaving ? 'Ukládám...' : 'Uložit'}
+                    <Button onClick={saveDream} disabled={dreamSaving || uploadingImages || !dreamForm.title.trim()}>
+                      {uploadingImages ? 'Nahrávám obrázky...' : dreamSaving ? 'Ukládám...' : 'Uložit'}
                     </Button>
                   </div>
                 </div>

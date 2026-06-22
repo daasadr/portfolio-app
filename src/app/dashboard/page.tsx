@@ -12,15 +12,22 @@ import {
   Plus,
   CheckCircle,
   Circle,
-  Star,
+  LayoutDashboard,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
-import type { Student, PersonalGoal, Dream, PortfolioPage, CalendarEntry } from '@/types';
+import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
+
+const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
+
+function getToken() {
+  try { return JSON.parse(localStorage.getItem('pp_auth') ?? 'null')?.access_token ?? ''; }
+  catch { return ''; }
+}
 
 export default function DashboardPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [goals, setGoals] = useState<PersonalGoal[]>([]);
-  const [dreams, setDreams] = useState<Dream[]>([]);
+  const [boardItems, setBoardItems] = useState<DreamBoardItem[]>([]);
   const [recentPages, setRecentPages] = useState<PortfolioPage[]>([]);
   const [todayEntries, setTodayEntries] = useState<CalendarEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +39,8 @@ export default function DashboardPage() {
         if (!studentData) return;
         setStudent(studentData);
 
-        const [goalsData, dreamsData, pagesData, entriesData] = await Promise.all([
+        const token = getToken();
+        const [goalsData, pagesData, entriesData, boardRes] = await Promise.all([
           directus.request(
             readItems('personal_goals', {
               filter: { student_id: { _eq: studentData.id } },
@@ -40,14 +48,6 @@ export default function DashboardPage() {
               limit: 5,
             })
           ) as Promise<PersonalGoal[]>,
-
-          directus.request(
-            readItems('dreams', {
-              filter: { student_id: { _eq: studentData.id } },
-              sort: ['-created_at'],
-              limit: 3,
-            })
-          ) as Promise<Dream[]>,
 
           directus.request(
             readItems('portfolio_pages', {
@@ -66,12 +66,17 @@ export default function DashboardPage() {
               sort: ['created_at'],
             })
           ) as Promise<CalendarEntry[]>,
+
+          fetch(
+            `${directusUrl}/items/dream_board_items?filter[student_id][_eq]=${studentData.id}&filter[on_board][_eq]=true&sort[]=z_index&limit=9`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ).then(r => r.json()),
         ]);
 
         setGoals(goalsData ?? []);
-        setDreams(dreamsData ?? []);
         setRecentPages(pagesData ?? []);
         setTodayEntries(entriesData ?? []);
+        setBoardItems(boardRes.data ?? []);
       } catch (error) {
         console.error('Chyba při načítání dashboard dat:', error);
       } finally {
@@ -94,6 +99,7 @@ export default function DashboardPage() {
   }
 
   const completedGoals = goals.filter((g) => g.completed).length;
+  const onBoardCount = boardItems.length;
 
   return (
     <div className="space-y-6">
@@ -116,12 +122,12 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Portfolio</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Nástěnka snů</CardTitle>
+            <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recentPages.length}</div>
-            <p className="text-xs text-muted-foreground">nedávných stránek</p>
+            <div className="text-2xl font-bold">{onBoardCount}</div>
+            <p className="text-xs text-muted-foreground">obrázků na nástěnce</p>
           </CardContent>
         </Card>
 
@@ -190,43 +196,43 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Sny */}
+        {/* Nástěnka snů */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Mé sny</CardTitle>
-              <Link href="/dashboard/goals">
+              <CardTitle>Nástěnka snů</CardTitle>
+              <Link href="/dashboard/dreamboard">
                 <Button variant="outline" size="sm">
-                  <Star className="h-4 w-4 mr-1" />
-                  Spravovat
+                  <LayoutDashboard className="h-4 w-4 mr-1" />
+                  Otevřít
                 </Button>
               </Link>
             </div>
-            <CardDescription>Vaše dlouhodobé aspirace</CardDescription>
+            <CardDescription>Vaše vize a inspirace</CardDescription>
           </CardHeader>
           <CardContent>
-            {dreams.length === 0 ? (
+            {boardItems.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
-                <Star className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Zatím nemáte žádné sny</p>
+                <LayoutDashboard className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p>Nástěnka je zatím prázdná</p>
                 <Link href="/dashboard/goals">
-                  <Button variant="outline" size="sm" className="mt-2">Přidat první sen</Button>
+                  <Button variant="outline" size="sm" className="mt-2">Přidat obrázky ke snům</Button>
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {dreams.map((dream) => (
-                  <div key={dream.id} className="flex items-start space-x-3">
-                    <Star className="h-5 w-5 text-yellow-500 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{dream.title}</p>
-                      {dream.description && (
-                        <p className="text-xs text-gray-600 mt-1">{dream.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Link href="/dashboard/dreamboard" className="block group">
+                <div className="grid grid-cols-3 gap-1 rounded overflow-hidden">
+                  {boardItems.slice(0, 9).map((item) => (
+                    <img
+                      key={item.id}
+                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover`}
+                      alt=""
+                      className="w-full h-20 object-cover group-hover:opacity-90 transition-opacity"
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 text-center mt-2">Klikněte pro otevření nástěnky</p>
+              </Link>
             )}
           </CardContent>
         </Card>

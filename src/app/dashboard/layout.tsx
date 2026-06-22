@@ -12,7 +12,8 @@ import {
   Share2,
   Menu,
   X,
-  LogOut
+  LogOut,
+  LayoutDashboard,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import type { Student } from '@/types';
@@ -93,6 +94,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Přehled', href: '/dashboard', icon: BookOpen },
     { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
+    { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
     { name: 'Portfolio Paradise', href: '/dashboard/portfolio', icon: BookOpen },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
