@@ -292,6 +292,7 @@ export default function GoalsPage() {
       }
 
       // Upload pending images
+      const newItems: DreamBoardItem[] = [];
       if (pendingFiles.length > 0) {
         setUploadingImages(true);
         const token = getToken();
@@ -324,13 +325,17 @@ export default function GoalsPage() {
             }),
           });
           const itemJson = await itemRes.json();
-          if (itemJson.data) {
-            setDreamImages(prev => [...prev, itemJson.data]);
-          }
+          if (itemJson.data) newItems.push(itemJson.data);
         }
         setPendingFiles([]);
         setUploadingImages(false);
       }
+
+      // Sync expanded card view immediately (current dreamImages + new uploads)
+      setExpandedImages(prev => ({
+        ...prev,
+        [dream.id]: [...(prev[dream.id] ?? dreamImages), ...newItems],
+      }));
 
       setDreamDialogOpen(false);
     } catch (e) {
@@ -344,6 +349,26 @@ export default function GoalsPage() {
   async function deleteDream(id: string) {
     await directus.request(deleteItem('dreams', id));
     setDreams((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  async function toggleOnBoardFromCard(dreamId: string, item: DreamBoardItem) {
+    const token = getToken();
+    const newVal = !item.on_board;
+    const body: Record<string, unknown> = { on_board: newVal };
+    if (newVal && item.x === 0 && item.y === 0) {
+      body.x = 5; body.y = 5; body.width = 20; body.height = 15;
+    }
+    await fetch(`${directusUrl}/items/dream_board_items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    setExpandedImages(prev => ({
+      ...prev,
+      [dreamId]: (prev[dreamId] ?? []).map(i =>
+        i.id === item.id ? { ...i, ...body } as DreamBoardItem : i
+      ),
+    }));
   }
 
   async function toggleExpandDream(dreamId: string) {
@@ -691,15 +716,23 @@ export default function GoalsPage() {
                           ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
                               {images.map(img => (
-                                <div key={img.id} className="relative rounded overflow-hidden aspect-square">
+                                <div key={img.id} className="relative group rounded overflow-hidden aspect-square">
                                   <img
                                     src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover`}
                                     alt=""
                                     className="w-full h-full object-cover"
                                   />
-                                  {img.on_board && (
-                                    <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-blue-400" title="Na nástěnce" />
-                                  )}
+                                  <button
+                                    onClick={() => toggleOnBoardFromCard(dream.id, img)}
+                                    className={`absolute bottom-0 left-0 right-0 text-xs py-0.5 font-medium transition-opacity
+                                      ${img.on_board
+                                        ? 'bg-blue-500/90 text-white opacity-100'
+                                        : 'bg-black/60 text-white opacity-0 group-hover:opacity-100'
+                                      }`}
+                                    title={img.on_board ? 'Odebrat z nástěnky' : 'Umístit na nástěnku'}
+                                  >
+                                    {img.on_board ? '✓ Na nástěnce' : '+ Nástěnka'}
+                                  </button>
                                 </div>
                               ))}
                             </div>
