@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -442,6 +443,7 @@ export default function GoalsPage() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{editingGoal ? 'Upravit cíl' : 'Nový cíl'}</DialogTitle>
+                  <DialogDescription>Vyplňte informace o cíli</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-1">
@@ -546,6 +548,7 @@ export default function GoalsPage() {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingDream ? 'Upravit sen' : 'Nový sen'}</DialogTitle>
+                  <DialogDescription>Vyplňte název, popis a přidejte obrázky</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-1">
@@ -716,18 +719,18 @@ export default function GoalsPage() {
                           ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
                               {images.map(img => (
-                                <div key={img.id} className="relative group rounded overflow-hidden aspect-square">
+                                <div key={img.id} className="flex flex-col rounded overflow-hidden border border-gray-200">
                                   <img
                                     src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover`}
                                     alt=""
-                                    className="w-full h-full object-cover"
+                                    className="w-full aspect-square object-cover"
                                   />
                                   <button
                                     onClick={() => toggleOnBoardFromCard(dream.id, img)}
-                                    className={`absolute bottom-0 left-0 right-0 text-xs py-0.5 font-medium transition-opacity
+                                    className={`w-full text-xs py-1 font-medium transition-colors
                                       ${img.on_board
-                                        ? 'bg-blue-500/90 text-white opacity-100'
-                                        : 'bg-black/60 text-white opacity-0 group-hover:opacity-100'
+                                        ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                       }`}
                                     title={img.on_board ? 'Odebrat z nástěnky' : 'Umístit na nástěnku'}
                                   >
