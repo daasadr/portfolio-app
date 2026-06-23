@@ -77,11 +77,15 @@ export default function GoalsPage() {
   const [dreamForm, setDreamForm] = useState({ title: '', description: '' });
   const [dreamSaving, setDreamSaving] = useState(false);
 
-  // Dream images
+  // Dream images (in dialog)
   const [dreamImages, setDreamImages] = useState<DreamBoardItem[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dream detail view (expanded card)
+  const [expandedDreamId, setExpandedDreamId] = useState<string | null>(null);
+  const [expandedImages, setExpandedImages] = useState<Record<string, DreamBoardItem[]>>({});
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -335,6 +339,23 @@ export default function GoalsPage() {
   async function deleteDream(id: string) {
     await directus.request(deleteItem('dreams', id));
     setDreams((prev) => prev.filter((d) => d.id !== id));
+  }
+
+  async function toggleExpandDream(dreamId: string) {
+    if (expandedDreamId === dreamId) {
+      setExpandedDreamId(null);
+      return;
+    }
+    setExpandedDreamId(dreamId);
+    if (!expandedImages[dreamId]) {
+      const token = getToken();
+      const res = await fetch(
+        `${directusUrl}/items/dream_board_items?filter[dream_id][_eq]=${dreamId}&sort[]=z_index`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+      setExpandedImages(prev => ({ ...prev, [dreamId]: json.data ?? [] }));
+    }
   }
 
   if (isLoading) {
@@ -635,35 +656,70 @@ export default function GoalsPage() {
               <p className="text-sm mt-1">Zapište si, čeho byste jednou chtěli dosáhnout nebo co mít.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dreams.map((dream) => (
-                <Card key={dream.id} className="relative group">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-3">
-                      <Star className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">{dream.title}</p>
-                        {dream.description && (
-                          <p className="text-sm text-gray-600 mt-1">{dream.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 mt-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => openEditDream(dream)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => deleteDream(dream.id)}
+            <div className="space-y-3">
+              {dreams.map((dream) => {
+                const isExpanded = expandedDreamId === dream.id;
+                const images = expandedImages[dream.id] ?? [];
+                return (
+                  <Card key={dream.id} className="relative group overflow-hidden">
+                    <CardContent className="pt-4 pb-3">
+                      <div
+                        className="flex items-start gap-3 cursor-pointer"
+                        onClick={() => toggleExpandDream(dream.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <Star className={`h-5 w-5 mt-0.5 flex-shrink-0 ${isExpanded ? 'text-yellow-400' : 'text-yellow-300'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium">{dream.title}</p>
+                          {dream.description && (
+                            <p className="text-sm text-gray-600 mt-0.5">{dream.description}</p>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-400 mt-1 flex-shrink-0">
+                          {isExpanded ? '▲' : '▼'}
+                        </span>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-3 border-t pt-3">
+                          {images.length === 0 ? (
+                            <p className="text-sm text-gray-400 text-center py-2">Žádné obrázky — přidejte je přes tlačítko Upravit</p>
+                          ) : (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
+                              {images.map(img => (
+                                <div key={img.id} className="relative rounded overflow-hidden aspect-square">
+                                  <img
+                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover`}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                  {img.on_board && (
+                                    <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-blue-400" title="Na nástěnce" />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => openEditDream(dream)}>
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Upravit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => deleteDream(dream.id)}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Smazat
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

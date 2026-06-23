@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCurrentStudent } from '@/lib/directus';
 import type { DreamBoardItem } from '@/types';
@@ -30,6 +30,7 @@ function getToken() {
 export default function DreamBoardPage() {
   const [items, setItems] = useState<DreamBoardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function DreamBoardPage() {
   }, []);
 
   const startDrag = (e: React.MouseEvent, itemId: string, type: DragType) => {
+    if (!isEditing) return;
     e.preventDefault();
     e.stopPropagation();
     const item = items.find(i => i.id === itemId)!;
@@ -134,18 +136,46 @@ export default function DreamBoardPage() {
 
   return (
     <div className="bg-gray-950 min-h-screen">
-      <div className="sticky top-0 z-[1000] flex items-center gap-4 px-4 py-3 bg-gray-900/95 backdrop-blur border-b border-gray-800">
+      <div className="sticky top-0 z-[1000] flex items-center gap-3 px-4 py-3 bg-gray-900/95 backdrop-blur border-b border-gray-800">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-gray-800">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Zpět
         </Button>
         <h1 className="text-white font-semibold">Nástěnka snů</h1>
-        <span className="text-gray-400 text-sm ml-2">{items.length} obrázků</span>
+        <span className="text-gray-400 text-sm">{items.length} obrázků</span>
+        <div className="ml-auto">
+          {isEditing ? (
+            <Button
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Hotovo
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsEditing(true)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Upravit nástěnku
+            </Button>
+          )}
+        </div>
       </div>
+
+      {isEditing && (
+        <div className="bg-blue-900/40 border-b border-blue-700/50 px-4 py-2 text-blue-300 text-sm text-center">
+          Režim úprav — přetahujte obrázky, měňte jejich velikost rohemi, nebo je odeberte pomocí koše
+        </div>
+      )}
 
       <div
         ref={boardRef}
-        className="relative w-full select-none overflow-hidden"
+        className={`relative w-full select-none overflow-hidden ${isEditing ? '' : 'overflow-y-auto'}`}
         style={{ height: '300vh', background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}
       >
         {items.length === 0 && (
@@ -161,7 +191,7 @@ export default function DreamBoardPage() {
         {items.map(item => (
           <div
             key={item.id}
-            className="absolute group cursor-move"
+            className={`absolute ${isEditing ? 'group cursor-move' : ''}`}
             style={{
               left: `${item.x}%`,
               top: `${item.y}%`,
@@ -169,7 +199,7 @@ export default function DreamBoardPage() {
               height: `${item.height}%`,
               zIndex: item.z_index,
             }}
-            onMouseDown={(e) => startDrag(e, item.id, 'move')}
+            onMouseDown={isEditing ? (e) => startDrag(e, item.id, 'move') : undefined}
           >
             <img
               src={`${directusUrl}/assets/${item.file_id}`}
@@ -179,27 +209,31 @@ export default function DreamBoardPage() {
               style={{ display: 'block' }}
             />
 
-            <button
-              className="absolute top-1 right-1 p-1.5 bg-black/70 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
-              onMouseDown={e => e.stopPropagation()}
-              onClick={() => removeFromBoard(item.id)}
-              title="Odebrat z nástěnky"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            {isEditing && (
+              <>
+                <button
+                  className="absolute top-1 right-1 p-1.5 bg-black/70 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={() => removeFromBoard(item.id)}
+                  title="Odebrat z nástěnky"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
 
-            {(['se', 'sw', 'ne', 'nw'] as const).map(corner => (
-              <div
-                key={corner}
-                className={`absolute w-3 h-3 bg-white border-2 border-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity
-                  ${corner === 'se' ? 'bottom-0 right-0 cursor-se-resize' : ''}
-                  ${corner === 'sw' ? 'bottom-0 left-0 cursor-sw-resize' : ''}
-                  ${corner === 'ne' ? 'top-0 right-0 cursor-ne-resize' : ''}
-                  ${corner === 'nw' ? 'top-0 left-0 cursor-nw-resize' : ''}
-                `}
-                onMouseDown={e => { e.stopPropagation(); startDrag(e, item.id, `resize-${corner}`); }}
-              />
-            ))}
+                {(['se', 'sw', 'ne', 'nw'] as const).map(corner => (
+                  <div
+                    key={corner}
+                    className={`absolute w-3 h-3 bg-white border-2 border-blue-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity
+                      ${corner === 'se' ? 'bottom-0 right-0 cursor-se-resize' : ''}
+                      ${corner === 'sw' ? 'bottom-0 left-0 cursor-sw-resize' : ''}
+                      ${corner === 'ne' ? 'top-0 right-0 cursor-ne-resize' : ''}
+                      ${corner === 'nw' ? 'top-0 left-0 cursor-nw-resize' : ''}
+                    `}
+                    onMouseDown={e => { e.stopPropagation(); startDrag(e, item.id, `resize-${corner}`); }}
+                  />
+                ))}
+              </>
+            )}
           </div>
         ))}
       </div>
