@@ -160,7 +160,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <div className="text-sm">
                 <span className="font-medium text-gray-900">
-                  {student.first_name} {student.last_name}
+                  {student?.first_name} {student?.last_name}
                 </span>
               </div>
             </div>
