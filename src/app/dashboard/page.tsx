@@ -215,7 +215,7 @@ export default function DashboardPage() {
               <div className="text-center py-6 text-gray-500">
                 <LayoutDashboard className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                 <p>Nástěnka je zatím prázdná</p>
-                <Link href="/dashboard/goals">
+                <Link href="/dashboard/goals?tab=dreams">
                   <Button variant="outline" size="sm" className="mt-2">Přidat obrázky ke snům</Button>
                 </Link>
               </div>

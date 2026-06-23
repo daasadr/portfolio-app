@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,8 +39,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      <div className="fixed inset-0 z-0">
+        <Image src="/images/paradise-bg.webp" alt="" fill className="object-cover" priority quality={85} />
+        <div className="absolute inset-0 bg-white/20" />
+      </div>
+      <Card className="w-full max-w-md relative z-10 bg-white/90 backdrop-blur-sm shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Přihlášení</CardTitle>
           <CardDescription>

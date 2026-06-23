@@ -84,6 +84,11 @@ export default function GoalsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'dreams') setActiveTab('dreams');
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       try {
         const s = await getCurrentStudent();
