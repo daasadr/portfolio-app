@@ -14,6 +14,7 @@ import {
   X,
   LogOut,
   LayoutDashboard,
+  HelpCircle,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import type { Student } from '@/types';
@@ -99,6 +100,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
     { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
+    { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
   ];
 
   return (
