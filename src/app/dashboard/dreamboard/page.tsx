@@ -23,8 +23,13 @@ interface DragState {
 }
 
 function getToken() {
-  try { return JSON.parse(localStorage.getItem('pp_auth') ?? 'null')?.access_token ?? ''; }
-  catch { return ''; }
+  try {
+    const s = sessionStorage.getItem('pp_auth');
+    if (s) return JSON.parse(s)?.access_token ?? '';
+    const l = localStorage.getItem('pp_auth');
+    if (l) return JSON.parse(l)?.access_token ?? '';
+    return '';
+  } catch { return ''; }
 }
 
 export default function DreamBoardPage() {

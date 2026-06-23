@@ -147,6 +147,17 @@ export async function uploadFile(file: File) {
   return await directus.request(uploadFiles(formData));
 }
 
+export function getStoredToken(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const s = sessionStorage.getItem('pp_auth');
+    if (s) return JSON.parse(s)?.access_token ?? '';
+    const l = localStorage.getItem('pp_auth');
+    if (l) return JSON.parse(l)?.access_token ?? '';
+    return '';
+  } catch { return ''; }
+}
+
 export function generateShareToken(): string {
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
