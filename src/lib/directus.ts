@@ -12,17 +12,38 @@ import {
 import type { Schema, Student } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
+const STORAGE_KEY = 'pp_auth';
+const REMEMBER_KEY = 'pp_remember';
 
 const tokenStorage = {
   get: () => {
     if (typeof window === 'undefined') return null;
-    try { return JSON.parse(localStorage.getItem('pp_auth') ?? 'null'); } catch { return null; }
+    try {
+      // sessionStorage first (non-remember sessions)
+      const session = sessionStorage.getItem(STORAGE_KEY);
+      if (session) return JSON.parse(session);
+      // fall back to localStorage (remember-me sessions)
+      const local = localStorage.getItem(STORAGE_KEY);
+      if (local) return JSON.parse(local);
+      return null;
+    } catch { return null; }
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set: (value: any) => {
     if (typeof window === 'undefined') return;
-    if (value) localStorage.setItem('pp_auth', JSON.stringify(value));
-    else localStorage.removeItem('pp_auth');
+    const remember = localStorage.getItem(REMEMBER_KEY) === 'true';
+    if (value) {
+      if (remember) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+        sessionStorage.removeItem(STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
   },
 };
 
@@ -32,13 +53,21 @@ export const directus = createDirectus<Schema>(directusUrl)
 
 export { readItems, createItem, updateItem, deleteItem };
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, remember = false) {
+  if (remember) {
+    localStorage.setItem(REMEMBER_KEY, 'true');
+  } else {
+    localStorage.removeItem(REMEMBER_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+  }
   return await directus.login({ email, password });
 }
 
 export async function logout() {
-  await directus.logout();
-  if (typeof window !== 'undefined') localStorage.removeItem('pp_auth');
+  try { await directus.logout(); } catch { /* ignore */ }
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(REMEMBER_KEY);
+  sessionStorage.removeItem(STORAGE_KEY);
 }
 
 export async function register(
@@ -61,6 +90,7 @@ export async function register(
     throw new Error(err.message || 'Chyba při registraci');
   }
 
+  // remember = false for new registrations (user can enable on next login)
   await directus.login({ email, password });
 }
 
@@ -74,16 +104,38 @@ export async function getCurrentUser() {
 
 export async function getCurrentStudent(): Promise<Student | null> {
   try {
-    const token = tokenStorage.get()?.access_token;
-    if (!token) return null;
+    const stored = tokenStorage.get();
+    if (!stored) return null;
 
-    const res = await fetch('/api/student', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
+    const fetchStudent = async (token: string) => {
+      const res = await fetch('/api/student', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      const { student } = await res.json() as { student: Student | null };
+      return student ?? null;
+    };
 
-    const { student } = await res.json() as { student: Student | null };
-    return student ?? null;
+    // Try with current token
+    let result = await fetchStudent(stored.access_token);
+    if (result) return result;
+
+    // Token expired — try refresh
+    if (stored.refresh_token) {
+      try {
+        await directus.refresh();
+        const refreshed = tokenStorage.get();
+        if (refreshed?.access_token) {
+          result = await fetchStudent(refreshed.access_token);
+          return result;
+        }
+      } catch {
+        // Refresh token also expired → clear storage
+        tokenStorage.set(null);
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }

@@ -26,7 +26,6 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
 
@@ -35,15 +34,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         const studentData = await getCurrentStudent();
         if (!studentData) {
-          setAuthError('Nepodařilo se načíst váš profil. Odhlaste se a přihlaste znovu.');
-          setIsLoading(false);
+          router.push('/login');
           return;
         }
         setStudent(studentData);
-      } catch (error) {
-        console.error('Chyba při načítání profilu:', error);
-        setAuthError('Chyba připojení k serveru. Zkuste obnovit stránku.');
-        setIsLoading(false);
+      } catch {
+        router.push('/login');
       } finally {
         setIsLoading(false);
       }
@@ -72,25 +68,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  if (authError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow">
-          <p className="text-red-600 font-medium mb-4">{authError}</p>
-          <button
-            onClick={() => { router.push('/login'); }}
-            className="text-blue-600 underline text-sm"
-          >
-            Zpět na přihlášení
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!student) {
-    return null;
-  }
+  if (!student && !isLoading) return null;
 
   const navigation = [
     { name: 'Přehled', href: '/dashboard', icon: BookOpen },
