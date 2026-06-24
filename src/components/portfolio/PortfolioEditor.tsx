@@ -166,14 +166,18 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         ) as PortfolioPage;
       }
 
-      // Přidat vazby na soubory
+      // Propojit soubory se stránkou (vyžaduje oprávnění na portfolio_pages_files)
       for (const att of uploadedAttachments) {
-        await directus.request(
-          createItem('portfolio_pages_files', {
-            portfolio_pages_id: savedPage.id,
-            directus_files_id: att.directus_files_id,
-          })
-        );
+        try {
+          await directus.request(
+            createItem('portfolio_pages_files', {
+              portfolio_pages_id: savedPage.id,
+              directus_files_id: att.directus_files_id,
+            })
+          );
+        } catch {
+          console.warn('portfolio_pages_files: chybí oprávnění — soubor byl nahrán, ale není formálně propojen se stránkou');
+        }
       }
 
       router.push('/dashboard/portfolio');

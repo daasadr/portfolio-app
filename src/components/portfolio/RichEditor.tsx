@@ -64,8 +64,10 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: {
-        class:
-          'prose prose-sm max-w-none min-h-[300px] px-4 py-3 focus:outline-none',
+        class: 'prose prose-sm max-w-none min-h-[300px] px-4 py-3 focus:outline-none',
+        'data-gramm': 'false',
+        'data-gramm_editor': 'false',
+        'data-enable-grammarly': 'false',
       },
     },
   });
@@ -121,27 +123,27 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b bg-gray-50">
 
-        {/* Typ bloku */}
-        <select
-          className="text-sm border rounded px-1.5 py-1 mr-1 bg-white"
-          value={
-            editor.isActive('heading', { level: 1 }) ? 'h1' :
-            editor.isActive('heading', { level: 2 }) ? 'h2' :
-            editor.isActive('heading', { level: 3 }) ? 'h3' : 'p'
-          }
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v === 'p') editor.chain().focus().setParagraph().run();
-            else editor.chain().focus().setHeading({ level: Number(v[1]) as 1|2|3 }).run();
-          }}
-        >
-          <option value="p">Odstavec</option>
-          <option value="h1">Nadpis 1</option>
-          <option value="h2">Nadpis 2</option>
-          <option value="h3">Nadpis 3</option>
-        </select>
+        {/* Typ bloku — onMouseDown+preventDefault zachová focus v editoru */}
+        <div className="flex items-center mr-1 border rounded overflow-hidden text-xs font-medium">
+          {([
+            { label: '¶', title: 'Odstavec', onMD: () => editor.chain().focus().setParagraph().run(), active: !editor.isActive('heading') },
+            { label: 'H1', title: 'Nadpis 1', onMD: () => editor.chain().focus().setHeading({ level: 1 }).run(), active: editor.isActive('heading', { level: 1 }) },
+            { label: 'H2', title: 'Nadpis 2', onMD: () => editor.chain().focus().setHeading({ level: 2 }).run(), active: editor.isActive('heading', { level: 2 }) },
+            { label: 'H3', title: 'Nadpis 3', onMD: () => editor.chain().focus().setHeading({ level: 3 }).run(), active: editor.isActive('heading', { level: 3 }) },
+          ] as const).map(({ label, title, onMD, active }) => (
+            <button
+              key={label}
+              type="button"
+              title={title}
+              onMouseDown={(e) => { e.preventDefault(); onMD(); }}
+              className={`px-2 py-1 border-r last:border-r-0 transition-colors ${active ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-700'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        {/* Font pro nadpisy */}
+        {/* Font */}
         <select
           className="text-sm border rounded px-1.5 py-1 mr-2 bg-white"
           title="Písmo"
@@ -153,6 +155,9 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
             }
           }}
           defaultValue=""
+          onMouseDown={() => {
+            // preserves TipTap selection when select opens
+          }}
         >
           {HEADING_FONTS.map((f) => (
             <option key={f.value} value={f.value} style={{ fontFamily: f.value || undefined }}>

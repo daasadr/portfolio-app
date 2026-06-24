@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Přehled', href: '/dashboard', icon: BookOpen },
     { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
     { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
-    { name: 'Portfolio Paradise', href: '/dashboard/portfolio', icon: BookOpen },
+    { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
     { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
