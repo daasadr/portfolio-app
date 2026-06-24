@@ -3,26 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
-  BookOpen,
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  Globe,
-  Lock,
+  BookOpen, Plus, Search, Pencil, Trash2, Globe, Lock, FolderOpen, Eye,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, deleteItem } from '@/lib/directus';
+import { bgStyle } from '@/components/portfolio/CategoryEditor';
+import CategoryEditor from '@/components/portfolio/CategoryEditor';
 import type { Student, PortfolioPage, Category } from '@/types';
 
 export default function PortfolioPage() {
@@ -31,7 +18,7 @@ export default function PortfolioPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [catEditorOpen, setCatEditorOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -39,22 +26,14 @@ export default function PortfolioPage() {
         const s = await getCurrentStudent();
         if (!s) return;
         setStudent(s);
-
         const [p, c] = await Promise.all([
           directus.request(
-            readItems('portfolio_pages', {
-              filter: { student_id: { _eq: s.id } },
-              sort: ['-updated_at'],
-            })
+            readItems('portfolio_pages', { filter: { student_id: { _eq: s.id } }, sort: ['-updated_at'] })
           ) as Promise<PortfolioPage[]>,
           directus.request(
-            readItems('categories', {
-              filter: { student_id: { _eq: s.id } },
-              sort: ['sort_order'],
-            })
+            readItems('categories', { filter: { student_id: { _eq: s.id } }, sort: ['sort_order'] })
           ) as Promise<Category[]>,
         ]);
-
         setPages(p ?? []);
         setCategories(c ?? []);
       } catch (e) {
@@ -67,16 +46,14 @@ export default function PortfolioPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm('Opravdu chcete smazat tuto stránku?')) return;
+    if (!confirm('Opravdu smazat tuto stránku?')) return;
     await directus.request(deleteItem('portfolio_pages', id));
-    setPages((prev) => prev.filter((p) => p.id !== id));
+    setPages(prev => prev.filter(p => p.id !== id));
   }
 
-  const filtered = pages.filter((p) => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchCat = filterCategory === 'all' || p.category_id === filterCategory;
-    return matchSearch && matchCat;
-  });
+  const filtered = pages.filter(p =>
+    p.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -86,113 +63,240 @@ export default function PortfolioPage() {
     );
   }
 
+  // Skupiny: každá kategorie + necatgorized
+  const categorized = categories.map(cat => ({
+    cat,
+    pages: filtered.filter(p => p.category_id === cat.id),
+  })).filter(g => g.pages.length > 0 || search === '');
+
+  const uncategorized = filtered.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id));
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Portfolio</h1>
-        <Link href="/dashboard/portfolio/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nová stránka
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCatEditorOpen(true)}>
+            <FolderOpen className="h-4 w-4 mr-2" />
+            Kategorie
           </Button>
-        </Link>
-      </div>
-
-      {/* Filtry */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Hledat stránky..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Link href="/dashboard/portfolio/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Nová stránka
+            </Button>
+          </Link>
         </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Všechny kategorie" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Všechny kategorie</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-4 text-sm text-gray-600">
-        <span>{pages.length} stránek celkem</span>
-        <span>·</span>
-        <span>{pages.filter((p) => p.visibility === 'shared').length} sdílených</span>
+      {/* Hledání */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Hledat stránky..."
+          className="pl-9"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
-      {/* Seznam stránek */}
-      {filtered.length === 0 ? (
+      <div className="text-sm text-gray-500">
+        {pages.length} stránek celkem · {pages.filter(p => p.visibility === 'shared').length} sdílených
+      </div>
+
+      {/* Prázdný stav */}
+      {pages.length === 0 && (
         <div className="text-center py-16 text-gray-500">
           <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          {pages.length === 0 ? (
-            <>
-              <p className="text-lg font-medium">Zatím nemáte žádné stránky portfolia</p>
-              <p className="text-sm mt-1">Vytvořte první stránku a začněte dokumentovat své studium.</p>
-              <Link href="/dashboard/portfolio/new">
-                <Button className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Vytvořit první stránku
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <p className="text-lg font-medium">Žádné stránky neodpovídají filtru</p>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((page) => {
-            const category = categories.find((c) => c.id === page.category_id);
-            return (
-              <Card key={page.id} className="group hover:shadow-md transition-shadow">
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        {page.visibility === 'shared'
-                          ? <Globe className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                          : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />}
-                        <h3 className="font-medium truncate">{page.title}</h3>
-                      </div>
-                      {category && (
-                        <Badge variant="secondary" className="text-xs mb-2">{category.name}</Badge>
-                      )}
-                      <p className="text-xs text-gray-500">
-                        Upraveno {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Link href={`/dashboard/portfolio/${page.id}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Upravit
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(page.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <p className="text-lg font-medium">Zatím žádné stránky portfolia</p>
+          <p className="text-sm mt-1">Vytvořte první stránku a začněte dokumentovat své studium.</p>
+          <Link href="/dashboard/portfolio/new">
+            <Button className="mt-4">
+              <Plus className="h-4 w-4 mr-2" />
+              Vytvořit první stránku
+            </Button>
+          </Link>
         </div>
       )}
+
+      {/* Sekce po kategoriích */}
+      {categories.length > 0 && filtered.length > 0 && (
+        <div className="space-y-8">
+          {categorized.map(({ cat, pages: catPages }) => (
+            <CategorySection
+              key={cat.id}
+              category={cat}
+              pages={catPages}
+              onDelete={handleDelete}
+            />
+          ))}
+
+          {uncategorized.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-base font-semibold text-gray-500 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Bez kategorie
+              </h2>
+              <PageGrid pages={uncategorized} categories={categories} onDelete={handleDelete} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bez kategorií — flat grid */}
+      {categories.length === 0 && filtered.length > 0 && (
+        <PageGrid pages={filtered} categories={[]} onDelete={handleDelete} />
+      )}
+
+      {/* CategoryEditor dialog */}
+      <CategoryEditor
+        open={catEditorOpen}
+        onClose={() => setCatEditorOpen(false)}
+        onCategoriesChange={setCategories}
+      />
+    </div>
+  );
+}
+
+// ── Sekce jedné kategorie ────────────────────────────────────────────────────
+function CategorySection({
+  category,
+  pages,
+  onDelete,
+}: {
+  category: Category;
+  pages: PortfolioPage[];
+  onDelete: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const PREVIEW = 4;
+  const shown = expanded ? pages : pages.slice(0, PREVIEW);
+
+  return (
+    <div className="rounded-2xl overflow-hidden shadow-sm border border-white/30">
+      {/* Hlavička kategorie */}
+      <div
+        className="px-5 py-4 flex items-center justify-between"
+        style={bgStyle(category.background)}
+      >
+        <h2
+          className="text-lg font-bold"
+          style={{ color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}
+        >
+          {category.name}
+        </h2>
+        <span className="text-white/80 text-sm font-medium drop-shadow">
+          {pages.length} {pages.length === 1 ? 'stránka' : pages.length < 5 ? 'stránky' : 'stránek'}
+        </span>
+      </div>
+
+      {/* Stránky */}
+      <div className="bg-white p-4 space-y-3">
+        {shown.map(page => (
+          <PageRow key={page.id} page={page} onDelete={onDelete} />
+        ))}
+
+        {pages.length > PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          >
+            {expanded ? 'Zobrazit méně' : `Zobrazit všechny (${pages.length - PREVIEW} dalších)`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Flat grid stránek ─────────────────────────────────────────────────────────
+function PageGrid({
+  pages,
+  categories,
+  onDelete,
+}: {
+  pages: PortfolioPage[];
+  categories: Category[];
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {pages.map(page => {
+        const cat = categories.find(c => c.id === page.category_id);
+        return (
+          <div
+            key={page.id}
+            className="rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow p-4 space-y-3"
+          >
+            <div className="flex items-start gap-2">
+              {page.visibility === 'shared'
+                ? <Globe className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                : <Lock className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{page.title}</p>
+                {cat && <p className="text-xs text-gray-400 mt-0.5">{cat.name}</p>}
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                </p>
+              </div>
+            </div>
+            <PageActions page={page} onDelete={onDelete} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Řádek stránky (v sekci kategorie) ───────────────────────────────────────
+function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: string) => void }) {
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+      {page.visibility === 'shared'
+        ? <Globe className="h-4 w-4 text-blue-500 flex-shrink-0" />
+        : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{page.title}</p>
+        <p className="text-xs text-gray-400">{new Date(page.updated_at).toLocaleDateString('cs-CZ')}</p>
+      </div>
+      <PageActions page={page} onDelete={onDelete} compact />
+    </div>
+  );
+}
+
+// ── Akční tlačítka stránky ───────────────────────────────────────────────────
+function PageActions({
+  page,
+  onDelete,
+  compact = false,
+}: {
+  page: PortfolioPage;
+  onDelete: (id: string) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`flex gap-1.5 ${compact ? '' : 'mt-1'}`}>
+      <Link href={`/dashboard/portfolio/${page.id}/view`} className="flex-1">
+        <Button variant="outline" size="sm" className="w-full">
+          <Eye className="h-3.5 w-3.5 mr-1" />
+          {!compact && 'Otevřít'}
+        </Button>
+      </Link>
+      <Link href={`/dashboard/portfolio/${page.id}`}>
+        <Button variant="outline" size="sm">
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-red-400 hover:text-red-600 hover:bg-red-50"
+        onClick={() => onDelete(page.id)}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }

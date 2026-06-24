@@ -40,6 +40,7 @@ export interface Category {
   parent_category_id?: string;
   is_predefined: boolean;
   sort_order: number;
+  background?: string; // CSS color, gradient or /images/backgrounds/xxx.webp
   created_at: string;
 }
 

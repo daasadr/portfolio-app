@@ -25,7 +25,7 @@ import {
   Highlighter,
   Type,
 } from 'lucide-react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 
 const COLORS = [
   '#000000', '#374151', '#6B7280', '#EF4444', '#F97316',
@@ -47,6 +47,7 @@ interface RichEditorProps {
 
 export default function RichEditor({ content, onChange, onFileUpload }: RichEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, forceUpdate] = useState(0);
 
   const editor = useEditor({
     extensions: [
@@ -71,6 +72,14 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
       },
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => forceUpdate(n => n + 1);
+    editor.on('update', update);
+    editor.on('selectionUpdate', update);
+    return () => { editor.off('update', update); editor.off('selectionUpdate', update); };
+  }, [editor]);
 
   const setLink = useCallback(() => {
     if (!editor) return;
