@@ -92,6 +92,7 @@ export default function GoalsPage() {
   // Dream detail view (expanded card)
   const [expandedDreamId, setExpandedDreamId] = useState<string | null>(null);
   const [expandedImages, setExpandedImages] = useState<Record<string, DreamBoardItem[]>>({});
+  const [authToken, setAuthToken] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -122,6 +123,7 @@ export default function GoalsPage() {
 
         setGoals(g ?? []);
         setDreams(d ?? []);
+        setAuthToken(getToken());
       } catch (e) {
         console.error(e);
       } finally {
@@ -598,7 +600,7 @@ export default function GoalsPage() {
                         {dreamImages.map((img) => (
                           <div key={img.id} className="relative group rounded overflow-hidden border border-gray-200">
                             <img
-                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover`}
+                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover&access_token=${authToken}`}
                               alt=""
                               className="w-full h-24 object-cover"
                             />
@@ -721,7 +723,7 @@ export default function GoalsPage() {
                               {images.map(img => (
                                 <div key={img.id} className="flex flex-col rounded overflow-hidden border border-gray-200">
                                   <img
-                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover`}
+                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover&access_token=${authToken}`}
                                     alt=""
                                     className="w-full aspect-square object-cover"
                                   />

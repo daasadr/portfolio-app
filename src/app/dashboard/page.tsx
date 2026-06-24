@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [boardItems, setBoardItems] = useState<DreamBoardItem[]>([]);
   const [recentPages, setRecentPages] = useState<PortfolioPage[]>([]);
   const [todayEntries, setTodayEntries] = useState<CalendarEntry[]>([]);
+  const [authToken, setAuthToken] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function DashboardPage() {
         setStudent(studentData);
 
         const token = getToken();
+        setAuthToken(token);
         const [goalsData, pagesData, entriesData, boardRes] = await Promise.all([
           directus.request(
             readItems('personal_goals', {
@@ -230,7 +232,7 @@ export default function DashboardPage() {
                   {boardItems.slice(0, 9).map((item) => (
                     <img
                       key={item.id}
-                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover`}
+                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover&access_token=${authToken}`}
                       alt=""
                       className="w-full h-20 object-cover group-hover:opacity-90 transition-opacity"
                     />

@@ -36,6 +36,7 @@ export default function DreamBoardPage() {
   const [items, setItems] = useState<DreamBoardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [token, setToken] = useState('');
   const boardRef = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const router = useRouter();
@@ -44,10 +45,11 @@ export default function DreamBoardPage() {
     const load = async () => {
       const student = await getCurrentStudent();
       if (!student) { router.push('/login'); return; }
-      const token = getToken();
+      const t = getToken();
+      setToken(t);
       const res = await fetch(
         `${directusUrl}/items/dream_board_items?filter[student_id][_eq]=${student.id}&filter[on_board][_eq]=true&sort[]=z_index`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${t}` } }
       );
       const json = await res.json();
       setItems(json.data ?? []);
@@ -207,7 +209,7 @@ export default function DreamBoardPage() {
             onMouseDown={isEditing ? (e) => startDrag(e, item.id, 'move') : undefined}
           >
             <img
-              src={`${directusUrl}/assets/${item.file_id}`}
+              src={`${directusUrl}/assets/${item.file_id}?access_token=${token}`}
               alt=""
               className="w-full h-full object-cover shadow-2xl"
               draggable={false}
