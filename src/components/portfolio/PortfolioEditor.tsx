@@ -163,7 +163,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         content,
         category_id: categoryId === 'none' ? undefined : categoryId,
         visibility,
-        attachments: allAtts.length > 0 ? JSON.stringify(allAtts) : null,
+        attachments: allAtts.length > 0 ? JSON.stringify(allAtts) : undefined,
       };
 
       if (pageId) {
