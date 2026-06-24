@@ -32,7 +32,7 @@ import {
   ImagePlus,
   LayoutDashboard,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, getDisplayToken } from '@/lib/directus';
 import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -123,7 +123,7 @@ export default function GoalsPage() {
 
         setGoals(g ?? []);
         setDreams(d ?? []);
-        setAuthToken(getToken());
+        setAuthToken(getDisplayToken());
       } catch (e) {
         console.error(e);
       } finally {
@@ -600,7 +600,7 @@ export default function GoalsPage() {
                         {dreamImages.map((img) => (
                           <div key={img.id} className="relative group rounded overflow-hidden border border-gray-200">
                             <img
-                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover&access_token=${authToken}`}
+                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover&format=webp&access_token=${authToken}`}
                               alt=""
                               className="w-full h-24 object-cover"
                             />
@@ -723,7 +723,7 @@ export default function GoalsPage() {
                               {images.map(img => (
                                 <div key={img.id} className="flex flex-col rounded overflow-hidden border border-gray-200">
                                   <img
-                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover&access_token=${authToken}`}
+                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover&format=webp&access_token=${authToken}`}
                                     alt=""
                                     className="w-full aspect-square object-cover"
                                   />

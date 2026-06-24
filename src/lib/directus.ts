@@ -68,6 +68,7 @@ export async function logout() {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(REMEMBER_KEY);
   sessionStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem('pp_img_token');
 }
 
 export async function register(
@@ -155,6 +156,19 @@ export function getStoredToken(): string {
     const l = localStorage.getItem('pp_auth');
     if (l) return JSON.parse(l)?.access_token ?? '';
     return '';
+  } catch { return ''; }
+}
+
+// Stable token for image URLs — doesn't change on access_token refresh,
+// so browser can cache images across navigations within a session.
+export function getDisplayToken(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const existing = sessionStorage.getItem('pp_img_token');
+    if (existing) return existing;
+    const current = getStoredToken();
+    if (current) sessionStorage.setItem('pp_img_token', current);
+    return current;
   } catch { return ''; }
 }
 
