@@ -26,7 +26,7 @@ import {
   Video,
   Image as ImageIcon,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, createItem, updateItem, uploadFile } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, createItem, updateItem, uploadFile, getDisplayToken } from '@/lib/directus';
 import type { Student, Category, PortfolioPage } from '@/types';
 import RichEditor from './RichEditor';
 
@@ -95,6 +95,16 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             setContent(page.content ?? '');
             setCategoryId(page.category_id ?? 'none');
             setVisibility(page.visibility);
+            if (page.attachments) {
+              const token = getDisplayToken();
+              const saved = JSON.parse(page.attachments) as { id: string; name: string; type: string }[];
+              setAttachments(saved.map(a => ({
+                id: a.id,
+                name: a.name,
+                url: `${directusUrl}/assets/${a.id}?access_token=${token}`,
+                type: a.type,
+              })));
+            }
           }
         }
       } catch (e) {
@@ -137,47 +147,31 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
     setIsSaving(true);
     try {
       // Nahrát nové přílohy
-      const uploadedAttachments = await Promise.all(
-        attachments.filter((a) => a.isNew && a.file).map(async (a) => {
-          const uploaded = await uploadFile(a.file!) as { id: string; filename_download: string; type: string };
-          return { directus_files_id: uploaded.id };
-        })
-      );
+      const newUploads: { id: string; name: string; type: string }[] = [];
+      for (const a of attachments.filter(a => a.isNew && a.file)) {
+        const uploaded = await uploadFile(a.file!) as { id: string };
+        newUploads.push({ id: uploaded.id, name: a.name, type: a.type });
+      }
+
+      // Sloučit existující + nové přílohy do JSON
+      const existingAtts = attachments.filter(a => !a.isNew && a.id)
+        .map(a => ({ id: a.id!, name: a.name, type: a.type }));
+      const allAtts = [...existingAtts, ...newUploads];
 
       const pageData = {
         title: title.trim(),
         content,
         category_id: categoryId === 'none' ? undefined : categoryId,
         visibility,
+        attachments: allAtts.length > 0 ? JSON.stringify(allAtts) : null,
       };
 
-      let savedPage: PortfolioPage;
       if (pageId) {
-        savedPage = await directus.request(
-          updateItem('portfolio_pages', pageId, pageData)
-        ) as PortfolioPage;
+        await directus.request(updateItem('portfolio_pages', pageId, pageData));
       } else {
-        savedPage = await directus.request(
-          createItem('portfolio_pages', {
-            ...pageData,
-            student_id: student.id,
-            sort_order: 0,
-          })
-        ) as PortfolioPage;
-      }
-
-      // Propojit soubory se stránkou (vyžaduje oprávnění na portfolio_pages_files)
-      for (const att of uploadedAttachments) {
-        try {
-          await directus.request(
-            createItem('portfolio_pages_files', {
-              portfolio_pages_id: savedPage.id,
-              directus_files_id: att.directus_files_id,
-            })
-          );
-        } catch {
-          console.warn('portfolio_pages_files: chybí oprávnění — soubor byl nahrán, ale není formálně propojen se stránkou');
-        }
+        await directus.request(
+          createItem('portfolio_pages', { ...pageData, student_id: student.id, sort_order: 0 })
+        );
       }
 
       router.push('/dashboard/portfolio');

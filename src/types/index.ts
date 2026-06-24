@@ -59,6 +59,7 @@ export interface PortfolioPage {
   template_id?: string;
   category_id?: string;
   content?: string;
+  attachments?: string; // JSON: [{id, name, type}]
   structured_data?: any;
   visibility: 'private' | 'shared';
   sort_order: number;
