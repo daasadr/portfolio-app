@@ -49,8 +49,9 @@ const BG_GRADIENTS = [
 ];
 
 // ── Pozadí – fotopozadí (soubory v /public/images/backgrounds/) ─────────────
+// Pojmenování: bg1.webp, bg2.webp, ... (přidávejte další podle potřeby)
 const BG_PHOTOS = Array.from({ length: 55 }, (_, i) =>
-  `/images/backgrounds/bg-${String(i + 1).padStart(2, '0')}.webp`
+  `/images/backgrounds/bg${i + 1}.webp`
 );
 
 // ── Pomocné funkce pro styl a kontrast ───────────────────────────────────────
@@ -289,9 +290,9 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
 
   async function handleEdit(name: string, background: string) {
     if (!editing) return;
-    const updated = await directus.request(
+    await directus.request(
       updateItem('categories', editing.id, { name, background })
-    ) as Category;
+    );
     const list = categories.map(c => c.id === editing.id ? { ...c, name, background } : c);
     setCategories(list);
     onCategoriesChange(list);
