@@ -8,7 +8,7 @@ import {
   BookOpen, Plus, Search, Pencil, Trash2, Globe, Lock, FolderOpen, Eye,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, deleteItem } from '@/lib/directus';
-import { bgStyle } from '@/components/portfolio/CategoryEditor';
+import { bgStyle, catTextStyle } from '@/components/portfolio/CategoryEditor';
 import CategoryEditor from '@/components/portfolio/CategoryEditor';
 import type { Student, PortfolioPage, Category } from '@/types';
 
@@ -180,13 +180,10 @@ function CategorySection({
         className="px-5 py-4 flex items-center justify-between"
         style={bgStyle(category.background)}
       >
-        <h2
-          className="text-lg font-bold"
-          style={{ color: 'white', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}
-        >
+        <h2 className="text-lg font-bold" style={catTextStyle(category.background)}>
           {category.name}
         </h2>
-        <span className="text-white/80 text-sm font-medium drop-shadow">
+        <span className="text-sm font-medium" style={{ ...catTextStyle(category.background), opacity: 0.8 }}>
           {pages.length} {pages.length === 1 ? 'stránka' : pages.length < 5 ? 'stránky' : 'stránek'}
         </span>
       </div>

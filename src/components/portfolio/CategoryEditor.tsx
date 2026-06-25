@@ -53,12 +53,32 @@ const BG_PHOTOS = Array.from({ length: 55 }, (_, i) =>
   `/images/backgrounds/bg-${String(i + 1).padStart(2, '0')}.webp`
 );
 
-// ── Pomocná funkce pro style ──────────────────────────────────────────────────
+// ── Pomocné funkce pro styl a kontrast ───────────────────────────────────────
 export function bgStyle(background?: string): React.CSSProperties {
   if (!background) return { backgroundColor: '#f9fafb' };
   if (background.startsWith('linear-gradient')) return { backgroundImage: background };
   if (background.startsWith('/')) return { backgroundImage: `url(${background})`, backgroundSize: 'cover', backgroundPosition: 'center' };
   return { backgroundColor: background };
+}
+
+// Vrátí barvu textu (černá/bílá) + stín podle jasu pozadí
+export function catTextStyle(background?: string): React.CSSProperties {
+  if (!background) return { color: '#1f2937' };
+  // Gradient nebo foto — vždy bílá se stínem
+  if (background.startsWith('linear-gradient') || background.startsWith('/')) {
+    return { color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,0.6)' };
+  }
+  // Hex barva — spočítej luminance
+  if (background.startsWith('#')) {
+    const hex = background.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    if (lum > 0.55) return { color: '#1f2937' }; // světlé pozadí → tmavý text
+    return { color: '#ffffff', textShadow: '0 1px 3px rgba(0,0,0,0.5)' };
+  }
+  return { color: '#1f2937' };
 }
 
 // ── Background picker ─────────────────────────────────────────────────────────
@@ -157,8 +177,8 @@ function CategoryForm({
     <div className="space-y-4">
       {/* Náhled */}
       <div
-        className="w-full h-20 rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-inner transition-all"
-        style={{ ...bgStyle(background), textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+        className="w-full h-20 rounded-xl flex items-center justify-center text-xl font-bold shadow-inner transition-all"
+        style={{ ...bgStyle(background), ...catTextStyle(background) }}
       >
         {name || 'Nová kategorie'}
       </div>
@@ -317,10 +337,7 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
                   className="flex items-center gap-3 p-3 rounded-xl border"
                   style={bgStyle(cat.background)}
                 >
-                  <div
-                    className="flex-1 font-semibold text-sm"
-                    style={{ color: (cat.background && cat.background !== '#ffffff') ? 'white' : 'inherit', textShadow: cat.background?.startsWith('/') || cat.background?.startsWith('linear') ? '0 1px 2px rgba(0,0,0,0.4)' : 'none' }}
-                  >
+                  <div className="flex-1 font-semibold text-sm" style={catTextStyle(cat.background)}>
                     {cat.name}
                   </div>
                   <button
