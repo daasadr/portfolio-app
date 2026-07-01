@@ -49,8 +49,9 @@ const BG_GRADIENTS = [
 ];
 
 // ── Pozadí – fotopozadí (soubory v /public/images/backgrounds/) ─────────────
-// Pojmenování: bg1.webp, bg2.webp, ... (přidávejte další podle potřeby)
-const BG_PHOTOS = Array.from({ length: 55 }, (_, i) =>
+// Zvyšte BG_COUNT při přidání dalších souborů bg25.webp, bg26.webp, ...
+const BG_COUNT = 24;
+const BG_PHOTOS = Array.from({ length: BG_COUNT }, (_, i) =>
   `/images/backgrounds/bg${i + 1}.webp`
 );
 
