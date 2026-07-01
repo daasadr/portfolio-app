@@ -51,7 +51,8 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // StarterKit 3.x already bundles Link and Underline — exclude to avoid duplicates
+      StarterKit.configure({ link: false, underline: false } as Parameters<typeof StarterKit.configure>[0]),
       TextStyle,
       Color,
       Underline,

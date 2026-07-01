@@ -179,11 +179,15 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
 
       router.push('/dashboard/portfolio');
     } catch (e: unknown) {
-      console.error('Save error:', e);
-      let msg = 'Chyba při ukládání. Zkuste to znovu.';
+      console.error('Save error full:', JSON.stringify(e, null, 2));
+      let msg = 'Chyba při ukládání:';
       if (e && typeof e === 'object' && 'errors' in e) {
-        const errs = (e as { errors: Array<{ message: string }> }).errors;
-        if (errs?.length) msg = errs.map((x) => x.message).join('; ');
+        const errs = (e as { errors: Array<{ message: string; extensions?: Record<string, unknown> }> }).errors;
+        if (errs?.length) {
+          msg += '\n' + errs.map((x) => `${x.message} | ${JSON.stringify(x.extensions ?? {})}`).join('\n');
+        }
+      } else {
+        msg += '\n' + String(e);
       }
       alert(msg);
     } finally {
