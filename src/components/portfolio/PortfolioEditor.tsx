@@ -97,7 +97,10 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             setVisibility(page.visibility);
             if (page.attachments) {
               const token = getDisplayToken();
-              const saved = JSON.parse(page.attachments) as { id: string; name: string; type: string }[];
+              // Directus returns json field as array; guard against legacy string values
+              const rawAtts = page.attachments;
+              const saved: Array<{ id: string; name: string; type: string }> =
+                Array.isArray(rawAtts) ? rawAtts : JSON.parse(rawAtts as unknown as string);
               setAttachments(saved.map(a => ({
                 id: a.id,
                 name: a.name,
@@ -153,7 +156,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         newUploads.push({ id: uploaded.id, name: a.name, type: a.type });
       }
 
-      // Sloučit existující + nové přílohy do JSON
+      // Sloučit existující + nové přílohy — posíláme přímo jako pole (json field)
       const existingAtts = attachments.filter(a => !a.isNew && a.id)
         .map(a => ({ id: a.id!, name: a.name, type: a.type }));
       const allAtts = [...existingAtts, ...newUploads];
@@ -163,7 +166,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         content,
         category_id: categoryId === 'none' ? undefined : categoryId,
         visibility,
-        attachments: allAtts.length > 0 ? JSON.stringify(allAtts) : undefined,
+        attachments: allAtts.length > 0 ? allAtts : undefined,
       };
 
       if (pageId) {
@@ -175,9 +178,14 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       }
 
       router.push('/dashboard/portfolio');
-    } catch (e) {
-      console.error(e);
-      alert('Chyba při ukládání. Zkuste to znovu.');
+    } catch (e: unknown) {
+      console.error('Save error:', e);
+      let msg = 'Chyba při ukládání. Zkuste to znovu.';
+      if (e && typeof e === 'object' && 'errors' in e) {
+        const errs = (e as { errors: Array<{ message: string }> }).errors;
+        if (errs?.length) msg = errs.map((x) => x.message).join('; ');
+      }
+      alert(msg);
     } finally {
       setIsSaving(false);
     }

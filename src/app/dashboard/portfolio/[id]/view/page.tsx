@@ -78,8 +78,9 @@ export default function ViewPortfolioPage({ params }: Props) {
 
   if (!page) return null;
 
-  const attachments: Attachment[] = page.attachments
-    ? (JSON.parse(page.attachments) as Attachment[])
+  const rawAtts = page.attachments;
+  const attachments: Attachment[] = rawAtts
+    ? (Array.isArray(rawAtts) ? rawAtts : JSON.parse(rawAtts as unknown as string))
     : [];
 
   return (
