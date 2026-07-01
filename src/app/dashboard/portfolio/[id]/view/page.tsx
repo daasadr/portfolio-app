@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Pencil, Globe, Lock, Paperclip, FileText, Music, Video, Image as ImageIcon } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, getDisplayToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
 
@@ -29,7 +29,6 @@ export default function ViewPortfolioPage({ params }: Props) {
   const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageId, setPageId] = useState('');
-  const [token, setToken] = useState('');
 
   useEffect(() => {
     params.then(p => setPageId(p.id));
@@ -41,7 +40,6 @@ export default function ViewPortfolioPage({ params }: Props) {
       try {
         const s = await getCurrentStudent();
         if (!s) { router.push('/login'); return; }
-        setToken(getDisplayToken());
 
         const pages = await directus.request(
           readItems('portfolio_pages', {
@@ -152,30 +150,48 @@ export default function ViewPortfolioPage({ params }: Props) {
               <Paperclip className="h-4 w-4" />
               Přílohy ({attachments.length})
             </h3>
-            <div className="space-y-2">
-              {attachments.map(att => (
-                <a
-                  key={att.id}
-                  href={`${directusUrl}/assets/${att.id}?access_token=${token}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors"
-                >
-                  <FileIcon type={att.type} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{att.name}</p>
-                    <p className="text-xs text-gray-400">{att.type}</p>
+            <div className="space-y-3">
+              {attachments.map(att => {
+                const src = `${directusUrl}/assets/${att.id}`;
+                const isAudio = att.type.startsWith('audio/');
+                const isVideo = att.type.startsWith('video/');
+                const isImage = att.type.startsWith('image/');
+                return (
+                  <div key={att.id} className="rounded-lg border overflow-hidden">
+                    {isImage && (
+                      <img
+                        src={src}
+                        alt={att.name}
+                        className="w-full max-h-96 object-contain bg-gray-50"
+                      />
+                    )}
+                    {isVideo && (
+                      <video
+                        controls
+                        src={src}
+                        className="w-full max-h-96 bg-black"
+                      />
+                    )}
+                    {isAudio && (
+                      <div className="p-3 bg-gray-50">
+                        <audio controls src={src} className="w-full" />
+                      </div>
+                    )}
+                    <a
+                      href={src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <FileIcon type={att.type} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{att.name}</p>
+                        <p className="text-xs text-gray-400">{att.type}</p>
+                      </div>
+                    </a>
                   </div>
-                  {att.type.startsWith('audio/') && (
-                    <audio
-                      controls
-                      src={`${directusUrl}/assets/${att.id}?access_token=${token}`}
-                      className="h-8 max-w-48"
-                      onClick={e => e.preventDefault()}
-                    />
-                  )}
-                </a>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -26,7 +26,7 @@ import {
   Video,
   Image as ImageIcon,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, createItem, updateItem, uploadFile, getDisplayToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, createItem, updateItem, uploadFile } from '@/lib/directus';
 import type { Student, Category, PortfolioPage } from '@/types';
 import RichEditor from './RichEditor';
 
@@ -96,15 +96,13 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             setCategoryId(page.category_id != null ? String(page.category_id) : 'none');
             setVisibility(page.visibility);
             if (page.attachments) {
-              const token = getDisplayToken();
-              // Directus returns json field as array; guard against legacy string values
               const rawAtts = page.attachments;
               const saved: Array<{ id: string; name: string; type: string }> =
                 Array.isArray(rawAtts) ? rawAtts : JSON.parse(rawAtts as unknown as string);
               setAttachments(saved.map(a => ({
                 id: a.id,
                 name: a.name,
-                url: `${directusUrl}/assets/${a.id}?access_token=${token}`,
+                url: `${directusUrl}/assets/${a.id}`,
                 type: a.type,
               })));
             }
@@ -121,11 +119,19 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
 
   async function handleImageUpload(file: File): Promise<string> {
     const uploaded = await uploadFile(file) as { id: string };
-    return `${directusUrl}/assets/${uploaded.id}`;
+    return `${directusUrl}/assets/${uploaded.id}`; // public assets — no token needed
   }
+
+  const MAX_FILE_MB = 30;
 
   async function handleAttachmentAdd(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
+    const oversized = files.filter(f => f.size > MAX_FILE_MB * 1024 * 1024);
+    if (oversized.length > 0) {
+      alert(`Tyto soubory jsou příliš velké (max ${MAX_FILE_MB} MB):\n${oversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join('\n')}`);
+      e.target.value = '';
+      return;
+    }
     const newAttachments: Attachment[] = files.map((f) => ({
       name: f.name,
       url: URL.createObjectURL(f),

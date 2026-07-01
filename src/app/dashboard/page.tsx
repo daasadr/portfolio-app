@@ -14,7 +14,7 @@ import {
   Circle,
   LayoutDashboard,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, getDisplayToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -35,7 +35,6 @@ export default function DashboardPage() {
   const [boardItems, setBoardItems] = useState<DreamBoardItem[]>([]);
   const [recentPages, setRecentPages] = useState<PortfolioPage[]>([]);
   const [todayEntries, setTodayEntries] = useState<CalendarEntry[]>([]);
-  const [authToken, setAuthToken] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function DashboardPage() {
         setStudent(studentData);
 
         const token = getToken();
-        setAuthToken(getDisplayToken());
         const [goalsData, pagesData, entriesData, boardRes] = await Promise.all([
           directus.request(
             readItems('personal_goals', {
@@ -232,7 +230,7 @@ export default function DashboardPage() {
                   {boardItems.slice(0, 9).map((item) => (
                     <img
                       key={item.id}
-                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover&format=webp&access_token=${authToken}`}
+                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover&format=webp`}
                       alt=""
                       className="w-full h-20 object-cover group-hover:opacity-90 transition-opacity"
                     />

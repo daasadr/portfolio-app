@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Trash2, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getCurrentStudent, getDisplayToken } from '@/lib/directus';
+import { getCurrentStudent } from '@/lib/directus';
 import type { DreamBoardItem } from '@/types';
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -36,7 +36,6 @@ export default function DreamBoardPage() {
   const [items, setItems] = useState<DreamBoardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [token, setToken] = useState('');
   const boardRef = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const router = useRouter();
@@ -46,7 +45,6 @@ export default function DreamBoardPage() {
       const student = await getCurrentStudent();
       if (!student) { router.push('/login'); return; }
       const t = getToken();
-      setToken(getDisplayToken());
       const res = await fetch(
         `${directusUrl}/items/dream_board_items?filter[student_id][_eq]=${student.id}&filter[on_board][_eq]=true&sort[]=z_index`,
         { headers: { Authorization: `Bearer ${t}` } }
@@ -209,7 +207,7 @@ export default function DreamBoardPage() {
             onMouseDown={isEditing ? (e) => startDrag(e, item.id, 'move') : undefined}
           >
             <img
-              src={`${directusUrl}/assets/${item.file_id}?width=1200&quality=80&format=webp&access_token=${token}`}
+              src={`${directusUrl}/assets/${item.file_id}?width=1200&quality=80&format=webp`}
               alt=""
               className="w-full h-full object-cover shadow-2xl"
               draggable={false}
