@@ -201,7 +201,7 @@ export default function SharePage() {
                     <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -258,7 +258,9 @@ export default function SharePage() {
             const url = getShareUrl(link);
             const expired = link.expires_at ? new Date(link.expires_at) < new Date() : false;
             const page = link.page_id ? pages.find((p) => p.id === link.page_id) : null;
-            const category = link.category_id ? categories.find((c) => c.id === link.category_id) : null;
+            const category = link.category_id
+              ? categories.find((c) => String(c.id) === String(link.category_id))
+              : null;
 
             return (
               <Card key={link.id} className={!link.is_active || expired ? 'opacity-60' : ''}>

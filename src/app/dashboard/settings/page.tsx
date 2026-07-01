@@ -124,7 +124,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function deleteCat(id: string) {
+  async function deleteCat(id: number) {
     if (!confirm('Smazat tuto kategorii? Stránky v ní zůstanou, jen bez kategorie.')) return;
     await directus.request(deleteItem('categories', id));
     setCategories((prev) => prev.filter((c) => c.id !== id));

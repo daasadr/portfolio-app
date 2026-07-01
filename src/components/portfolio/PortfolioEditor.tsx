@@ -93,7 +93,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
           if (page) {
             setTitle(page.title);
             setContent(page.content ?? '');
-            setCategoryId(page.category_id ?? 'none');
+            setCategoryId(page.category_id != null ? String(page.category_id) : 'none');
             setVisibility(page.visibility);
             if (page.attachments) {
               const token = getDisplayToken();
@@ -164,7 +164,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       const pageData = {
         title: title.trim(),
         content,
-        category_id: categoryId === 'none' ? undefined : categoryId,
+        category_id: categoryId === 'none' ? undefined : Number(categoryId),
         visibility,
         attachments: allAtts.length > 0 ? allAtts : undefined,
       };
@@ -240,7 +240,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             <SelectContent>
               <SelectItem value="none">Bez kategorie</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -66,10 +66,12 @@ export default function PortfolioPage() {
   // Skupiny: každá kategorie + necatgorized
   const categorized = categories.map(cat => ({
     cat,
-    pages: filtered.filter(p => p.category_id === cat.id),
+    // eslint-disable-next-line eqeqeq
+    pages: filtered.filter(p => p.category_id == cat.id),
   })).filter(g => g.pages.length > 0 || search === '');
 
-  const uncategorized = filtered.filter(p => !p.category_id || !categories.find(c => c.id === p.category_id));
+  // eslint-disable-next-line eqeqeq
+  const uncategorized = filtered.filter(p => !p.category_id || !categories.find(c => c.id == p.category_id));
 
   return (
     <div className="space-y-6">
@@ -221,7 +223,8 @@ function PageGrid({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {pages.map(page => {
-        const cat = categories.find(c => c.id === page.category_id);
+        // eslint-disable-next-line eqeqeq
+        const cat = categories.find(c => c.id == page.category_id);
         return (
           <div
             key={page.id}

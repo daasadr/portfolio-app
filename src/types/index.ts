@@ -34,10 +34,10 @@ export interface Dream {
 }
 
 export interface Category {
-  id: string;
+  id: number; // auto-increment integer
   student_id: string;
   name: string;
-  parent_category_id?: string;
+  parent_category_id?: number;
   is_predefined: boolean;
   sort_order: number;
   background?: string; // CSS color, gradient or /images/backgrounds/xxx.webp
@@ -58,7 +58,7 @@ export interface PortfolioPage {
   student_id: string;
   title: string;
   template_id?: string;
-  category_id?: string;
+  category_id?: number; // references categories.id (integer)
   content?: string;
   attachments?: Array<{ id: string; name: string; type: string }>;
   structured_data?: any;

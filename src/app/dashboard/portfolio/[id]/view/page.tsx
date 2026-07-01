@@ -53,7 +53,7 @@ export default function ViewPortfolioPage({ params }: Props) {
         if (!pg) { router.push('/dashboard/portfolio'); return; }
         setPage(pg);
 
-        if (pg.category_id) {
+        if (pg.category_id != null) {
           const cats = await directus.request(
             readItems('categories', { filter: { id: { _eq: pg.category_id } }, limit: 1 })
           ) as Category[];
