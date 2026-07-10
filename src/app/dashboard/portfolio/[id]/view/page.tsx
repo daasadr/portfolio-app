@@ -10,8 +10,6 @@ import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
 
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
 interface Attachment { id: string; name: string; type: string; }
 
 function FileIcon({ type }: { type: string }) {
@@ -152,7 +150,7 @@ export default function ViewPortfolioPage({ params }: Props) {
             </h3>
             <div className="space-y-3">
               {attachments.map(att => {
-                const src = `${directusUrl}/assets/${att.id}`;
+                const src = `/api/asset/${att.id}`;
                 const isAudio = att.type.startsWith('audio/');
                 const isVideo = att.type.startsWith('video/');
                 const isImage = att.type.startsWith('image/');

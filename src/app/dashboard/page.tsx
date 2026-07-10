@@ -230,7 +230,7 @@ export default function DashboardPage() {
                   {boardItems.slice(0, 9).map((item) => (
                     <img
                       key={item.id}
-                      src={`${directusUrl}/assets/${item.file_id}?width=150&height=100&fit=cover&format=webp`}
+                      src={`/api/asset/${item.file_id}?width=150&height=100&fit=cover&format=webp`}
                       alt=""
                       className="w-full h-20 object-cover group-hover:opacity-90 transition-opacity"
                     />

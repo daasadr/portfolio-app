@@ -207,7 +207,7 @@ export default function DreamBoardPage() {
             onMouseDown={isEditing ? (e) => startDrag(e, item.id, 'move') : undefined}
           >
             <img
-              src={`${directusUrl}/assets/${item.file_id}?width=1200&quality=80&format=webp`}
+              src={`/api/asset/${item.file_id}?width=1200&quality=80&format=webp`}
               alt=""
               className="w-full h-full object-cover shadow-2xl"
               draggable={false}

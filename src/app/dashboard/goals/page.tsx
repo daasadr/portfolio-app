@@ -598,7 +598,7 @@ export default function GoalsPage() {
                         {dreamImages.map((img) => (
                           <div key={img.id} className="relative group rounded overflow-hidden border border-gray-200">
                             <img
-                              src={`${directusUrl}/assets/${img.file_id}?width=200&height=150&fit=cover&format=webp`}
+                              src={`/api/asset/${img.file_id}?width=200&height=150&fit=cover&format=webp`}
                               alt=""
                               className="w-full h-24 object-cover"
                             />
@@ -721,7 +721,7 @@ export default function GoalsPage() {
                               {images.map(img => (
                                 <div key={img.id} className="flex flex-col rounded overflow-hidden border border-gray-200">
                                   <img
-                                    src={`${directusUrl}/assets/${img.file_id}?width=200&height=200&fit=cover&format=webp`}
+                                    src={`/api/asset/${img.file_id}?width=200&height=200&fit=cover&format=webp`}
                                     alt=""
                                     className="w-full aspect-square object-cover"
                                   />

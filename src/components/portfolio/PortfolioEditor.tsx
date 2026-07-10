@@ -50,8 +50,6 @@ function getFileIcon(type: string) {
   return <FileText className="h-4 w-4 text-gray-500" />;
 }
 
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
 export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,7 +100,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
               setAttachments(saved.map(a => ({
                 id: a.id,
                 name: a.name,
-                url: `${directusUrl}/assets/${a.id}`,
+                url: `/api/asset/${a.id}`,
                 type: a.type,
               })));
             }
@@ -119,7 +117,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
 
   async function handleImageUpload(file: File): Promise<string> {
     const uploaded = await uploadFile(file) as { id: string };
-    return `${directusUrl}/assets/${uploaded.id}`; // public assets — no token needed
+    return `/api/asset/${uploaded.id}`;
   }
 
   const MAX_FILE_MB = 30;
