@@ -9,6 +9,7 @@ import {
   BookOpen,
   Calendar,
   Share2,
+  Building2,
   ChevronDown,
   ChevronUp,
   CheckCircle,
@@ -40,7 +41,7 @@ const guides: Guide[] = [
       { heading: 'Odhlášení', text: 'V levém menu úplně dole klikněte na „Odhlásit se". Vždy se odhlaste, pokud používáte sdílený počítač.' },
     ],
     tips: [
-      'Pokud zapomenete heslo, požádejte učitele o pomoc — obnoví vám přístup.',
+      'Pokud zapomenete heslo, klikněte na přihlašovací stránce na „Zapomněli jste heslo?" a postupujte podle pokynů — budete potřebovat svou bezpečnostní otázku.',
       'Každý žák má vlastní účet s vlastními daty. Nikdo jiný vaše portfolio neuvidí, dokud mu to sami neumožníte.',
     ],
   },
@@ -151,19 +152,39 @@ const guides: Guide[] = [
     id: 'share',
     icon: <Share2 className="h-6 w-6" />,
     title: 'Sdílení portfolia',
-    subtitle: 'Jak ukázat portfolio rodičům nebo učiteli',
+    subtitle: 'Jak ukázat portfolio rodičům nebo se propojit s učitelem',
     color: 'from-rose-500 to-pink-600',
     steps: [
       { heading: 'Sdílení celého portfolia', text: 'V menu klikněte na „Sdílení". Zvolte „Celé portfolio" a klikněte na „Vytvořit odkaz".' },
-      { text: 'Zkopírujte vygenerovaný odkaz a pošlete ho rodičům nebo učiteli (e-mailem, přes zprávy, nebo ho vypište na papír).' },
+      { text: 'Zkopírujte vygenerovaný odkaz a pošlete ho rodičům (e-mailem, přes zprávy, nebo ho vypište na papír).' },
       { heading: 'Sdílení konkrétní stránky', text: 'Místo celého portfolia lze sdílet i jednu konkrétní stránku — vyberte „Jedna stránka" a zvolte, kterou.' },
       { heading: 'Ochrana heslem', text: 'Chcete-li, aby odkaz byl chráněn, nastavte heslo. Příjemce ho bude muset zadat pro zobrazení.' },
       { heading: 'Zrušit sdílení', text: 'V přehledu sdílených odkazů klikněte na „Deaktivovat". Odkaz přestane fungovat.' },
+      { heading: 'Propojení s učitelem', text: 'Pokud vás učitel pozval do své třídy, zobrazí se v sekci „Propojení s učiteli" jeho jméno a tlačítka „Přijmout" a „Odmítnout".' },
+      { text: 'Po přijetí má učitel přístup k vašemu portfoliu v režimu jen pro čtení. Propojení můžete kdykoli zrušit tlačítkem „Odebrat".' },
     ],
     tips: [
       'Sdílený odkaz zobrazí portfolio jen pro čtení — nikdo nemůže vaše portfolio měnit.',
       'Odkaz můžete kdykoli zrušit nebo vytvořit nový.',
       'Rodiče nepotřebují účet — odkaz otevřou v jakémkoli prohlížeči.',
+    ],
+  },
+  {
+    id: 'community',
+    icon: <Building2 className="h-6 w-6" />,
+    title: 'Komunita',
+    subtitle: 'Organizace a skupiny — setkávejte se s ostatními',
+    color: 'from-violet-500 to-violet-700',
+    steps: [
+      { heading: 'Co je komunita?', text: 'Komunita umožňuje vytvářet organizace (např. školu nebo kroužek) a skupiny uvnitř nich (např. třídy nebo zájmové skupiny).' },
+      { heading: 'Připojit se k organizaci nebo skupině', text: 'V menu klikněte na „Komunita". Do vyhledávacího pole napište název organizace nebo skupiny (min. 2 znaky) a klikněte na „Připojit se".' },
+      { heading: 'Vytvořit novou organizaci nebo skupinu', text: 'Klikněte na tlačítko „Vytvořit" vpravo nahoře. Vyplňte název a popis. Pro skupinu lze zvolit, do které organizace patří.' },
+      { heading: 'Odejít ze skupiny nebo organizace', text: 'V přehledu vašich členství klikněte na ikonu „odejít" (šipka vpravo). Budete odebráni jako člen.' },
+      { heading: 'Správce (admin)', text: 'Zakladatel organizace nebo skupiny se stává automaticky správcem (admin). Správce může skupinu nebo organizaci smazat kliknutím na ikonu koše.' },
+    ],
+    tips: [
+      'Vyhledávání funguje již od 2 znaků — stačí napsat začátek názvu.',
+      'Každý může být členem více organizací a skupin zároveň.',
     ],
   },
 ];
@@ -276,10 +297,8 @@ export default function HelpPage() {
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-center">
         <p className="text-gray-700 font-medium">Nenašli jste odpověď?</p>
         <p className="text-gray-500 text-sm mt-1">
-          Obraťte se na svého učitele nebo napište na{' '}
-          <a href="mailto:podpora@portfolioparadise.eu" className="text-blue-600 hover:underline">
-            podpora@portfolioparadise.eu
-          </a>
+          Obraťte se na svého učitele nebo napište správci na{' '}
+          <span className="font-mono text-blue-700 select-all">daasa.d@seznam.cz</span>
         </p>
       </div>
     </div>
