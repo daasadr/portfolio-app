@@ -14,9 +14,9 @@ function adminHeaders() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName, securityQuestion, securityAnswer } = await request.json() as {
+    const { email, password, firstName, lastName, securityQuestion, securityAnswer, isTeacher } = await request.json() as {
       email: string; password: string; firstName: string; lastName: string;
-      securityQuestion?: number; securityAnswer?: string;
+      securityQuestion?: number; securityAnswer?: string; isTeacher?: boolean;
     };
 
     const userRes = await fetch(`${directusUrl}/users`, {
@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         first_name: firstName,
         last_name: lastName,
+        is_teacher: isTeacher ?? false,
         ...(securityQuestion != null && { security_question: securityQuestion }),
         ...(securityAnswer && { security_answer: securityAnswer.trim().toLowerCase() }),
       }),

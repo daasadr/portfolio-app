@@ -29,9 +29,19 @@ import {
   Eye,
   Lock,
   CheckCheck,
+  GraduationCap,
+  Check,
+  X,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken, getStoredToken } from '@/lib/directus';
 import type { Student, SharedLink, PortfolioPage, Category, ShareType } from '@/types';
+
+interface TeacherConnection {
+  id: number;
+  status: 'pending' | 'accepted';
+  created_at: string;
+  other_person: { id: number; first_name: string; last_name: string } | null;
+}
 
 const SHARE_TYPE_LABELS: Record<ShareType, string> = {
   full_portfolio: 'Celé portfolio',
@@ -48,6 +58,8 @@ export default function SharePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [teacherConnections, setTeacherConnections] = useState<TeacherConnection[]>([]);
+  const [tcLoading, setTcLoading] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
@@ -65,6 +77,13 @@ export default function SharePage() {
         const s = await getCurrentStudent();
         if (!s) return;
         setStudent(s);
+
+        // Načti propojení s učiteli
+        const tcRes = await fetch('/api/connections', { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+        if (tcRes.ok) {
+          const tcData = await tcRes.json() as { connections: TeacherConnection[] };
+          setTeacherConnections(tcData.connections ?? []);
+        }
 
         const [l, p, c] = await Promise.all([
           directus.request(
@@ -98,6 +117,21 @@ export default function SharePage() {
     };
     load();
   }, []);
+
+  async function handleTcAction(id: number, action: 'accepted' | 'rejected') {
+    setTcLoading(true);
+    await fetch(`/api/connections/${id}`, {
+      method: action === 'rejected' ? 'DELETE' : 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
+      body: action === 'accepted' ? JSON.stringify({ status: 'accepted' }) : undefined,
+    });
+    const res = await fetch('/api/connections', { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+    if (res.ok) {
+      const data = await res.json() as { connections: TeacherConnection[] };
+      setTeacherConnections(data.connections ?? []);
+    }
+    setTcLoading(false);
+  }
 
   function getShareUrl(link: SharedLink) {
     return `${appUrl}/portfolio/${link.share_token}`;
@@ -246,6 +280,64 @@ export default function SharePage() {
         </Dialog>
       </div>
 
+      {/* Propojení s učiteli */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+          <GraduationCap className="h-4 w-4" /> Propojení s učiteli
+        </h2>
+        {teacherConnections.length === 0 ? (
+          <Card className="bg-gray-50/50">
+            <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
+              Zatím nejste propojeni s žádným učitelem. Učitel vás přidá podle vašeho e-mailu a vy žádost přijmete zde.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {teacherConnections.map(tc => (
+              <Card key={tc.id} className={tc.status === 'pending' ? 'border-yellow-200 bg-yellow-50/40' : ''}>
+                <CardContent className="pt-3 pb-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">
+                      {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Učitel'}
+                    </p>
+                    {tc.status === 'pending' ? (
+                      <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-0.5">Čeká na vaše přijetí</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs mt-0.5">Propojeno</Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {tc.status === 'pending' && (
+                      <>
+                        <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50"
+                          onClick={() => handleTcAction(tc.id, 'accepted')} disabled={tcLoading}>
+                          <Check className="h-4 w-4 mr-1" /> Přijmout
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600"
+                          onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    {tc.status === 'accepted' && (
+                      <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600"
+                        onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
+                        <X className="h-4 w-4" /> Odebrat
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sdílecí odkazy */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+          <Share2 className="h-4 w-4" /> Sdílecí odkazy
+        </h2>
       {links.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <Share2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -326,6 +418,7 @@ export default function SharePage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

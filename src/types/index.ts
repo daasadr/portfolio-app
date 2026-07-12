@@ -7,8 +7,19 @@ export interface Student {
   last_name: string;
   avatar?: string;
   date_of_birth?: string;
+  is_teacher?: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface StudentConnection {
+  id: number;
+  teacher_id: number;
+  student_id: number;
+  status: 'pending' | 'accepted';
+  created_at: string;
+  teacher?: { id: number; first_name: string; last_name: string };
+  student?: { id: number; first_name: string; last_name: string };
 }
 
 export interface PersonalGoal {
@@ -125,6 +136,7 @@ export interface Schema {
   calendar_entries: CalendarEntry[];
   shared_links: SharedLink[];
   portfolio_pages_files: PortfolioPageFile[];
+  student_connections: StudentConnection[];
 }
 
 // Utility typy

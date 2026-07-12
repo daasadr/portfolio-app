@@ -15,6 +15,8 @@ import {
   LogOut,
   LayoutDashboard,
   HelpCircle,
+  GraduationCap,
+  Users,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
@@ -86,7 +88,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (!student && !isLoading) return null;
 
-  const navigation = [
+  const studentNavigation = [
     { name: 'Přehled', href: '/dashboard', icon: BookOpen },
     { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
     { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
@@ -96,6 +98,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
     { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
   ];
+
+  const teacherNavigation = [
+    { name: 'Přehled', href: '/dashboard', icon: BookOpen },
+    { name: 'Moji žáci', href: '/dashboard/students', icon: Users },
+    { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
+    { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
+    { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
+    { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
+    { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
+    { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
+    { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
+  ];
+
+  const navigation = student?.is_teacher ? teacherNavigation : studentNavigation;
 
   return (
     <div className="min-h-screen" style={{ ...bgStyle(bg), backgroundAttachment: 'fixed' }}>
@@ -174,10 +190,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1" />
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <div className="text-sm">
+              <div className="text-sm flex items-center gap-2">
                 <span className="font-medium text-gray-900">
                   {student?.first_name} {student?.last_name}
                 </span>
+                {student?.is_teacher && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                    <GraduationCap className="h-3 w-3" /> Učitel
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, X, ShieldQuestion } from 'lucide-react';
+import { Check, X, ShieldQuestion, GraduationCap } from 'lucide-react';
 import { register } from '@/lib/directus';
 import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 
@@ -45,6 +45,7 @@ export default function RegisterPage() {
   });
   const [securityQuestion, setSecurityQuestion] = useState<number>(-1);
   const [securityAnswer, setSecurityAnswer] = useState('');
+  const [isTeacher, setIsTeacher] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -94,7 +95,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError('');
     try {
-      await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer);
+      await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer, isTeacher);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba při registraci. Zkuste to znovu.');
@@ -213,6 +214,19 @@ export default function RegisterPage() {
                   <X className="h-3 w-3" /> Hesla se neshodují
                 </p>
               )}
+            </div>
+
+            {/* Typ účtu */}
+            <div
+              onClick={() => setIsTeacher(v => !v)}
+              className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${isTeacher ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'}`}
+            >
+              <GraduationCap className={`h-5 w-5 flex-shrink-0 ${isTeacher ? 'text-indigo-600' : 'text-gray-400'}`} />
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${isTeacher ? 'text-indigo-800' : 'text-gray-700'}`}>Registruji se jako učitel/ka</p>
+                <p className="text-xs text-gray-400">Budu moci sledovat portfolia svých žáků</p>
+              </div>
+              <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isTeacher ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'}`} />
             </div>
 
             {/* Bezpečnostní otázka */}
