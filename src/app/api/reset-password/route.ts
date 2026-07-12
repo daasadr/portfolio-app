@@ -21,14 +21,15 @@ export async function GET(request: NextRequest) {
 
   const userId = users[0].id;
   const studentRes = await fetch(
-    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}&fields=security_question`,
+    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}`,
     { headers: adminHeaders() }
   );
-  const { data: students } = await studentRes.json() as { data: { security_question: number }[] };
+  const studentBody = await studentRes.json() as { data?: { security_question?: number }[]; errors?: unknown };
+  const students = studentBody.data;
   if (!students?.length) return NextResponse.json({ message: 'Účet nenalezen' }, { status: 404 });
 
   const q = students[0].security_question;
-  if (q == null) return NextResponse.json({ message: 'Bezpečnostní otázka není nastavena' }, { status: 400 });
+  if (q == null) return NextResponse.json({ message: 'Bezpečnostní otázka pro tento účet není nastavena. Kontaktujte správce.' }, { status: 400 });
 
   return NextResponse.json({ security_question: q });
 }
@@ -55,10 +56,11 @@ export async function POST(request: NextRequest) {
 
   const userId = users[0].id;
   const studentRes = await fetch(
-    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}&fields=security_answer`,
+    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}`,
     { headers: adminHeaders() }
   );
-  const { data: students } = await studentRes.json() as { data: { security_answer: string }[] };
+  const studentBody = await studentRes.json() as { data?: { security_answer?: string }[] };
+  const students = studentBody.data;
   if (!students?.length) return NextResponse.json({ message: 'Nesprávný email nebo odpověď' }, { status: 400 });
 
   const storedAnswer = students[0].security_answer?.trim().toLowerCase();
