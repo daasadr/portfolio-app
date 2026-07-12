@@ -28,14 +28,14 @@ const PREDEFINED_NAMES = [
 ];
 
 // ── Pozadí – barvy ───────────────────────────────────────────────────────────
-const BG_COLORS = [
+export const BG_COLORS = [
   '#ffffff', '#FFF9C4', '#E8F5E9', '#E3F2FD',
   '#F3E5F5', '#FFE0E0', '#FFF3E0', '#E0F7FA',
   '#263238', '#212121',
 ];
 
 // ── Pozadí – přechody ────────────────────────────────────────────────────────
-const BG_GRADIENTS = [
+export const BG_GRADIENTS = [
   'linear-gradient(135deg,#F6D365,#FDA085)',
   'linear-gradient(135deg,#A1C4FD,#C2E9FB)',
   'linear-gradient(135deg,#96FBC4,#F9F586)',
@@ -84,7 +84,7 @@ export function catTextStyle(background?: string): React.CSSProperties {
 }
 
 // ── Background picker ─────────────────────────────────────────────────────────
-function BgPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function BgPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [photoErrors, setPhotoErrors] = useState<Set<string>>(new Set());
 
   const Swatch = ({ bg, size = 'md' }: { bg: string; size?: 'sm' | 'md' }) => {

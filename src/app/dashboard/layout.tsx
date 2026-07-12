@@ -17,7 +17,10 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
+import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { Student } from '@/types';
+
+const DEFAULT_BG = '/images/paradise-bg.webp';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,7 +30,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bg, setBg] = useState(DEFAULT_BG);
   const router = useRouter();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('pp_bg');
+    if (saved) setBg(saved);
+    const handler = () => {
+      const s = localStorage.getItem('pp_bg');
+      if (s) setBg(s);
+    };
+    window.addEventListener('pp-bg-changed', handler);
+    return () => window.removeEventListener('pp-bg-changed', handler);
+  }, []);
 
   useEffect(() => {
     const loadStudent = async () => {
@@ -59,8 +74,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ ...bgStyle(bg), backgroundAttachment: 'fixed' }}>
+        <div className="text-center bg-white/80 backdrop-blur rounded-xl p-6 shadow">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600">Načítám...</p>
         </div>
@@ -82,7 +97,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ ...bgStyle(bg), backgroundAttachment: 'fixed' }}>
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />

@@ -13,9 +13,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Save, Plus, Trash2, User, Tag, Pencil } from 'lucide-react';
+import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, updateItem, createItem, deleteItem } from '@/lib/directus';
+import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { Student, Category } from '@/types';
+
+const DEFAULT_BG = '/images/paradise-bg.webp';
 
 export default function SettingsPage() {
   const [student, setStudent] = useState<Student | null>(null);
@@ -30,10 +33,23 @@ export default function SettingsPage() {
   });
 
   // Kategorie
+  const [appBg, setAppBg] = useState(DEFAULT_BG);
+
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [catName, setCatName] = useState('');
   const [catSaving, setCatSaving] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('pp_bg');
+    if (saved) setAppBg(saved);
+  }, []);
+
+  function saveAppBg(bg: string) {
+    setAppBg(bg);
+    localStorage.setItem('pp_bg', bg);
+    window.dispatchEvent(new Event('pp-bg-changed'));
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -182,6 +198,35 @@ export default function SettingsPage() {
               {saveStatus === 'saving' ? 'Ukládám...' : saveStatus === 'saved' ? 'Uloženo ✓' : 'Uložit profil'}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pozadí aplikace */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Pozadí aplikace
+          </CardTitle>
+          <CardDescription>Vyberte pozadí, které se zobrazí na všech stránkách</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Výchozí</p>
+            <button
+              type="button"
+              onClick={() => saveAppBg(DEFAULT_BG)}
+              className={`w-16 h-16 rounded-lg border-2 overflow-hidden flex items-center justify-center transition-all ${appBg === DEFAULT_BG ? 'border-blue-500 scale-110 shadow-md' : 'border-gray-200 hover:border-gray-400'}`}
+              style={{ backgroundImage: `url(${DEFAULT_BG})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+            >
+              {appBg === DEFAULT_BG && <Check className="h-3 w-3 text-white drop-shadow" />}
+            </button>
+          </div>
+          <BgPicker value={appBg} onChange={saveAppBg} />
+          <div
+            className="h-20 rounded-lg border overflow-hidden"
+            style={bgStyle(appBg)}
+          />
         </CardContent>
       </Card>
 
