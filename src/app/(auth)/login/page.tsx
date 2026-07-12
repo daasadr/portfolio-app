@@ -9,18 +9,28 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { login } from '@/lib/directus';
 
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidEmail(email)) {
+      setEmailError('Neplatná e-mailová adresa');
+      return;
+    }
     setIsLoading(true);
     setError('');
+    setEmailError('');
 
     try {
       await login(email, password, remember);
@@ -60,10 +70,13 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                onBlur={() => email && !isValidEmail(email) && setEmailError('Neplatná e-mailová adresa')}
                 required
                 placeholder="vas@email.cz"
+                className={emailError ? 'border-red-400 focus-visible:ring-red-300' : ''}
               />
+              {emailError && <p className="text-xs text-red-500">{emailError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Heslo</Label>
