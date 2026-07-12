@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, X } from 'lucide-react';
+import { Check, X, ShieldQuestion } from 'lucide-react';
 import { register } from '@/lib/directus';
+import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
@@ -42,6 +43,8 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     email: '', password: '', confirmPassword: '', firstName: '', lastName: '',
   });
+  const [securityQuestion, setSecurityQuestion] = useState<number>(-1);
+  const [securityAnswer, setSecurityAnswer] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -79,11 +82,19 @@ export default function RegisterPage() {
       setError('Hesla se neshodují.');
       return;
     }
+    if (securityQuestion < 0) {
+      setError('Vyberte bezpečnostní otázku pro obnovu hesla.');
+      return;
+    }
+    if (!securityAnswer.trim()) {
+      setError('Vyplňte odpověď na bezpečnostní otázku.');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
     try {
-      await register(formData.email, formData.password, formData.firstName, formData.lastName);
+      await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba při registraci. Zkuste to znovu.');
@@ -202,6 +213,32 @@ export default function RegisterPage() {
                   <X className="h-3 w-3" /> Hesla se neshodují
                 </p>
               )}
+            </div>
+
+            {/* Bezpečnostní otázka */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                <ShieldQuestion className="h-4 w-4 text-blue-500" />
+                Bezpečnostní otázka pro obnovu hesla
+              </div>
+              <p className="text-xs text-gray-400">Použijete ji, pokud zapomenete heslo.</p>
+              <select
+                value={securityQuestion}
+                onChange={(e) => setSecurityQuestion(Number(e.target.value))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value={-1} disabled>— Vyberte otázku —</option>
+                {SECURITY_QUESTIONS.map((q, i) => (
+                  <option key={i} value={i}>{q}</option>
+                ))}
+              </select>
+              <Input
+                value={securityAnswer}
+                onChange={(e) => setSecurityAnswer(e.target.value)}
+                placeholder="Vaše odpověď..."
+                disabled={securityQuestion < 0}
+              />
+              <p className="text-xs text-gray-400">Odpověď není citlivá na velká/malá písmena.</p>
             </div>
 
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}

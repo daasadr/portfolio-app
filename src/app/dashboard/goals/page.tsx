@@ -525,7 +525,7 @@ export default function GoalsPage() {
           )}
 
           {goals.length === 0 && (
-            <div className="text-center py-16 text-gray-500">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl text-center py-14 text-gray-500">
               <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">Zatím nemáte žádné cíle</p>
               <p className="text-sm mt-1">Klikněte na &quot;Nový cíl&quot; a začněte svou cestu.</p>
@@ -683,7 +683,7 @@ export default function GoalsPage() {
           </div>
 
           {dreams.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl text-center py-14 text-gray-500">
               <Star className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">Zatím nemáte žádné sny</p>
               <p className="text-sm mt-1">Zapište si, čeho byste jednou chtěli dosáhnout nebo co mít.</p>

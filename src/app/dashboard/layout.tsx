@@ -183,7 +183,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         {/* Page content */}
-        <main className="py-6">
+        <main className="py-6 bg-white/55 backdrop-blur-[2px] min-h-[calc(100vh-4rem)]">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {children}
           </div>

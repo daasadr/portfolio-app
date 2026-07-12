@@ -14,7 +14,10 @@ function adminHeaders() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName } = await request.json();
+    const { email, password, firstName, lastName, securityQuestion, securityAnswer } = await request.json() as {
+      email: string; password: string; firstName: string; lastName: string;
+      securityQuestion?: number; securityAnswer?: string;
+    };
 
     const userRes = await fetch(`${directusUrl}/users`, {
       method: 'POST',
@@ -40,7 +43,13 @@ export async function POST(request: NextRequest) {
     const studentRes = await fetch(`${directusUrl}/items/students`, {
       method: 'POST',
       headers: adminHeaders(),
-      body: JSON.stringify({ user_id: user.id, first_name: firstName, last_name: lastName }),
+      body: JSON.stringify({
+        user_id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        ...(securityQuestion != null && { security_question: securityQuestion }),
+        ...(securityAnswer && { security_answer: securityAnswer.trim().toLowerCase() }),
+      }),
     });
 
     const { data: student } = await studentRes.json() as { data: { id: string } };

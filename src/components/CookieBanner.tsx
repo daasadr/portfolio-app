@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 
 const CONSENT_KEY = 'pp_consent';
 
 export default function CookieBanner() {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem(CONSENT_KEY)) {
       setMounted(true);
-      const t = setTimeout(() => setVisible(true), 600);
+      const t = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(t);
     }
   }, []);
@@ -22,44 +22,40 @@ export default function CookieBanner() {
   function dismiss() {
     localStorage.setItem(CONSENT_KEY, 'accepted');
     setVisible(false);
-    setTimeout(() => setMounted(false), 400);
+    setTimeout(() => setMounted(false), 500);
   }
 
   if (!mounted) return null;
 
   return (
     <div
-      className={`fixed bottom-5 left-5 z-50 max-w-xs transition-all duration-400 ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
-      }`}
+      className="fixed left-0 bottom-20 z-50 w-72"
+      style={{
+        transform: !visible
+          ? 'translateX(-110%)'
+          : expanded
+          ? 'translateX(0)'
+          : 'translateX(calc(-100% + 2.75rem))',
+        transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
     >
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-lg flex-shrink-0 mt-0.5" aria-hidden>🍪</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-800 mb-1">Soukromí & cookies</p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Používáme pouze technické cookies nutné pro přihlášení. Žádné sledování ani reklamy.
-            </p>
-            <div className="flex items-center gap-3 mt-3">
-              <Button size="sm" onClick={dismiss} className="h-7 text-xs px-3">
-                Rozumím
-              </Button>
-              <Link
-                href="/privacy"
-                className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-              >
-                Více info
-              </Link>
-            </div>
+      <div className="bg-white/95 backdrop-blur-sm rounded-r-2xl shadow-lg border-r border-t border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+        <span className="text-xl flex-shrink-0" aria-hidden>🍪</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-gray-800 mb-0.5">Cookies & soukromí</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Pouze technické cookies pro přihlášení. Bez sledování.
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <Button size="sm" onClick={dismiss} className="h-6 text-xs px-2">
+              Rozumím
+            </Button>
+            <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+              Více info
+            </Link>
           </div>
-          <button
-            onClick={dismiss}
-            aria-label="Zavřít"
-            className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0 -mt-0.5 -mr-0.5"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
         </div>
       </div>
     </div>

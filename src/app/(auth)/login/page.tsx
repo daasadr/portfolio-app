@@ -110,11 +110,16 @@ export default function LoginPage() {
               {isLoading ? 'Přihlašuji...' : 'Přihlásit se'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-1.5">
             <p className="text-sm text-gray-600">
               Nemáte účet?{' '}
               <a href="/register" className="text-blue-600 hover:underline">
                 Zaregistrujte se
+              </a>
+            </p>
+            <p className="text-sm">
+              <a href="/forgot-password" className="text-gray-400 hover:text-gray-600 hover:underline">
+                Zapomněli jste heslo?
               </a>
             </p>
           </div>

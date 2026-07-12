@@ -75,12 +75,14 @@ export async function register(
   email: string,
   password: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  securityQuestion?: number,
+  securityAnswer?: string
 ) {
   const response = await fetch('/api/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, firstName, lastName }),
+    body: JSON.stringify({ email, password, firstName, lastName, securityQuestion, securityAnswer }),
   });
 
   if (!response.ok) {
