@@ -125,6 +125,46 @@ export interface DreamBoardItem {
   on_board: boolean;
 }
 
+export interface Organisation {
+  id: number;
+  name: string;
+  description?: string;
+  created_by: number;
+  created_at: string;
+  member_count?: number;
+  my_role?: 'admin' | 'member';
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  description?: string;
+  organisation_id?: number;
+  organisation_name?: string;
+  created_by: number;
+  created_at: string;
+  member_count?: number;
+  my_role?: 'admin' | 'member';
+}
+
+export interface OrganisationMember {
+  id: number;
+  organisation_id: number;
+  student_id: number;
+  role: 'admin' | 'member';
+  joined_at: string;
+  student?: { id: number; first_name: string; last_name: string };
+}
+
+export interface GroupMember {
+  id: number;
+  group_id: number;
+  student_id: number;
+  role: 'admin' | 'member';
+  joined_at: string;
+  student?: { id: number; first_name: string; last_name: string };
+}
+
 // Directus Schema interface
 export interface Schema {
   students: Student[];
@@ -137,6 +177,10 @@ export interface Schema {
   shared_links: SharedLink[];
   portfolio_pages_files: PortfolioPageFile[];
   student_connections: StudentConnection[];
+  organisations: Organisation[];
+  groups: Group[];
+  organisation_members: OrganisationMember[];
+  group_members: GroupMember[];
 }
 
 // Utility typy
