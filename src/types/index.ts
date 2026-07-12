@@ -130,7 +130,7 @@ export interface Organisation {
   name: string;
   description?: string;
   created_by: number;
-  created_at: string;
+  date_created: string;
   member_count?: number;
   my_role?: 'admin' | 'member';
 }
@@ -142,7 +142,7 @@ export interface Group {
   organisation_id?: number;
   organisation_name?: string;
   created_by: number;
-  created_at: string;
+  date_created: string;
   member_count?: number;
   my_role?: 'admin' | 'member';
 }
@@ -152,7 +152,7 @@ export interface OrganisationMember {
   organisation_id: number;
   student_id: number;
   role: 'admin' | 'member';
-  joined_at: string;
+  date_created: string;
   student?: { id: number; first_name: string; last_name: string };
 }
 
@@ -161,7 +161,7 @@ export interface GroupMember {
   group_id: number;
   student_id: number;
   role: 'admin' | 'member';
-  joined_at: string;
+  date_created: string;
   student?: { id: number; first_name: string; last_name: string };
 }
 
