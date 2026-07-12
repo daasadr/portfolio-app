@@ -16,6 +16,8 @@ import {
 import { getStoredToken } from '@/lib/directus';
 import type { Organisation, Group } from '@/types';
 
+function asGroup(item: Organisation | Group): Group { return item as Group; }
+
 type Tab = 'organisations' | 'groups';
 
 export default function CommunityPage() {
@@ -270,9 +272,9 @@ export default function CommunityPage() {
                         <Users className="h-3 w-3" /> {item.member_count} {item.member_count === 1 ? 'člen' : 'členů'}
                       </span>
                     )}
-                    {'organisation_name' in item && item.organisation_name && (
+                    {asGroup(item).organisation_name && (
                       <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Building2 className="h-3 w-3" /> {item.organisation_name}
+                        <Building2 className="h-3 w-3" /> {asGroup(item).organisation_name}
                       </span>
                     )}
                   </div>
