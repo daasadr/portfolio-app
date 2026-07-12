@@ -174,7 +174,7 @@ export default function DreamBoardPage() {
 
       {isEditing && (
         <div className="bg-blue-900/40 border-b border-blue-700/50 px-4 py-2 text-blue-300 text-sm text-center">
-          Režim úprav — přetahujte obrázky, měňte jejich velikost rohemi, nebo je odeberte pomocí koše
+          Režim úprav — přetahujte obrázky, měňte jejich velikost tažením za rohy nebo je odeberte pomocí koše
         </div>
       )}
 
