@@ -30,8 +30,17 @@ export default function PrivacyPage() {
 
           <Section title="1. Správce osobních údajů">
             <p>
-              Správcem osobních údajů je provozovatel aplikace Portfolio Paradise. Konkrétní identifikační
-              údaje školy nebo organizace jsou dostupné u vašeho pedagoga nebo správce aplikace.
+              Správcem osobních údajů je provozovatel aplikace Portfolio Paradise:
+            </p>
+            <p className="mt-2 font-medium text-gray-800">
+              Dasa D.<br />
+              <a href="mailto:daasa.d@seznam.cz" className="text-blue-600 hover:underline font-normal">
+                daasa.d@seznam.cz
+              </a>
+            </p>
+            <p className="mt-2 text-gray-500">
+              Aplikace je provozována jako bezplatná služba pro školy a vzdělávací organizace.
+              Školy a pedagogové jsou uživateli aplikace, nikoli samostatnými správci dat.
             </p>
           </Section>
 
@@ -95,7 +104,10 @@ export default function PrivacyPage() {
               <Li><strong>Odvolání souhlasu</strong> – kdykoli bez negativních důsledků</Li>
             </ul>
             <p className="mt-3 text-gray-500">
-              Pro uplatnění práv se obraťte na správce aplikace (vašeho pedagoga nebo školu).
+              Pro uplatnění práv napište na{' '}
+              <a href="mailto:daasa.d@seznam.cz" className="text-blue-600 hover:underline">
+                daasa.d@seznam.cz
+              </a>.
               Máte také právo podat stížnost u{' '}
               <a
                 href="https://www.uoou.cz"
