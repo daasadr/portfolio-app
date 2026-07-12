@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Check, X, Mail } from 'lucide-react';
+import { ArrowLeft, Check, X, Mail, ChevronDown } from 'lucide-react';
 import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 
 function getStrength(pwd: string) {
@@ -32,6 +32,7 @@ export default function ForgotPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAdminInfo, setShowAdminInfo] = useState(false);
 
   const strength = getStrength(newPassword);
   const passwordsMatch = confirmPassword && newPassword === confirmPassword;
@@ -202,16 +203,23 @@ export default function ForgotPasswordPage() {
           )}
 
           {step !== 'done' && (
-            <div className="mt-5 pt-4 border-t text-center">
-              <p className="text-xs text-gray-400">
-                Nepamatujete si ani odpověď na bezpečnostní otázku?{' '}
-                <a
-                  href={`mailto:daasa.d@seznam.cz?subject=PORTFOLIO-PARADISE OBNOVENÍ HESLA&body=Dobrý den,%0A%0Apotřebuji obnovit přístup k účtu s emailem: ${encodeURIComponent(email)}%0A%0ADěkuji`}
-                  className="text-blue-600 hover:underline"
-                >
-                  Kontaktujte správce
-                </a>
-              </p>
+            <div className="mt-5 pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowAdminInfo(v => !v)}
+                className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1"
+              >
+                Nepamatujete si ani odpověď na bezpečnostní otázku?
+                <ChevronDown className={`h-3 w-3 transition-transform ${showAdminInfo ? 'rotate-180' : ''}`} />
+              </button>
+              {showAdminInfo && (
+                <div className="mt-3 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-900 space-y-1.5">
+                  <p>Napište e-mail správci aplikace:</p>
+                  <p className="font-mono font-semibold select-all">daasa.d@seznam.cz</p>
+                  <p className="text-xs text-blue-700">Do předmětu napište přesně:</p>
+                  <p className="font-mono font-semibold select-all text-xs">PORTFOLIO-PARADISE OBNOVENÍ HESLA</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
