@@ -34,17 +34,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
 
   useEffect(() => {
-    const saved = localStorage.getItem('pp_bg');
-    if (saved) setBg(saved);
-    const handler = () => {
-      const s = localStorage.getItem('pp_bg');
-      if (s) setBg(s);
-    };
-    window.addEventListener('pp-bg-changed', handler);
-    return () => window.removeEventListener('pp-bg-changed', handler);
-  }, []);
-
-  useEffect(() => {
     const loadStudent = async () => {
       try {
         const studentData = await getCurrentStudent();
@@ -53,6 +42,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           return;
         }
         setStudent(studentData);
+        const saved = localStorage.getItem(`pp_bg_${studentData.id}`);
+        if (saved) setBg(saved);
       } catch {
         router.push('/login');
       } finally {
@@ -62,6 +53,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     loadStudent();
   }, [router]);
+
+  useEffect(() => {
+    if (!student) return;
+    const handler = () => {
+      const s = localStorage.getItem(`pp_bg_${student.id}`);
+      if (s) setBg(s);
+    };
+    window.addEventListener('pp-bg-changed', handler);
+    return () => window.removeEventListener('pp-bg-changed', handler);
+  }, [student]);
 
   const handleLogout = async () => {
     try {

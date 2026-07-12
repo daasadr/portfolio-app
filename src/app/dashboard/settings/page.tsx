@@ -40,14 +40,10 @@ export default function SettingsPage() {
   const [catName, setCatName] = useState('');
   const [catSaving, setCatSaving] = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('pp_bg');
-    if (saved) setAppBg(saved);
-  }, []);
-
   function saveAppBg(bg: string) {
+    if (!student) return;
     setAppBg(bg);
-    localStorage.setItem('pp_bg', bg);
+    localStorage.setItem(`pp_bg_${student.id}`, bg);
     window.dispatchEvent(new Event('pp-bg-changed'));
   }
 
@@ -57,6 +53,8 @@ export default function SettingsPage() {
         const s = await getCurrentStudent();
         if (!s) return;
         setStudent(s);
+        const saved = localStorage.getItem(`pp_bg_${s.id}`);
+        if (saved) setAppBg(saved);
         setProfileForm({
           first_name: s.first_name,
           last_name: s.last_name,
