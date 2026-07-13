@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Users,
   Building2,
+  Globe2,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
@@ -96,6 +97,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
+    { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },
     { name: 'Komunita', href: '/dashboard/community', icon: Building2 },
     { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
     { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
@@ -109,6 +111,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
+    { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },
     { name: 'Komunita', href: '/dashboard/community', icon: Building2 },
     { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
     { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },

@@ -13,9 +13,19 @@ import {
   CheckCircle,
   Circle,
   LayoutDashboard,
+  Flame,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, getStoredToken } from '@/lib/directus';
+import { BADGES } from '@/lib/badges';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
+
+interface UserBadge {
+  id: number;
+  badge_slug: string;
+  steps_done: number;
+  last_step_date: string | null;
+  status: 'active' | 'completed' | 'expired';
+}
 
 const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 
@@ -35,6 +45,8 @@ export default function DashboardPage() {
   const [boardItems, setBoardItems] = useState<DreamBoardItem[]>([]);
   const [recentPages, setRecentPages] = useState<PortfolioPage[]>([]);
   const [todayEntries, setTodayEntries] = useState<CalendarEntry[]>([]);
+  const [activeBadges, setActiveBadges] = useState<UserBadge[]>([]);
+  const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -82,6 +94,15 @@ export default function DashboardPage() {
         setRecentPages(pagesData ?? []);
         setTodayEntries(entriesData ?? []);
         setBoardItems(boardRes.data ?? []);
+
+        // Load active badges
+        const badgeRes = await fetch('/api/user-badges', {
+          headers: { Authorization: `Bearer ${getStoredToken()}` },
+        });
+        if (badgeRes.ok) {
+          const badgeData = await badgeRes.json() as { user_badges: UserBadge[] };
+          setActiveBadges((badgeData.user_badges ?? []).filter(ub => ub.status === 'active'));
+        }
       } catch (error) {
         console.error('Chyba při načítání dashboard dat:', error);
       } finally {
@@ -91,6 +112,27 @@ export default function DashboardPage() {
 
     loadDashboardData();
   }, []);
+
+  async function handleCheckin(ubId: number) {
+    setCheckingIn(ubId);
+    const res = await fetch(`/api/user-badges/${ubId}/checkin`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getStoredToken()}` },
+    });
+    if (res.ok) {
+      const data = await res.json() as { completed?: boolean };
+      if (data.completed) {
+        setActiveBadges(prev => prev.filter(ub => ub.id !== ubId));
+      } else {
+        setActiveBadges(prev => prev.map(ub =>
+          ub.id === ubId
+            ? { ...ub, steps_done: ub.steps_done + 1, last_step_date: new Date().toISOString().slice(0, 10) }
+            : ub
+        ));
+      }
+    }
+    setCheckingIn(null);
+  }
 
   if (isLoading) {
     return (
@@ -147,6 +189,59 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Aktivní bobříci */}
+      {activeBadges.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className="text-xl">🦫</span> Aktivní bobříci
+              </CardTitle>
+              <Link href="/dashboard/world">
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">Světoběžník →</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {activeBadges.map(ub => {
+                const badge = BADGES.find(b => b.slug === ub.badge_slug);
+                if (!badge) return null;
+                const today = new Date().toISOString().slice(0, 10);
+                const doneTodayAlready = ub.last_step_date === today;
+                return (
+                  <div key={ub.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
+                    <p className="font-medium text-sm text-gray-900 leading-tight">{badge.name}</p>
+                    <div className="flex gap-1">
+                      {Array.from({ length: badge.total_steps }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`flex-1 h-2 rounded-full ${i < ub.steps_done ? 'bg-teal-500' : 'bg-gray-200'}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400">{ub.steps_done}/{badge.total_steps} dní</p>
+                    <button
+                      onClick={() => handleCheckin(ub.id)}
+                      disabled={doneTodayAlready || checkingIn === ub.id}
+                      className={`w-full text-xs py-1.5 px-2 rounded-md font-medium transition-colors ${
+                        doneTodayAlready
+                          ? 'bg-teal-50 text-teal-600 cursor-default'
+                          : 'bg-teal-500 hover:bg-teal-600 text-white'
+                      }`}
+                    >
+                      {checkingIn === ub.id ? 'Ukládám...' : doneTodayAlready
+                        ? <span className="flex items-center justify-center gap-1"><CheckCircle className="h-3 w-3" /> Dnes splněno</span>
+                        : <span className="flex items-center justify-center gap-1"><Flame className="h-3 w-3" /> Dnes splněno</span>}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Nedávné cíle */}
