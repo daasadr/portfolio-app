@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   };
 
-  if (ub.student_id !== studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 403 });
+  if (String(ub.student_id) !== String(studentId)) return NextResponse.json({ message: 'Neautorizováno' }, { status: 403 });
   if (ub.status !== 'active') return NextResponse.json({ message: 'Bobřík není aktivní' }, { status: 400 });
 
   const today = new Date().toISOString().slice(0, 10);
