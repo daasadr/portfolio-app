@@ -209,7 +209,7 @@ export default function DashboardPage() {
                 const badge = BADGES.find(b => b.slug === ub.badge_slug);
                 if (!badge) return null;
                 const today = new Date().toISOString().slice(0, 10);
-                const doneTodayAlready = ub.last_step_date === today;
+                const doneTodayAlready = ub.last_step_date?.slice(0, 10) === today;
                 return (
                   <div key={ub.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
                     <p className="font-medium text-sm text-gray-900 leading-tight">{badge.name}</p>

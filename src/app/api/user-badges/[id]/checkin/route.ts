@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (ub.status !== 'active') return NextResponse.json({ message: 'Bobřík není aktivní' }, { status: 400 });
 
   const today = new Date().toISOString().slice(0, 10);
-  if (ub.last_step_date === today) {
+  if (ub.last_step_date?.slice(0, 10) === today) {
     return NextResponse.json({ message: 'Dnes jsi bobříka již splnil/a. Zítra zase!' }, { status: 409 });
   }
 

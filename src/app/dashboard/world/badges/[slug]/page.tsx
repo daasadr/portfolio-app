@@ -100,7 +100,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const alreadyDoneToday = userBadge?.last_step_date === today;
+  const alreadyDoneToday = userBadge?.last_step_date?.slice(0, 10) === today;
   const isActive = userBadge?.status === 'active';
   const isCompleted = userBadge?.status === 'completed';
 
