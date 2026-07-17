@@ -61,14 +61,14 @@ export default function CookieBanner() {
         </div>
         {/* Šipka — viditelná na pravém okraji když je banner zasunutý */}
         <div
-          className="absolute right-0 top-0 bottom-0 w-11 flex items-center justify-center rounded-r-2xl"
+          className="absolute right-0 top-0 bottom-0 w-16 flex items-center justify-center rounded-r-2xl"
           style={{
             opacity: expanded ? 0 : 1,
             transition: 'opacity 0.2s',
             background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.95))',
           }}
         >
-          <span className="text-gray-500 font-bold text-xl leading-none">›</span>
+          <span className="text-purple-500 font-bold text-2xl leading-none">›</span>
         </div>
       </div>
     </div>
