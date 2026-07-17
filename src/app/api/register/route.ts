@@ -53,7 +53,20 @@ export async function POST(request: NextRequest) {
       }),
     });
 
+    if (!studentRes.ok) {
+      const studentErr = await studentRes.json();
+      console.error('Student creation failed:', JSON.stringify(studentErr));
+      // Clean up the Directus user so the email can be re-used
+      await fetch(`${directusUrl}/users/${user.id}`, { method: 'DELETE', headers: adminHeaders() });
+      return NextResponse.json({ message: 'Chyba při vytváření profilu studenta. Zkuste to znovu.' }, { status: 500 });
+    }
+
     const { data: student } = await studentRes.json() as { data: { id: string } };
+    if (!student?.id) {
+      console.error('Student creation returned no id');
+      await fetch(`${directusUrl}/users/${user.id}`, { method: 'DELETE', headers: adminHeaders() });
+      return NextResponse.json({ message: 'Chyba při vytváření profilu.' }, { status: 500 });
+    }
 
     for (const cat of PREDEFINED_CATEGORIES) {
       await fetch(`${directusUrl}/items/categories`, {
