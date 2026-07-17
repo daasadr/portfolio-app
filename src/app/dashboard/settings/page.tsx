@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Eye, EyeOff } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, updateItem, createItem, deleteItem, getStoredToken } from '@/lib/directus';
+import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, getStoredToken } from '@/lib/directus';
 import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
 import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 import type { Student, Category } from '@/types';
@@ -26,6 +26,8 @@ export default function SettingsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const [email, setEmail] = useState('');
 
   const [profileForm, setProfileForm] = useState({
     first_name: '',
@@ -65,9 +67,10 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const s = await getCurrentStudent();
+        const [s, me] = await Promise.all([getCurrentStudent(), getCurrentUser()]);
         if (!s) return;
         setStudent(s);
+        if (me && 'email' in me) setEmail((me as { email?: string }).email ?? '');
         const saved = localStorage.getItem(`pp_bg_${s.id}`);
         if (saved) setAppBg(saved);
         setProfileForm({
@@ -231,6 +234,13 @@ export default function SettingsPage() {
           <CardDescription>Vaše osobní informace</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {email && (
+            <div className="space-y-1">
+              <Label>E-mail (přihlašovací)</Label>
+              <Input value={email} readOnly className="bg-gray-50 text-gray-500 cursor-default" />
+              <p className="text-xs text-gray-400">E-mail nelze změnit přes tuto stránku.</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Jméno</Label>

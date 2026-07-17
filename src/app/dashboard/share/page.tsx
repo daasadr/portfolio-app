@@ -71,19 +71,29 @@ export default function SharePage() {
   });
   const [saving, setSaving] = useState(false);
 
+  const fetchConnections = async () => {
+    const token = getStoredToken();
+    if (!token) return;
+    try {
+      const tcRes = await fetch('/api/connections', { headers: { Authorization: `Bearer ${token}` } });
+      if (tcRes.ok) {
+        const tcData = await tcRes.json() as { connections: TeacherConnection[] };
+        setTeacherConnections(tcData.connections ?? []);
+      }
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    fetchConnections();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
         const s = await getCurrentStudent();
         if (!s) return;
         setStudent(s);
-
-        // Načti propojení s učiteli
-        const tcRes = await fetch('/api/connections', { headers: { Authorization: `Bearer ${getStoredToken()}` } });
-        if (tcRes.ok) {
-          const tcData = await tcRes.json() as { connections: TeacherConnection[] };
-          setTeacherConnections(tcData.connections ?? []);
-        }
 
         const [l, p, c] = await Promise.all([
           directus.request(
@@ -125,11 +135,7 @@ export default function SharePage() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
       body: action === 'accepted' ? JSON.stringify({ status: 'accepted' }) : undefined,
     });
-    const res = await fetch('/api/connections', { headers: { Authorization: `Bearer ${getStoredToken()}` } });
-    if (res.ok) {
-      const data = await res.json() as { connections: TeacherConnection[] };
-      setTeacherConnections(data.connections ?? []);
-    }
+    await fetchConnections();
     setTcLoading(false);
   }
 

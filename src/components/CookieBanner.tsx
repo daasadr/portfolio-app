@@ -29,7 +29,7 @@ export default function CookieBanner() {
 
   return (
     <div
-      className="fixed left-0 bottom-20 z-50 w-72"
+      className="fixed left-0 bottom-20 z-50 w-72 cursor-pointer"
       style={{
         transform: !visible
           ? 'translateX(-110%)'
@@ -40,6 +40,7 @@ export default function CookieBanner() {
       }}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
+      onClick={() => setExpanded(true)}
     >
       <div className="bg-white/95 backdrop-blur-sm rounded-r-2xl shadow-lg border-r border-t border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <span className="text-xl flex-shrink-0" aria-hidden>🍪</span>
@@ -49,13 +50,25 @@ export default function CookieBanner() {
             Pouze technické cookies pro přihlášení. Bez sledování.
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <Button size="sm" onClick={dismiss} className="h-6 text-xs px-2">
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); dismiss(); }} className="h-6 text-xs px-2">
               Rozumím
             </Button>
-            <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+            <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+              onClick={(e) => e.stopPropagation()}>
               Více info
             </Link>
           </div>
+        </div>
+        {/* Šipka — viditelná na pravém okraji když je banner zasunutý */}
+        <div
+          className="absolute right-0 top-0 bottom-0 w-11 flex items-center justify-center rounded-r-2xl"
+          style={{
+            opacity: expanded ? 0 : 1,
+            transition: 'opacity 0.2s',
+            background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.95))',
+          }}
+        >
+          <span className="text-gray-500 font-bold text-xl leading-none">›</span>
         </div>
       </div>
     </div>

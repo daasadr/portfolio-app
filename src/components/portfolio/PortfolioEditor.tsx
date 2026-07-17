@@ -278,6 +278,11 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
               Sdílené
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {visibility === 'shared'
+              ? 'Stránka se zahrne do sdílecích odkazů a uvidí ji propojení učitelé.'
+              : 'Stránka je viditelná jen tobě. Propojení učitelé ji neuvidí.'}
+          </p>
         </div>
       </div>
 
