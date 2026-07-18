@@ -125,6 +125,17 @@ export interface DreamBoardItem {
   on_board: boolean;
 }
 
+export interface PageShare {
+  id: number;
+  page_id: string;
+  from_id: number;
+  to_id: number;
+  date_created: string;
+  page?: { id: string; title: string; content?: string; visibility: string; updated_at: string };
+  from?: { id: number; first_name: string; last_name: string };
+  to?: { id: number; first_name: string; last_name: string };
+}
+
 export interface Organisation {
   id: number;
   name: string;
@@ -177,6 +188,7 @@ export interface Schema {
   shared_links: SharedLink[];
   portfolio_pages_files: PortfolioPageFile[];
   student_connections: StudentConnection[];
+  page_shares: PageShare[];
   organisations: Organisation[];
   groups: Group[];
   organisation_members: OrganisationMember[];

@@ -90,7 +90,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {catPages.map(page => (
-                  <Link key={page.id} href={`/dashboard/portfolio/${page.id}/view`}>
+                  <Link key={page.id} href={`/dashboard/students/${studentId}/pages/${page.id}`}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="pt-4">
                         <div className="flex items-start gap-3">
@@ -121,7 +121,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {uncategorized.map(page => (
-                  <Link key={page.id} href={`/dashboard/portfolio/${page.id}/view`}>
+                  <Link key={page.id} href={`/dashboard/students/${studentId}/pages/${page.id}`}>
                     <Card className="hover:shadow-md transition-shadow cursor-pointer">
                       <CardContent className="pt-4">
                         <div className="flex items-start gap-3">

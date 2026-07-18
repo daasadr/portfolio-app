@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -32,9 +33,12 @@ import {
   GraduationCap,
   Check,
   X,
+  Inbox,
+  FileText,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken, getStoredToken } from '@/lib/directus';
-import type { Student, SharedLink, PortfolioPage, Category, ShareType } from '@/types';
+import type { Student, SharedLink, PortfolioPage, Category, ShareType, PageShare } from '@/types';
 
 interface TeacherConnection {
   id: number;
@@ -61,6 +65,10 @@ export default function SharePage() {
   const [teacherConnections, setTeacherConnections] = useState<TeacherConnection[]>([]);
   const [tcLoading, setTcLoading] = useState(false);
 
+  const [incomingShares, setIncomingShares] = useState<PageShare[]>([]);
+  const [outgoingShares, setOutgoingShares] = useState<PageShare[]>([]);
+  const [sharesLoading, setSharesLoading] = useState(false);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
     share_type: 'full_portfolio' as ShareType,
@@ -71,7 +79,7 @@ export default function SharePage() {
   });
   const [saving, setSaving] = useState(false);
 
-  const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     const token = getStoredToken();
     if (!token) return;
     try {
@@ -81,12 +89,33 @@ export default function SharePage() {
         setTeacherConnections(tcData.connections ?? []);
       }
     } catch { /* ignore */ }
-  };
+  }, []);
+
+  const fetchPageShares = useCallback(async () => {
+    const token = getStoredToken();
+    if (!token) return;
+    setSharesLoading(true);
+    try {
+      const [inRes, outRes] = await Promise.all([
+        fetch('/api/page-shares?type=incoming', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/page-shares?type=outgoing', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (inRes.ok) {
+        const d = await inRes.json() as { shares: PageShare[] };
+        setIncomingShares(d.shares ?? []);
+      }
+      if (outRes.ok) {
+        const d = await outRes.json() as { shares: PageShare[] };
+        setOutgoingShares(d.shares ?? []);
+      }
+    } catch { /* ignore */ }
+    setSharesLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchConnections();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchPageShares();
+  }, [fetchConnections, fetchPageShares]);
 
   useEffect(() => {
     const load = async () => {
@@ -137,6 +166,13 @@ export default function SharePage() {
     });
     await fetchConnections();
     setTcLoading(false);
+  }
+
+  async function removePageShare(id: number) {
+    const token = getStoredToken();
+    await fetch(`/api/page-shares/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    setIncomingShares(prev => prev.filter(s => s.id !== id));
+    setOutgoingShares(prev => prev.filter(s => s.id !== id));
   }
 
   function getShareUrl(link: SharedLink) {
@@ -197,124 +233,53 @@ export default function SharePage() {
     );
   }
 
+  const pendingConnections = teacherConnections.filter(tc => tc.status === 'pending');
+  const acceptedConnections = teacherConnections.filter(tc => tc.status === 'accepted');
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Sdílení portfolia</h1>
-          <p className="text-gray-500 text-sm mt-1">Sdílejte své portfolio s učiteli nebo rodinou pomocí odkazů</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nový odkaz
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Vytvořit sdílecí odkaz</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <Label>Co sdílet</Label>
-                <Select
-                  value={form.share_type}
-                  onValueChange={(v) => setForm((f) => ({ ...f, share_type: v as ShareType, category_id: '', page_id: '' }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full_portfolio">Celé portfolio</SelectItem>
-                    <SelectItem value="category">Jen kategorii</SelectItem>
-                    <SelectItem value="single_page">Jednu stránku</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {form.share_type === 'category' && (
-                <div className="space-y-1">
-                  <Label>Vyberte kategorii</Label>
-                  <Select
-                    value={form.category_id}
-                    onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {form.share_type === 'single_page' && (
-                <div className="space-y-1">
-                  <Label>Vyberte stránku</Label>
-                  <Select
-                    value={form.page_id}
-                    onValueChange={(v) => setForm((f) => ({ ...f, page_id: v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Vyberte stránku" /></SelectTrigger>
-                    <SelectContent>
-                      {pages.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <Label>Platnost odkazu (volitelné)</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.expires_at}
-                  onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
-                />
-                <p className="text-xs text-gray-500">Pokud nevyplníte, odkaz nevyprší</p>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Zrušit</Button>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? 'Vytvářím...' : 'Vytvořit odkaz'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Sdílení</h1>
+        <p className="text-gray-500 text-sm mt-1">Stránky sdílené s vámi a vaše sdílení s ostatními</p>
       </div>
 
-      {/* Propojení s učiteli */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-          <GraduationCap className="h-4 w-4" /> Propojení s učiteli
-        </h2>
-        {teacherConnections.length === 0 ? (
-          <Card className="bg-gray-50/50">
-            <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
-              Zatím nejste propojeni s žádným učitelem. Učitel vás přidá podle vašeho e-mailu a vy žádost přijmete zde.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {teacherConnections.map(tc => (
-              <Card key={tc.id} className={tc.status === 'pending' ? 'border-yellow-200 bg-yellow-50/40' : ''}>
-                <CardContent className="pt-3 pb-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">
-                      {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Učitel'}
-                    </p>
-                    {tc.status === 'pending' ? (
-                      <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-0.5">Čeká na vaše přijetí</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs mt-0.5">Propojeno</Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    {tc.status === 'pending' && (
-                      <>
+      <Tabs defaultValue="incoming">
+        <TabsList className="mb-4">
+          <TabsTrigger value="incoming" className="flex items-center gap-2">
+            <Inbox className="h-4 w-4" />
+            Sdílí se mnou
+            {incomingShares.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs px-1.5">{incomingShares.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="outgoing" className="flex items-center gap-2">
+            <Share2 className="h-4 w-4" />
+            Sdílím
+          </TabsTrigger>
+        </TabsList>
+
+        {/* === ZÁLOŽKA: Sdílí se mnou === */}
+        <TabsContent value="incoming" className="space-y-6">
+
+          {/* Žádosti o propojení čekající na přijetí */}
+          {pendingConnections.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" /> Žádosti o propojení
+              </h2>
+              <div className="space-y-2">
+                {pendingConnections.map(tc => (
+                  <Card key={tc.id} className="border-yellow-200 bg-yellow-50/40">
+                    <CardContent className="pt-3 pb-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Uživatel'}
+                        </p>
+                        <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-0.5">
+                          Čeká na vaše přijetí
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2">
                         <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50"
                           onClick={() => handleTcAction(tc.id, 'accepted')} disabled={tcLoading}>
                           <Check className="h-4 w-4 mr-1" /> Přijmout
@@ -323,108 +288,278 @@ export default function SharePage() {
                           onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
                           <X className="h-4 w-4" />
                         </Button>
-                      </>
-                    )}
-                    {tc.status === 'accepted' && (
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stránky sdílené s tímto uživatelem */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Stránky sdílené se mnou
+            </h2>
+            {sharesLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+              </div>
+            ) : incomingShares.length === 0 ? (
+              <Card className="bg-gray-50/50">
+                <CardContent className="pt-4 text-sm text-gray-400 text-center py-10">
+                  Nikdo s vámi zatím nesdílel žádnou stránku.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {incomingShares.map(share => (
+                  <Card key={share.id} className="hover:shadow-sm transition-shadow">
+                    <CardContent className="pt-3 pb-3 flex items-center gap-4">
+                      <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {share.page?.title ?? 'Neznámá stránka'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Od: {share.from?.first_name} {share.from?.last_name}
+                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString('cs-CZ')}`}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => removePageShare(share.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* === ZÁLOŽKA: Sdílím === */}
+        <TabsContent value="outgoing" className="space-y-6">
+
+          {/* Přijatá propojení */}
+          {acceptedConnections.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" /> Propojení
+              </h2>
+              <div className="space-y-2">
+                {acceptedConnections.map(tc => (
+                  <Card key={tc.id}>
+                    <CardContent className="pt-3 pb-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">
+                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Uživatel'}
+                        </p>
+                        <Badge variant="secondary" className="text-xs mt-0.5">Propojeno</Badge>
+                      </div>
                       <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600"
                         onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
                         <X className="h-4 w-4" /> Odebrat
                       </Button>
-                    )}
-                  </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stránky, které sdílím */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Sdílené stránky
+            </h2>
+            {sharesLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+              </div>
+            ) : outgoingShares.length === 0 ? (
+              <Card className="bg-gray-50/50">
+                <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
+                  Zatím jste nesdíleli žádnou stránku. Otevřete stránku v portfoliu a klikněte na „Sdílet s...".
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Sdílecí odkazy */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-          <Share2 className="h-4 w-4" /> Sdílecí odkazy
-        </h2>
-      {links.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">
-          <Share2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg font-medium">Zatím nemáte žádné sdílecí odkazy</p>
-          <p className="text-sm mt-1">Vytvořte odkaz a sdílejte své portfolio.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {links.map((link) => {
-            const url = getShareUrl(link);
-            const expired = link.expires_at ? new Date(link.expires_at) < new Date() : false;
-            const page = link.page_id ? pages.find((p) => p.id === link.page_id) : null;
-            const category = link.category_id
-              ? categories.find((c) => String(c.id) === String(link.category_id))
-              : null;
-
-            return (
-              <Card key={link.id} className={!link.is_active || expired ? 'opacity-60' : ''}>
-                <CardContent className="pt-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge variant="secondary">{SHARE_TYPE_LABELS[link.share_type]}</Badge>
-                        {category && <Badge variant="outline">{category.name}</Badge>}
-                        {page && <Badge variant="outline">{page.title}</Badge>}
-                        {!link.is_active && <Badge variant="destructive">Neaktivní</Badge>}
-                        {expired && <Badge variant="destructive">Vypršelo</Badge>}
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Eye className="h-3 w-3" /> {link.view_count} zobrazení
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 mt-2">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded truncate flex-1 max-w-xs">
-                          {url}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyLink(link)}
-                          className="flex-shrink-0"
-                        >
-                          {copiedId === link.id
-                            ? <CheckCheck className="h-4 w-4 text-green-500" />
-                            : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-
-                      {link.expires_at && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Platí do: {new Date(link.expires_at).toLocaleString('cs-CZ')}
+            ) : (
+              <div className="space-y-2">
+                {outgoingShares.map(share => (
+                  <Card key={share.id}>
+                    <CardContent className="pt-3 pb-3 flex items-center gap-4">
+                      <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {share.page?.title ?? 'Neznámá stránka'}
                         </p>
-                      )}
+                        <p className="text-xs text-gray-400">
+                          Pro: {share.to?.first_name} {share.to?.last_name}
+                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString('cs-CZ')}`}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => removePageShare(share.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Veřejné sdílecí odkazy */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                <LinkIcon className="h-4 w-4" /> Veřejné sdílecí odkazy
+              </h2>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Nový odkaz
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Vytvořit sdílecí odkaz</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <div className="space-y-1">
+                      <Label>Co sdílet</Label>
+                      <Select
+                        value={form.share_type}
+                        onValueChange={(v) => setForm((f) => ({ ...f, share_type: v as ShareType, category_id: '', page_id: '' }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full_portfolio">Celé portfolio</SelectItem>
+                          <SelectItem value="category">Jen kategorii</SelectItem>
+                          <SelectItem value="single_page">Jednu stránku</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleActive(link)}
-                        title={link.is_active ? 'Deaktivovat' : 'Aktivovat'}
-                      >
-                        {link.is_active ? <Globe className="h-4 w-4 text-blue-500" /> : <Lock className="h-4 w-4 text-gray-400" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => deleteLink(link.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                    {form.share_type === 'category' && (
+                      <div className="space-y-1">
+                        <Label>Vyberte kategorii</Label>
+                        <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => (
+                              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {form.share_type === 'single_page' && (
+                      <div className="space-y-1">
+                        <Label>Vyberte stránku</Label>
+                        <Select value={form.page_id} onValueChange={(v) => setForm((f) => ({ ...f, page_id: v }))}>
+                          <SelectTrigger><SelectValue placeholder="Vyberte stránku" /></SelectTrigger>
+                          <SelectContent>
+                            {pages.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <Label>Platnost odkazu (volitelné)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={form.expires_at}
+                        onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
+                      />
+                      <p className="text-xs text-gray-500">Pokud nevyplníte, odkaz nevyprší</p>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setDialogOpen(false)}>Zrušit</Button>
+                      <Button onClick={handleSave} disabled={saving}>
+                        {saving ? 'Vytvářím...' : 'Vytvořit odkaz'}
                       </Button>
                     </div>
                   </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {links.length === 0 ? (
+              <Card className="bg-gray-50/50">
+                <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
+                  Zatím nemáte žádné veřejné sdílecí odkazy.
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
-      )}
-      </div>
+            ) : (
+              <div className="space-y-3">
+                {links.map((link) => {
+                  const url = getShareUrl(link);
+                  const expired = link.expires_at ? new Date(link.expires_at) < new Date() : false;
+                  const pg = link.page_id ? pages.find((p) => p.id === link.page_id) : null;
+                  const cat = link.category_id ? categories.find((c) => String(c.id) === String(link.category_id)) : null;
+
+                  return (
+                    <Card key={link.id} className={!link.is_active || expired ? 'opacity-60' : ''}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge variant="secondary">{SHARE_TYPE_LABELS[link.share_type]}</Badge>
+                              {cat && <Badge variant="outline">{cat.name}</Badge>}
+                              {pg && <Badge variant="outline">{pg.title}</Badge>}
+                              {!link.is_active && <Badge variant="destructive">Neaktivní</Badge>}
+                              {expired && <Badge variant="destructive">Vypršelo</Badge>}
+                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                <Eye className="h-3 w-3" /> {link.view_count} zobrazení
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <code className="text-xs bg-gray-100 px-2 py-1 rounded truncate flex-1 max-w-xs">{url}</code>
+                              <Button variant="ghost" size="sm" onClick={() => copyLink(link)} className="flex-shrink-0">
+                                {copiedId === link.id
+                                  ? <CheckCheck className="h-4 w-4 text-green-500" />
+                                  : <Copy className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            {link.expires_at && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Platí do: {new Date(link.expires_at).toLocaleString('cs-CZ')}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(link)} title={link.is_active ? 'Deaktivovat' : 'Aktivovat'}>
+                              {link.is_active ? <Globe className="h-4 w-4 text-blue-500" /> : <Lock className="h-4 w-4 text-gray-400" />}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => deleteLink(link.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

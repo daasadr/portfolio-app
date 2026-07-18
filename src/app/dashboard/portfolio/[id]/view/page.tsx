@@ -5,12 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Pencil, Globe, Lock, Paperclip, FileText, Music, Video, Image as ImageIcon } from 'lucide-react';
-import { getCurrentStudent, directus, readItems } from '@/lib/directus';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ArrowLeft, Pencil, Globe, Lock, Paperclip, FileText, Music, Video, Image as ImageIcon, Share2, Check, UserCheck } from 'lucide-react';
+import { getCurrentStudent, directus, readItems, getStoredToken } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
 
 interface Attachment { id: string; name: string; type: string; }
+interface Connection { id: number; other_person: { id: number; first_name: string; last_name: string } | null }
 
 function FileIcon({ type }: { type: string }) {
   if (type.startsWith('image/')) return <ImageIcon className="h-4 w-4 text-blue-500" />;
@@ -27,6 +35,11 @@ export default function ViewPortfolioPage({ params }: Props) {
   const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageId, setPageId] = useState('');
+
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [sharedWith, setSharedWith] = useState<Set<number>>(new Set());
+  const [sharingId, setSharingId] = useState<number | null>(null);
 
   useEffect(() => {
     params.then(p => setPageId(p.id));
@@ -64,6 +77,39 @@ export default function ViewPortfolioPage({ params }: Props) {
     load();
   }, [pageId, router]);
 
+  async function loadShareData() {
+    const token = getStoredToken();
+    if (!token) return;
+    const [connRes, sharesRes] = await Promise.all([
+      fetch('/api/connections', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`/api/page-shares?type=outgoing`, { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+    if (connRes.ok) {
+      const d = await connRes.json() as { connections: Connection[] };
+      setConnections(d.connections ?? []);
+    }
+    if (sharesRes.ok) {
+      const d = await sharesRes.json() as { shares: { page_id: string; to_id: number }[] };
+      const alreadyShared = new Set(
+        (d.shares ?? []).filter(s => s.page_id === pageId).map(s => s.to_id)
+      );
+      setSharedWith(alreadyShared);
+    }
+  }
+
+  async function handleShare(toId: number) {
+    if (sharedWith.has(toId)) return;
+    setSharingId(toId);
+    const token = getStoredToken();
+    await fetch('/api/page-shares', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ page_id: pageId, to_id: toId }),
+    });
+    setSharedWith(prev => new Set([...prev, toId]));
+    setSharingId(null);
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -97,6 +143,62 @@ export default function ViewPortfolioPage({ params }: Props) {
             Zpět
           </Button>
           <div className="flex-1" />
+
+          {/* Sdílet s... */}
+          <Dialog open={shareDialogOpen} onOpenChange={(open) => {
+            setShareDialogOpen(open);
+            if (open) loadShareData();
+          }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
+                <Share2 className="h-4 w-4 mr-1" />
+                Sdílet s...
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sdílet stránku</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 pt-1">
+                {connections.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">
+                    Nemáte žádná propojení. Propojte se s učitelem nebo žáky nejprve na stránce Sdílení.
+                  </p>
+                ) : (
+                  connections.map(c => {
+                    if (!c.other_person) return null;
+                    const already = sharedWith.has(c.other_person.id);
+                    return (
+                      <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50">
+                        <span className="text-sm font-medium text-gray-800">
+                          {c.other_person.first_name} {c.other_person.last_name}
+                        </span>
+                        {already ? (
+                          <Badge variant="secondary" className="flex items-center gap-1">
+                            <UserCheck className="h-3 w-3" /> Nasdíleno
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleShare(c.other_person!.id)}
+                            disabled={sharingId === c.other_person.id}
+                          >
+                            {sharingId === c.other_person.id ? (
+                              <span className="animate-spin h-3 w-3 border-b border-gray-600 rounded-full inline-block" />
+                            ) : (
+                              <><Check className="h-3 w-3 mr-1" /> Sdílet</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Link href={`/dashboard/portfolio/${page.id}`}>
             <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
               <Pencil className="h-4 w-4 mr-1" />
@@ -157,18 +259,10 @@ export default function ViewPortfolioPage({ params }: Props) {
                 return (
                   <div key={att.id} className="rounded-lg border overflow-hidden">
                     {isImage && (
-                      <img
-                        src={src}
-                        alt={att.name}
-                        className="w-full max-h-96 object-contain bg-gray-50"
-                      />
+                      <img src={src} alt={att.name} className="w-full max-h-96 object-contain bg-gray-50" />
                     )}
                     {isVideo && (
-                      <video
-                        controls
-                        src={src}
-                        className="w-full max-h-96 bg-black"
-                      />
+                      <video controls src={src} className="w-full max-h-96 bg-black" />
                     )}
                     {isAudio && (
                       <div className="p-3 bg-gray-50">
