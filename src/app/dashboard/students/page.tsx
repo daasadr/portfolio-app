@@ -163,7 +163,9 @@ export default function StudentsPage() {
                     <p className="font-medium text-gray-900">
                       {c.other_person ? `${c.other_person.first_name} ${c.other_person.last_name}` : '—'}
                     </p>
-                    <p className="text-xs text-gray-400">Propojeno {new Date(c.created_at).toLocaleDateString('cs-CZ')}</p>
+                    <p className="text-xs text-gray-400">
+                      {c.created_at ? `Propojeno ${new Date(c.created_at).toLocaleDateString('cs-CZ')}` : 'Propojeno'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Link href={`/dashboard/students/${c.student_id}`}>
