@@ -45,7 +45,7 @@ export default function TeacherPageView({
         pages: PortfolioPage[];
       };
       setStudentName(`${data.student.first_name} ${data.student.last_name}`);
-      const found = data.pages.find(p => p.id === pageId) ?? null;
+      const found = data.pages.find(p => String(p.id) === String(pageId)) ?? null;
       if (!found) setError('Stránka nenalezena.');
       setPage(found);
       setIsLoading(false);
@@ -94,7 +94,7 @@ export default function TeacherPageView({
           {page.title}
         </h1>
         <p className="text-white/70 text-xs mt-1">
-          {studentName} · Upraveno {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+          {studentName} · {(page.updated_at ?? page.created_at) ? `Upraveno ${new Date(page.updated_at ?? page.created_at).toLocaleDateString('cs-CZ')}` : ''}
         </p>
       </div>
 
