@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Načti data žáka
   const [studentRes, pagesRes, catsRes] = await Promise.all([
     fetch(`${directusUrl}/items/students/${studentId}`, { headers: adminHeaders() }),
-    fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=sort_order&sort[]=title`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=sort_order`, { headers: adminHeaders() }),
   ]);
 
