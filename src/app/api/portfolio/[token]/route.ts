@@ -60,8 +60,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   const [pagesRes, catsRes] = await Promise.all([
-    fetch(`${directusUrl}/items/portfolio_pages?${pagesFilter}&sort[]=sort_order&sort[]=title`, { headers: adminHeaders() }),
-    fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${link.student_id}&sort[]=sort_order`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/portfolio_pages?${pagesFilter}&sort[]=title`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${link.student_id}&sort[]=name`, { headers: adminHeaders() }),
   ]);
 
   const { data: pages } = await pagesRes.json() as { data: unknown[] };

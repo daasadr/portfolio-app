@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const [studentRes, pagesRes, catsRes] = await Promise.all([
     fetch(`${directusUrl}/items/students/${studentId}`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
-    fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=sort_order`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=name`, { headers: adminHeaders() }),
   ]);
 
   const { data: student } = await studentRes.json() as { data: unknown };
