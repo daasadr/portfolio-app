@@ -2,6 +2,8 @@
 
 Moderní webová aplikace pro online portfolio žáků základních škol, kteří studují formou individuálního studia z domova s portfoliovým přístupem.
 
+Běží na https://portfolioparadise.eu
+
 ## 🚀 Rychlý start
 
 ### 1. Nastavení Directus
@@ -141,7 +143,7 @@ Pokud máte problémy nebo otázky:
 
 1. Zkontrolujte [Issues](https://github.com/your-repo/issues)
 2. Vytvořte nový issue s popisem problému
-3. Kontaktujte nás na email@example.com
+3. Kontaktujte nás na daasa.d@seznam.cz
 
 ---
 
