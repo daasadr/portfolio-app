@@ -110,19 +110,20 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
         <ArrowLeft className="h-4 w-4" /> Zpět na Světoběžník
       </Link>
 
-      {/* Obrázek bobříka */}
-      <div className="relative w-full h-56 rounded-2xl overflow-hidden mb-6">
-        <Image
-          src={`/images/bobrici/${badge.icon}`}
-          alt={badge.name}
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-4 left-5 text-white">
-          <h1 className="text-2xl font-bold">{badge.name}</h1>
-          <p className="text-white/80 text-sm">{badge.tagline}</p>
+      {/* Obrázek bobříka — medailónový styl */}
+      <div className="rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-100 py-8 flex flex-col items-center">
+        <div className="relative w-52 h-52 drop-shadow-2xl">
+          <Image
+            src={`/images/bobrici/${badge.icon}`}
+            alt={badge.name}
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+        <div className="text-center mt-5 px-6">
+          <h1 className="text-2xl font-bold text-gray-900">{badge.name}</h1>
+          <p className="text-gray-500 text-sm mt-1">{badge.tagline}</p>
         </div>
       </div>
 
