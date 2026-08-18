@@ -44,12 +44,12 @@ export default function ForgotPasswordPage() {
     setError('');
     try {
       const res = await fetch(`/api/reset-password?email=${encodeURIComponent(email)}`);
-      const data = await res.json() as { security_question?: number; message?: string };
-      if (!res.ok) {
-        setError(data.message ?? 'Účet s tímto emailem nebyl nalezen.');
+      const data = await res.json() as { security_question: number | null };
+      if (data.security_question === null) {
+        setError('Pokud je e-mail zaregistrován a má nastavenou bezpečnostní otázku, zobrazí se formulář. Jinak kontaktujte správce.');
         return;
       }
-      setQuestionIndex(data.security_question!);
+      setQuestionIndex(data.security_question);
       setStep('question');
     } catch {
       setError('Chyba připojení. Zkuste to znovu.');
@@ -215,7 +215,7 @@ export default function ForgotPasswordPage() {
               {showAdminInfo && (
                 <div className="mt-3 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-900 space-y-1.5">
                   <p>Napište e-mail správci aplikace:</p>
-                  <p className="font-mono font-semibold select-all">daasa.d@seznam.cz</p>
+                  <p className="font-mono font-semibold select-all">{process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? 'daasa.d@seznam.cz'}</p>
                   <p className="text-xs text-blue-700">Do předmětu napište přesně:</p>
                   <p className="font-mono font-semibold select-all text-xs">PORTFOLIO-PARADISE OBNOVENÍ HESLA</p>
                 </div>

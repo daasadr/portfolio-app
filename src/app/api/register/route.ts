@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PREDEFINED_CATEGORIES } from '@/types';
+import { hashAnswer } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -14,9 +15,10 @@ function adminHeaders() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName, securityQuestion, securityAnswer, isTeacher } = await request.json() as {
+    // isTeacher is intentionally excluded — teacher accounts are created by admins only (C1)
+    const { email, password, firstName, lastName, securityQuestion, securityAnswer } = await request.json() as {
       email: string; password: string; firstName: string; lastName: string;
-      securityQuestion?: number; securityAnswer?: string; isTeacher?: boolean;
+      securityQuestion?: number; securityAnswer?: string;
     };
 
     const userRes = await fetch(`${directusUrl}/users`, {
@@ -40,6 +42,11 @@ export async function POST(request: NextRequest) {
 
     const { data: user } = await userRes.json() as { data: { id: string } };
 
+    // Hash security answer before storing (M3)
+    const hashedAnswer = securityAnswer
+      ? await hashAnswer(securityAnswer)
+      : undefined;
+
     const studentRes = await fetch(`${directusUrl}/items/students`, {
       method: 'POST',
       headers: adminHeaders(),
@@ -47,16 +54,15 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         first_name: firstName,
         last_name: lastName,
-        is_teacher: isTeacher ?? false,
+        is_teacher: false,
         ...(securityQuestion != null && { security_question: securityQuestion }),
-        ...(securityAnswer && { security_answer: securityAnswer.trim().toLowerCase() }),
+        ...(hashedAnswer && { security_answer: hashedAnswer }),
       }),
     });
 
     if (!studentRes.ok) {
       const studentErr = await studentRes.json();
       console.error('Student creation failed:', JSON.stringify(studentErr));
-      // Clean up the Directus user so the email can be re-used
       await fetch(`${directusUrl}/users/${user.id}`, { method: 'DELETE', headers: adminHeaders() });
       return NextResponse.json({ message: 'Chyba při vytváření profilu studenta. Zkuste to znovu.' }, { status: 500 });
     }

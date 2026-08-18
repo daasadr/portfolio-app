@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ArrowLeft, Pencil, Globe, Lock, Paperclip, FileText, Music, Video, Image as ImageIcon, Share2, Check, UserCheck } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { getCurrentStudent, directus, readItems, getStoredToken } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
@@ -237,7 +238,7 @@ export default function ViewPortfolioPage({ params }: Props) {
         {page.content ? (
           <div
             className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: page.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
           />
         ) : (
           <p className="text-gray-400 italic text-center py-8">Tato stránka nemá žádný obsah.</p>

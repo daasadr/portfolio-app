@@ -49,7 +49,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const pagesJson = await pagesRes.json() as { data: unknown[]; errors?: unknown };
   const { data: categories } = await catsRes.json() as { data: unknown[] };
 
-  console.log(`[teacher/student] studentId=${studentId} pages=${JSON.stringify(pagesJson).slice(0, 300)}`);
-
   return NextResponse.json({ student, pages: pagesJson.data ?? [], categories: categories ?? [] });
 }

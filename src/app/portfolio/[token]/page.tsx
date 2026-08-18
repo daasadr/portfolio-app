@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { use } from 'react';
+import DOMPurify from 'dompurify';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -92,7 +93,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
             </div>
             <div className="bg-white px-6 py-6">
               {selectedPage.content ? (
-                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selectedPage.content }} />
+                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPage.content) }} />
               ) : (
                 <p className="text-gray-400 italic text-center py-8">Tato stránka nemá žádný obsah.</p>
               )}
