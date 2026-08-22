@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileText, Music, Video, Image as ImageIcon, Paperclip } from 'lucide-react';
 import DOMPurify from 'dompurify';
-import { getStoredToken } from '@/lib/directus';
 import type { PortfolioPage } from '@/types';
 
 interface Attachment { id: string; name: string; type: string; }
@@ -32,10 +31,7 @@ export default function TeacherPageView({
 
   useEffect(() => {
     const load = async () => {
-      const token = getStoredToken();
-      const res = await fetch(`/api/teacher/student/${studentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/teacher/student/${studentId}`);
       if (!res.ok) {
         setError('Stránka nenalezena nebo nemáte přístup.');
         setIsLoading(false);

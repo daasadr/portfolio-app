@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const userToken = getTokenFromRequest(request);
+    if (!userToken) {
       return NextResponse.json({ student: null }, { status: 401 });
     }
-
-    const userToken = authHeader.replace('Bearer ', '');
 
     const meRes = await fetch(`${directusUrl}/users/me`, {
       headers: { Authorization: `Bearer ${userToken}` },

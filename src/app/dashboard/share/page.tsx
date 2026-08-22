@@ -37,7 +37,7 @@ import {
   FileText,
   Link as LinkIcon,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken, getStoredToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken } from '@/lib/directus';
 import type { Student, SharedLink, PortfolioPage, Category, ShareType, PageShare } from '@/types';
 
 interface TeacherConnection {
@@ -80,10 +80,8 @@ export default function SharePage() {
   const [saving, setSaving] = useState(false);
 
   const fetchConnections = useCallback(async () => {
-    const token = getStoredToken();
-    if (!token) return;
     try {
-      const tcRes = await fetch('/api/connections', { headers: { Authorization: `Bearer ${token}` } });
+      const tcRes = await fetch('/api/connections');
       if (tcRes.ok) {
         const tcData = await tcRes.json() as { connections: TeacherConnection[] };
         setTeacherConnections(tcData.connections ?? []);
@@ -92,13 +90,11 @@ export default function SharePage() {
   }, []);
 
   const fetchPageShares = useCallback(async () => {
-    const token = getStoredToken();
-    if (!token) return;
     setSharesLoading(true);
     try {
       const [inRes, outRes] = await Promise.all([
-        fetch('/api/page-shares?type=incoming', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/page-shares?type=outgoing', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/page-shares?type=incoming'),
+        fetch('/api/page-shares?type=outgoing'),
       ]);
       if (inRes.ok) {
         const d = await inRes.json() as { shares: PageShare[] };
@@ -161,7 +157,7 @@ export default function SharePage() {
     setTcLoading(true);
     await fetch(`/api/connections/${id}`, {
       method: action === 'rejected' ? 'DELETE' : 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: action === 'accepted' ? JSON.stringify({ status: 'accepted' }) : undefined,
     });
     await fetchConnections();
@@ -169,8 +165,7 @@ export default function SharePage() {
   }
 
   async function removePageShare(id: number) {
-    const token = getStoredToken();
-    await fetch(`/api/page-shares/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/api/page-shares/${id}`, { method: 'DELETE' });
     setIncomingShares(prev => prev.filter(s => s.id !== id));
     setOutgoingShares(prev => prev.filter(s => s.id !== id));
   }

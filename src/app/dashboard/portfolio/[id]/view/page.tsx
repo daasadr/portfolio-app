@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Pencil, Globe, Lock, Paperclip, FileText, Music, Video, Image as ImageIcon, Share2, Check, UserCheck } from 'lucide-react';
 import DOMPurify from 'dompurify';
-import { getCurrentStudent, directus, readItems, getStoredToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
 
@@ -79,11 +79,9 @@ export default function ViewPortfolioPage({ params }: Props) {
   }, [pageId, router]);
 
   async function loadShareData() {
-    const token = getStoredToken();
-    if (!token) return;
     const [connRes, sharesRes] = await Promise.all([
-      fetch('/api/connections', { headers: { Authorization: `Bearer ${token}` } }),
-      fetch(`/api/page-shares?type=outgoing`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/connections'),
+      fetch('/api/page-shares?type=outgoing'),
     ]);
     if (connRes.ok) {
       const d = await connRes.json() as { connections: Connection[] };
@@ -101,10 +99,9 @@ export default function ViewPortfolioPage({ params }: Props) {
   async function handleShare(toId: number) {
     if (sharedWith.has(toId)) return;
     setSharingId(toId);
-    const token = getStoredToken();
     await fetch('/api/page-shares', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page_id: pageId, to_id: toId }),
     });
     setSharedWith(prev => new Set([...prev, toId]));

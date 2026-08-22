@@ -35,8 +35,6 @@ import {
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
 
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
 const GOAL_TYPE_LABELS: Record<GoalType, string> = {
   short_term: 'Krátkodobý',
   long_term: 'Dlouhodobý',
@@ -48,16 +46,6 @@ const GOAL_TYPE_COLORS: Record<GoalType, string> = {
   long_term: 'bg-blue-100 text-blue-800',
   lifelong: 'bg-purple-100 text-purple-800',
 };
-
-function getToken() {
-  try {
-    const s = sessionStorage.getItem('pp_auth');
-    if (s) return JSON.parse(s)?.access_token ?? '';
-    const l = localStorage.getItem('pp_auth');
-    if (l) return JSON.parse(l)?.access_token ?? '';
-    return '';
-  } catch { return ''; }
-}
 
 export default function GoalsPage() {
   const [student, setStudent] = useState<Student | null>(null);
@@ -215,10 +203,8 @@ export default function GoalsPage() {
     setPendingFiles([]);
     // Load existing images
     try {
-      const token = getToken();
       const res = await fetch(
-        `${directusUrl}/items/dream_board_items?filter[dream_id][_eq]=${dream.id}&sort[]=z_index`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `/api/directus/items/dream_board_items?filter[dream_id][_eq]=${dream.id}&sort[]=z_index`
       );
       const json = await res.json();
       setDreamImages(json.data ?? []);
@@ -242,16 +228,11 @@ export default function GoalsPage() {
   }
 
   async function deleteImage(id: string) {
-    const token = getToken();
-    await fetch(`${directusUrl}/items/dream_board_items/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await fetch(`/api/directus/items/dream_board_items/${id}`, { method: 'DELETE' });
     setDreamImages(prev => prev.filter(i => i.id !== id));
   }
 
   async function toggleOnBoard(item: DreamBoardItem) {
-    const token = getToken();
     const newVal = !item.on_board;
     const body: Record<string, unknown> = { on_board: newVal };
     if (newVal && item.x === 0 && item.y === 0) {
@@ -260,9 +241,9 @@ export default function GoalsPage() {
       body.width = 20;
       body.height = 15;
     }
-    await fetch(`${directusUrl}/items/dream_board_items/${item.id}`, {
+    await fetch(`/api/directus/items/dream_board_items/${item.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     setDreamImages(prev => prev.map(i => i.id === item.id ? { ...i, ...body } as DreamBoardItem : i));
@@ -296,23 +277,18 @@ export default function GoalsPage() {
       const newItems: DreamBoardItem[] = [];
       if (pendingFiles.length > 0) {
         setUploadingImages(true);
-        const token = getToken();
         for (let i = 0; i < pendingFiles.length; i++) {
           const file = pendingFiles[i];
           const formData = new FormData();
           formData.append('file', file, file.name);
-          const uploadRes = await fetch(`${directusUrl}/files`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-            body: formData,
-          });
+          const uploadRes = await fetch('/api/directus/files', { method: 'POST', body: formData });
           const uploadJson = await uploadRes.json();
           const file_id = uploadJson.data?.id;
           if (!file_id) continue;
 
-          const itemRes = await fetch(`${directusUrl}/items/dream_board_items`, {
+          const itemRes = await fetch('/api/directus/items/dream_board_items', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               file_id,
               dream_id: dream.id,
@@ -353,15 +329,14 @@ export default function GoalsPage() {
   }
 
   async function toggleOnBoardFromCard(dreamId: string, item: DreamBoardItem) {
-    const token = getToken();
     const newVal = !item.on_board;
     const body: Record<string, unknown> = { on_board: newVal };
     if (newVal && item.x === 0 && item.y === 0) {
       body.x = 5; body.y = 5; body.width = 20; body.height = 15;
     }
-    await fetch(`${directusUrl}/items/dream_board_items/${item.id}`, {
+    await fetch(`/api/directus/items/dream_board_items/${item.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     setExpandedImages(prev => ({
@@ -379,10 +354,8 @@ export default function GoalsPage() {
     }
     setExpandedDreamId(dreamId);
     if (!expandedImages[dreamId]) {
-      const token = getToken();
       const res = await fetch(
-        `${directusUrl}/items/dream_board_items?filter[dream_id][_eq]=${dreamId}&sort[]=z_index`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `/api/directus/items/dream_board_items?filter[dream_id][_eq]=${dreamId}&sort[]=z_index`
       );
       const json = await res.json();
       setExpandedImages(prev => ({ ...prev, [dreamId]: json.data ?? [] }));

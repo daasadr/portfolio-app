@@ -13,7 +13,6 @@ import {
 import {
   Building2, Users, Plus, Search, LogOut, Trash2, Crown,
 } from 'lucide-react';
-import { getStoredToken } from '@/lib/directus';
 import type { Organisation, Group } from '@/types';
 
 function asGroup(item: Organisation | Group): Group { return item as Group; }
@@ -40,12 +39,10 @@ export default function CommunityPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  const token = () => getStoredToken();
-
   const loadMine = useCallback(async () => {
     const [orgRes, grpRes] = await Promise.all([
-      fetch('/api/organisations', { headers: { Authorization: `Bearer ${token()}` } }),
-      fetch('/api/groups', { headers: { Authorization: `Bearer ${token()}` } }),
+      fetch('/api/organisations'),
+      fetch('/api/groups'),
     ]);
     const orgData = await orgRes.json() as { organisations: Organisation[] };
     const grpData = await grpRes.json() as { groups: Group[] };
@@ -62,9 +59,7 @@ export default function CommunityPage() {
     if (q.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     const endpoint = tab === 'organisations' ? '/api/organisations' : '/api/groups';
-    const res = await fetch(`${endpoint}?all=1&search=${encodeURIComponent(q)}`, {
-      headers: { Authorization: `Bearer ${token()}` },
-    });
+    const res = await fetch(`${endpoint}?all=1&search=${encodeURIComponent(q)}`);
     if (res.ok) {
       const data = await res.json() as { organisations?: Organisation[]; groups?: Group[] };
       setSearchResults((tab === 'organisations' ? data.organisations : data.groups) ?? []);
@@ -75,7 +70,7 @@ export default function CommunityPage() {
   async function handleJoin(id: number) {
     setJoiningId(id);
     const endpoint = tab === 'organisations' ? `/api/organisations/${id}` : `/api/groups/${id}`;
-    const res = await fetch(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${token()}` } });
+    const res = await fetch(endpoint, { method: 'POST' });
     if (res.ok) {
       await loadMine();
       setSearchResults([]);
@@ -87,14 +82,14 @@ export default function CommunityPage() {
   async function handleLeave(id: number) {
     if (!confirm('Opravdu chcete odejít?')) return;
     const endpoint = tab === 'organisations' ? `/api/organisations/${id}` : `/api/groups/${id}`;
-    await fetch(endpoint, { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+    await fetch(endpoint, { method: 'DELETE' });
     await loadMine();
   }
 
   async function handleDelete(id: number) {
     if (!confirm('Smazat tuto organizaci/skupinu a všechny její členy?')) return;
     const endpoint = tab === 'organisations' ? `/api/organisations/${id}?action=delete` : `/api/groups/${id}?action=delete`;
-    await fetch(endpoint, { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+    await fetch(endpoint, { method: 'DELETE' });
     await loadMine();
   }
 
@@ -108,7 +103,7 @@ export default function CommunityPage() {
 
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const data = await res.json() as { message?: string };

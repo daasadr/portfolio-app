@@ -7,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { getCurrentStudent } from '@/lib/directus';
 import type { DreamBoardItem } from '@/types';
 
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
 type DragType = 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';
 
 interface DragState {
@@ -20,16 +18,6 @@ interface DragState {
   startY: number;
   startW: number;
   startH: number;
-}
-
-function getToken() {
-  try {
-    const s = sessionStorage.getItem('pp_auth');
-    if (s) return JSON.parse(s)?.access_token ?? '';
-    const l = localStorage.getItem('pp_auth');
-    if (l) return JSON.parse(l)?.access_token ?? '';
-    return '';
-  } catch { return ''; }
 }
 
 export default function DreamBoardPage() {
@@ -44,10 +32,8 @@ export default function DreamBoardPage() {
     const load = async () => {
       const student = await getCurrentStudent();
       if (!student) { router.push('/login'); return; }
-      const t = getToken();
       const res = await fetch(
-        `${directusUrl}/items/dream_board_items?filter[student_id][_eq]=${student.id}&filter[on_board][_eq]=true&sort[]=z_index`,
-        { headers: { Authorization: `Bearer ${t}` } }
+        `/api/directus/items/dream_board_items?filter[student_id][_eq]=${student.id}&filter[on_board][_eq]=true&sort[]=z_index`
       );
       const json = await res.json();
       setItems(json.data ?? []);
@@ -57,10 +43,9 @@ export default function DreamBoardPage() {
   }, [router]);
 
   const saveItem = useCallback(async (item: DreamBoardItem) => {
-    const token = getToken();
-    await fetch(`${directusUrl}/items/dream_board_items/${item.id}`, {
+    await fetch(`/api/directus/items/dream_board_items/${item.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ x: item.x, y: item.y, width: item.width, height: item.height, z_index: item.z_index }),
     });
   }, []);
@@ -122,10 +107,9 @@ export default function DreamBoardPage() {
   }, [onMouseMove, onMouseUp]);
 
   const removeFromBoard = async (id: string) => {
-    const token = getToken();
-    await fetch(`${directusUrl}/items/dream_board_items/${id}`, {
+    await fetch(`/api/directus/items/dream_board_items/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ on_board: false }),
     });
     setItems(prev => prev.filter(i => i.id !== id));

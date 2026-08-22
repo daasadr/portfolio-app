@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BADGES } from '@/lib/badges';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -32,9 +33,9 @@ async function getStudent(token: string): Promise<{ id: string } | null> {
 
 // GET: my user_badges with badge definition merged
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const student = await getStudent(auth.replace('Bearer ', ''));
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  const student = await getStudent(token);
   if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const res = await fetch(
@@ -53,9 +54,9 @@ export async function GET(request: NextRequest) {
 
 // POST: start a badge { badge_slug }
 export async function POST(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const student = await getStudent(auth.replace('Bearer ', ''));
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  const student = await getStudent(token);
   if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const { badge_slug } = await request.json() as { badge_slug: string };

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -18,9 +19,9 @@ async function getStudentId(token: string): Promise<string | null> {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const studentId = await getStudentId(auth.replace('Bearer ', ''));
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  const studentId = await getStudentId(token);
   if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const res = await fetch(
@@ -32,9 +33,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const studentId = await getStudentId(auth.replace('Bearer ', ''));
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  const studentId = await getStudentId(token);
   if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const { security_question, security_answer } = await request.json() as {

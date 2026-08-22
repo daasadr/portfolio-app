@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -8,9 +9,8 @@ function adminHeaders() {
 }
 
 async function getTeacherFromToken(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return null;
-  const token = auth.replace('Bearer ', '');
+  const token = getTokenFromRequest(request);
+  if (!token) return null;
   const meRes = await fetch(`${directusUrl}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
   if (!meRes.ok) return null;
   const { data: user } = await meRes.json() as { data: { id: string } };

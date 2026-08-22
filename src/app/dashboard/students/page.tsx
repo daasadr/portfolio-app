@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, Check, X, Trash2, ExternalLink } from 'lucide-react';
-import { getCurrentStudent, getStoredToken } from '@/lib/directus';
+import { getCurrentStudent } from '@/lib/directus';
 
 interface Connection {
   id: number;
@@ -26,8 +26,6 @@ export default function StudentsPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
 
-  const token = typeof window !== 'undefined' ? getStoredToken() : '';
-
   useEffect(() => {
     const load = async () => {
       const s = await getCurrentStudent();
@@ -41,8 +39,7 @@ export default function StudentsPage() {
   }, []);
 
   async function fetchConnections() {
-    const t = getStoredToken();
-    const res = await fetch('/api/connections', { headers: { Authorization: `Bearer ${t}` } });
+    const res = await fetch('/api/connections');
     if (!res.ok) return;
     const data = await res.json() as { connections: Connection[] };
     setConnections(data.connections ?? []);
@@ -52,10 +49,9 @@ export default function StudentsPage() {
     e.preventDefault();
     setAdding(true);
     setAddError('');
-    const t = getStoredToken();
     const res = await fetch('/api/connections', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetEmail: email }),
     });
     const data = await res.json() as { message?: string };
@@ -67,8 +63,7 @@ export default function StudentsPage() {
 
   async function handleDelete(id: number) {
     if (!confirm('Odebrat toto propojení?')) return;
-    const t = getStoredToken();
-    await fetch(`/api/connections/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${t}` } });
+    await fetch(`/api/connections/${id}`, { method: 'DELETE' });
     setConnections(prev => prev.filter(c => c.id !== id));
   }
 

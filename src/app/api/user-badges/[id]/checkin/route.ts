@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BADGES } from '@/lib/badges';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -20,9 +21,9 @@ async function getStudentId(token: string): Promise<string | null> {
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const studentId = await getStudentId(auth.replace('Bearer ', ''));
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  const studentId = await getStudentId(token);
   if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const ubRes = await fetch(`${directusUrl}/items/user_badges/${id}`, { headers: h() });

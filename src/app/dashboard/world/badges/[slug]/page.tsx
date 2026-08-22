@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2, Flame, Trophy } from 'lucide-react';
-import { getStoredToken } from '@/lib/directus';
 import { BADGES } from '@/lib/badges';
 
 interface UserBadge {
@@ -42,9 +41,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
   const [justCompleted, setJustCompleted] = useState(false);
 
   const loadMyBadge = useCallback(async () => {
-    const res = await fetch('/api/user-badges', {
-      headers: { Authorization: `Bearer ${getStoredToken()}` },
-    });
+    const res = await fetch('/api/user-badges');
     if (res.ok) {
       const data = await res.json() as { user_badges: UserBadge[] };
       const found = data.user_badges.find(ub => ub.badge_slug === slug) ?? null;
@@ -69,7 +66,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     setMessage('');
     const res = await fetch('/api/user-badges', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ badge_slug: slug }),
     });
     const data = await res.json() as { message?: string };
@@ -87,7 +84,6 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     setMessage('');
     const res = await fetch(`/api/user-badges/${userBadge.id}/checkin`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${getStoredToken()}` },
     });
     const data = await res.json() as { message?: string; completed?: boolean };
     if (!res.ok) {

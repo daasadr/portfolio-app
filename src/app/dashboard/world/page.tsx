@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Globe2, Flame, CheckCircle2, Lock } from 'lucide-react';
-import { getStoredToken } from '@/lib/directus';
 import { BADGES } from '@/lib/badges';
 
 interface UserBadge {
@@ -24,9 +23,7 @@ export default function WorldPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/user-badges', {
-      headers: { Authorization: `Bearer ${getStoredToken()}` },
-    });
+    const res = await fetch('/api/user-badges');
     if (res.ok) {
       const data = await res.json() as { user_badges: UserBadge[] };
       setUserBadges(data.user_badges ?? []);

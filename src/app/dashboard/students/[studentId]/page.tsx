@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BookOpen, FileText, FolderOpen } from 'lucide-react';
-import { getStoredToken } from '@/lib/directus';
 import type { Student, Category, PortfolioPage } from '@/types';
 
 export default function StudentPortfolioPage({ params }: { params: Promise<{ studentId: string }> }) {
@@ -20,10 +19,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
 
   useEffect(() => {
     const load = async () => {
-      const token = getStoredToken();
-      const res = await fetch(`/api/teacher/student/${studentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/teacher/student/${studentId}`);
       if (!res.ok) {
         const data = await res.json() as { message?: string };
         setError(data.message ?? 'Chyba při načítání');

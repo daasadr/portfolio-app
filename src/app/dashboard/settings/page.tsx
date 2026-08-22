@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Eye, EyeOff, Download, AlertTriangle } from 'lucide-react';
-import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, getStoredToken, logout } from '@/lib/directus';
+import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, logout } from '@/lib/directus';
 import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
 import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 import type { Student, Category } from '@/types';
@@ -97,9 +97,7 @@ export default function SettingsPage() {
         setCategories(cats ?? []);
 
         // Load current security question index
-        const sqRes = await fetch('/api/security-question', {
-          headers: { Authorization: `Bearer ${getStoredToken()}` },
-        });
+        const sqRes = await fetch('/api/security-question');
         if (sqRes.ok) {
           const sqData = await sqRes.json() as { security_question: number | null };
           setSqCurrent(sqData.security_question);
@@ -183,7 +181,7 @@ export default function SettingsPage() {
     setPwSaving(true);
     const res = await fetch('/api/change-password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
     });
     const data = await res.json() as { message?: string };
@@ -203,7 +201,7 @@ export default function SettingsPage() {
     setSqSaving(true);
     const res = await fetch('/api/security-question', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getStoredToken()}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ security_question: sqForm.question, security_answer: sqForm.answer }),
     });
     const data = await res.json() as { message?: string };
@@ -218,9 +216,7 @@ export default function SettingsPage() {
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await fetch('/api/account', {
-        headers: { Authorization: `Bearer ${getStoredToken()}` },
-      });
+      const res = await fetch('/api/account');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -240,10 +236,7 @@ export default function SettingsPage() {
     setDeleting(true);
     setDeleteError('');
     try {
-      const res = await fetch('/api/account', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${getStoredToken()}` },
-      });
+      const res = await fetch('/api/account', { method: 'DELETE' });
       if (!res.ok) {
         const d = await res.json() as { message?: string };
         setDeleteError(d.message ?? 'Chyba při mazání účtu');

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
 const adminH = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` });
 
 export async function POST(request: NextRequest) {
-  const auth = request.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  const token = auth.replace('Bearer ', '');
+  const token = getTokenFromRequest(request);
+  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
   const { currentPassword, newPassword } = await request.json() as {
     currentPassword: string; newPassword: string;

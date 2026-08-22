@@ -15,7 +15,7 @@ import {
   LayoutDashboard,
   Flame,
 } from 'lucide-react';
-import { getCurrentStudent, directus, readItems, getStoredToken } from '@/lib/directus';
+import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { BADGES } from '@/lib/badges';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
 
@@ -25,18 +25,6 @@ interface UserBadge {
   steps_done: number;
   last_step_date: string | null;
   status: 'active' | 'completed' | 'expired';
-}
-
-const directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-
-function getToken() {
-  try {
-    const s = sessionStorage.getItem('pp_auth');
-    if (s) return JSON.parse(s)?.access_token ?? '';
-    const l = localStorage.getItem('pp_auth');
-    if (l) return JSON.parse(l)?.access_token ?? '';
-    return '';
-  } catch { return ''; }
 }
 
 export default function DashboardPage() {
@@ -56,7 +44,6 @@ export default function DashboardPage() {
         if (!studentData) return;
         setStudent(studentData);
 
-        const token = getToken();
         const [goalsData, pagesData, entriesData, boardRes] = await Promise.all([
           directus.request(
             readItems('personal_goals', {
@@ -85,8 +72,7 @@ export default function DashboardPage() {
           ) as Promise<CalendarEntry[]>,
 
           fetch(
-            `${directusUrl}/items/dream_board_items?filter[student_id][_eq]=${studentData.id}&filter[on_board][_eq]=true&sort[]=z_index&limit=9`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            `/api/directus/items/dream_board_items?filter[student_id][_eq]=${studentData.id}&filter[on_board][_eq]=true&sort[]=z_index&limit=9`
           ).then(r => r.json()),
         ]);
 
@@ -96,9 +82,7 @@ export default function DashboardPage() {
         setBoardItems(boardRes.data ?? []);
 
         // Load active badges
-        const badgeRes = await fetch('/api/user-badges', {
-          headers: { Authorization: `Bearer ${getStoredToken()}` },
-        });
+        const badgeRes = await fetch('/api/user-badges');
         if (badgeRes.ok) {
           const badgeData = await badgeRes.json() as { user_badges: UserBadge[] };
           setActiveBadges((badgeData.user_badges ?? []).filter(ub => ub.status === 'active'));
@@ -115,10 +99,7 @@ export default function DashboardPage() {
 
   async function handleCheckin(ubId: number) {
     setCheckingIn(ubId);
-    const res = await fetch(`/api/user-badges/${ubId}/checkin`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getStoredToken()}` },
-    });
+    const res = await fetch(`/api/user-badges/${ubId}/checkin`, { method: 'POST' });
     if (res.ok) {
       const data = await res.json() as { completed?: boolean };
       if (data.completed) {
