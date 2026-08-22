@@ -101,7 +101,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                 <div className="mt-8 pt-6 border-t space-y-3">
                   <h3 className="text-sm font-semibold text-gray-600">Přílohy ({attachments.length})</h3>
                   {attachments.map(att => {
-                    const src = `/api/asset/${att.id}`;
+                    const src = `/api/asset/${att.id}?share=${token}`;
                     return (
                       <div key={att.id} className="rounded-lg border overflow-hidden">
                         {att.type.startsWith('image/') && <img src={src} alt={att.name} className="w-full max-h-96 object-contain bg-gray-50" />}
