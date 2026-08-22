@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +15,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Eye, EyeOff } from 'lucide-react';
-import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, getStoredToken } from '@/lib/directus';
+import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Eye, EyeOff, Download, AlertTriangle } from 'lucide-react';
+import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, getStoredToken, logout } from '@/lib/directus';
 import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
 import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 import type { Student, Category } from '@/types';
@@ -22,6 +24,7 @@ import type { Student, Category } from '@/types';
 const DEFAULT_BG = '/images/paradise-bg.webp';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +52,12 @@ export default function SettingsPage() {
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
+
+  // Export / smazání účtu
+  const [exporting, setExporting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Bezpečnostní otázka
   const [sqCurrent, setSqCurrent] = useState<number | null>(null);
@@ -204,6 +213,49 @@ export default function SettingsPage() {
       setSqForm({ question: -1, answer: '' });
     }
     setSqSaving(false);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/account', {
+        headers: { Authorization: `Bearer ${getStoredToken()}` },
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio-paradise-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm !== 'SMAZAT') return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch('/api/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getStoredToken()}` },
+      });
+      if (!res.ok) {
+        const d = await res.json() as { message?: string };
+        setDeleteError(d.message ?? 'Chyba při mazání účtu');
+        return;
+      }
+      logout();
+      router.push('/');
+    } catch {
+      setDeleteError('Chyba připojení');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function deleteCat(id: number) {
@@ -485,6 +537,58 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+      {/* Export dat */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Export mých dat
+          </CardTitle>
+          <CardDescription>
+            Stáhněte si kopii všech svých dat (GDPR čl. 20 — právo na přenositelnost).{' '}
+            <Link href="/privacy" className="underline underline-offset-2 text-blue-500 hover:text-blue-700">Zásady ochrany osobních údajů</Link>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            <Download className="h-4 w-4 mr-2" />
+            {exporting ? 'Připravuji export...' : 'Stáhnout moje data (JSON)'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Smazání účtu */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            Smazání účtu
+          </CardTitle>
+          <CardDescription>
+            Nevratně smaže váš účet a všechna data — portfolio, stránky, kategorie, propojení (GDPR čl. 17 — právo na výmaz).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Pro potvrzení napište do pole <span className="font-mono font-semibold">SMAZAT</span>:
+          </p>
+          <Input
+            value={deleteConfirm}
+            onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(''); }}
+            placeholder="SMAZAT"
+            className="max-w-xs font-mono"
+          />
+          {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAccount}
+            disabled={deleteConfirm !== 'SMAZAT' || deleting}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {deleting ? 'Mažu účet...' : 'Trvale smazat účet'}
+          </Button>
         </CardContent>
       </Card>
     </div>

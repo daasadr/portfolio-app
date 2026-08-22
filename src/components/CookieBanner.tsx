@@ -12,7 +12,10 @@ export default function CookieBanner() {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem(CONSENT_KEY)) {
+    const stored = localStorage.getItem(CONSENT_KEY);
+    // Accept both legacy string value and new JSON format
+    const hasConsent = stored === 'accepted' || (stored ? (() => { try { return (JSON.parse(stored) as { accepted?: boolean }).accepted; } catch { return false; } })() : false);
+    if (!hasConsent) {
       setMounted(true);
       const t = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(t);
@@ -20,7 +23,7 @@ export default function CookieBanner() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(CONSENT_KEY, 'accepted');
+    localStorage.setItem(CONSENT_KEY, JSON.stringify({ v: 1, ts: Date.now(), accepted: true }));
     setVisible(false);
     setTimeout(() => setMounted(false), 500);
   }

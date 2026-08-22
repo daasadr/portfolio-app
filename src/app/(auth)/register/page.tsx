@@ -45,6 +45,7 @@ export default function RegisterPage() {
   });
   const [securityQuestion, setSecurityQuestion] = useState<number>(-1);
   const [securityAnswer, setSecurityAnswer] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -241,9 +242,27 @@ export default function RegisterPage() {
               <p className="text-xs text-gray-400">Odpověď není citlivá na velká/malá písmena.</p>
             </div>
 
+            {/* Souhlas se zpracováním osobních údajů (GDPR čl. 6) */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={consentAccepted}
+                onChange={e => setConsentAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                required
+              />
+              <span className="text-xs text-gray-600 leading-relaxed">
+                Souhlasím se{' '}
+                <a href="/privacy" target="_blank" className="text-blue-600 hover:underline font-medium">
+                  zpracováním osobních údajů
+                </a>{' '}
+                za účelem provozování portfolia. Souhlas mohu kdykoli odvolat smazáním účtu.
+              </span>
+            </label>
+
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !consentAccepted}>
               {isLoading ? 'Registruji...' : 'Zaregistrovat se'}
             </Button>
           </form>
