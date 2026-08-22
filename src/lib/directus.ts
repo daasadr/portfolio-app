@@ -10,9 +10,14 @@ import {
 } from '@directus/sdk';
 import type { Schema, Student } from '@/types';
 
-// All SDK requests go through our Next.js proxy, which reads the HttpOnly cookie.
-// The browser never sees the Directus JWT.
-export const directus = createDirectus<Schema>('/api/directus').with(rest());
+// During SSR/prerender, Node.js rejects relative URLs — use the real Directus URL as a fallback.
+// Client-side requests always go through /api/directus (proxy adds HttpOnly cookie auth).
+// Server-side module evaluation never actually triggers SDK requests (those happen in useEffect/handlers only).
+const SDK_BASE = typeof window !== 'undefined'
+  ? '/api/directus'
+  : (process.env.NEXT_PUBLIC_DIRECTUS_URL ?? 'http://localhost:3000');
+
+export const directus = createDirectus<Schema>(SDK_BASE).with(rest());
 
 export { readItems, createItem, updateItem, deleteItem };
 
