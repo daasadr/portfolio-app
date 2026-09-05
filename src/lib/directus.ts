@@ -10,11 +10,11 @@ import {
 } from '@directus/sdk';
 import type { Schema, Student } from '@/types';
 
-// During SSR/prerender, Node.js rejects relative URLs — use the real Directus URL as a fallback.
-// Client-side requests always go through /api/directus (proxy adds HttpOnly cookie auth).
-// Server-side module evaluation never actually triggers SDK requests (those happen in useEffect/handlers only).
+// new URL('/api/directus') throws in both Node.js and browser — URL constructor requires an absolute URL.
+// Client: use window.location.origin to build an absolute URL dynamically.
+// Server: use the real Directus URL (module evaluation never triggers actual SDK requests server-side).
 const SDK_BASE = typeof window !== 'undefined'
-  ? '/api/directus'
+  ? `${window.location.origin}/api/directus`
   : (process.env.NEXT_PUBLIC_DIRECTUS_URL ?? 'http://localhost:3000');
 
 export const directus = createDirectus<Schema>(SDK_BASE).with(rest());
