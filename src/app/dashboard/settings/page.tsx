@@ -53,8 +53,14 @@ export default function SettingsPage() {
   const [pwSuccess, setPwSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
-  // Export / smazání účtu
+  // Export
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'html' | 'raw'>('html');
+  const [exportSections, setExportSections] = useState({ portfolio: true, goals: true, dreamboard: true });
+  const [exportPrivacy, setExportPrivacy] = useState<'all' | 'shared'>('all');
   const [exporting, setExporting] = useState(false);
+
+  // Smazání účtu
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -214,16 +220,26 @@ export default function SettingsPage() {
   }
 
   async function handleExport() {
+    const activeSections = (Object.keys(exportSections) as (keyof typeof exportSections)[])
+      .filter(k => exportSections[k]);
+    if (!activeSections.length) return;
     setExporting(true);
     try {
-      const res = await fetch('/api/account');
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: exportFormat, sections: activeSections, privacy: exportPrivacy }),
+      });
+      if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `portfolio-paradise-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = res.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1]
+        ?? `portfolio_export_${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
       URL.revokeObjectURL(url);
+      setExportDialogOpen(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -540,15 +556,98 @@ export default function SettingsPage() {
             Export mých dat
           </CardTitle>
           <CardDescription>
-            Stáhněte si kopii všech svých dat (GDPR čl. 20 — právo na přenositelnost).{' '}
+            Stáhněte si kopii svých dat jako ZIP soubor (GDPR čl. 20 — právo na přenositelnost).{' '}
             <Link href="/privacy" className="underline underline-offset-2 text-blue-500 hover:text-blue-700">Zásady ochrany osobních údajů</Link>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" onClick={handleExport} disabled={exporting}>
-            <Download className="h-4 w-4 mr-2" />
-            {exporting ? 'Připravuji export...' : 'Stáhnout moje data (JSON)'}
-          </Button>
+          <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Exportovat data...
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Exportovat portfolio</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5 pt-1">
+
+                {/* Formát */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700">Formát</p>
+                  <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <input type="radio" name="format" value="html" checked={exportFormat === 'html'}
+                      onChange={() => setExportFormat('html')} className="mt-0.5" />
+                    <span>
+                      <span className="block font-medium text-sm">Prohlížitelný HTML archiv</span>
+                      <span className="block text-xs text-gray-500">Rozbal ZIP, otevři index.html v prohlížeči. Lze tisknout nebo uložit jako PDF.</span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <input type="radio" name="format" value="raw" checked={exportFormat === 'raw'}
+                      onChange={() => setExportFormat('raw')} className="mt-0.5" />
+                    <span>
+                      <span className="block font-medium text-sm">Záloha souborů</span>
+                      <span className="block text-xs text-gray-500">Složky s texty (.txt) + originální fotky a videa. Vhodné pro přenos na jiný systém.</span>
+                    </span>
+                  </label>
+                </div>
+
+                {/* Co exportovat */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-700">Co exportovat</p>
+                  <div className="space-y-2">
+                    {([
+                      ['portfolio', 'Portfolio stránky'] as const,
+                      ['goals', 'Cíle a přání'] as const,
+                      ['dreamboard', 'Dream board'] as const,
+                    ]).map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-3 cursor-pointer py-1">
+                        <input type="checkbox" checked={exportSections[key]}
+                          onChange={e => setExportSections(s => ({ ...s, [key]: e.target.checked }))}
+                          className="rounded" />
+                        <span className="text-sm">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Viditelnost (jen pro portfolio) */}
+                {exportSections.portfolio && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-gray-700">Portfolio stránky</p>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input type="radio" name="privacy" value="all" checked={exportPrivacy === 'all'}
+                          onChange={() => setExportPrivacy('all')} />
+                        Vše (i soukromé)
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input type="radio" name="privacy" value="shared" checked={exportPrivacy === 'shared'}
+                          onChange={() => setExportPrivacy('shared')} />
+                        Jen sdílené
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-400">Export může trvat chvíli, pokud máš hodně příloh.</p>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Zrušit</Button>
+                  <Button
+                    onClick={handleExport}
+                    disabled={exporting || !Object.values(exportSections).some(Boolean)}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {exporting ? 'Připravuji...' : 'Stáhnout ZIP'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 
