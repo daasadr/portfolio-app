@@ -5,6 +5,7 @@ export interface Student {
   user_id: string;
   first_name: string;
   last_name: string;
+  email?: string;
   avatar?: string;
   date_of_birth?: string;
   is_teacher?: boolean;

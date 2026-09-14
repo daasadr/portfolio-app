@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       headers: adminHeaders(),
       body: JSON.stringify({
         user_id: user.id,
+        email,
         first_name: firstName,
         last_name: lastName,
         is_teacher: false,
