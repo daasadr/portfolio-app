@@ -23,8 +23,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { data } = await res.json() as {
-    data: { access_token: string; refresh_token: string };
+    data: { access_token: string; refresh_token: string; expires?: number };
   };
+
+  const expTs = Math.floor((Date.now() + (data.expires ?? 900_000)) / 1000);
 
   const response = NextResponse.json({ success: true });
   response.cookies.set('pp_token', data.access_token, {
@@ -32,6 +34,9 @@ export async function POST(request: NextRequest) {
   });
   response.cookies.set('pp_refresh', data.refresh_token, {
     httpOnly: true, secure: isProd, sameSite: 'strict', path: '/api/auth',
+  });
+  response.cookies.set('pp_token_exp', String(expTs), {
+    httpOnly: false, secure: isProd, sameSite: 'strict', path: '/',
   });
   return response;
 }

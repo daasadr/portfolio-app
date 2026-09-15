@@ -44,11 +44,21 @@ export async function POST(request: NextRequest) {
   const tokenMaxAge = remember ? 60 * 60 * 24 * 30 : undefined;
   const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : undefined;
 
+  // Expiry timestamp (seconds) — readable by middleware for proactive refresh
+  const expTs = Math.floor((Date.now() + (data.expires ?? 900_000)) / 1000);
+
   const response = NextResponse.json({ success: true });
   response.cookies.set('pp_token', data.access_token, cookieOpts(tokenMaxAge));
   response.cookies.set('pp_refresh', data.refresh_token, {
     ...cookieOpts(refreshMaxAge),
     path: '/api/auth',
+  });
+  response.cookies.set('pp_token_exp', String(expTs), {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: 'strict' as const,
+    path: '/',
+    ...(tokenMaxAge != null ? { maxAge: tokenMaxAge } : {}),
   });
   return response;
 }
