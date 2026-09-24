@@ -10,8 +10,9 @@ echo "Portfolio Paradise — deploy.sh (PID $$, $(date '+%Y-%m-%d %H:%M:%S'))"
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_NAME="portfolio-paradise"
 
-# Auto-detect compose file — checks same dir then parent, prod variant first
+# Hledá compose soubor v daném adresáři
 _find_compose() {
   local dir="$1"
   for name in docker-compose.prod.yml docker-compose.yml; do
@@ -19,15 +20,32 @@ _find_compose() {
   done
   return 1
 }
-# || true: pokud _find_compose vrátí 1 (nenajde soubor), set -e by tiše ukončilo skript.
+
+# Fallback: zjistí compose adresář z labels běžícího kontejneru
+_find_compose_from_docker() {
+  local dir
+  dir="$(docker inspect "${PROJECT_NAME}" \
+    --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null)" || return 1
+  [ -n "${dir:-}" ] || return 1
+  _find_compose "$dir" || return 1
+}
+
+# 1) Zkus adresář skriptu
 COMPOSE_FILE="$(_find_compose "$SCRIPT_DIR")" || true
+# 2) Zkus nadřazený adresář
 if [ -z "${COMPOSE_FILE:-}" ]; then
   COMPOSE_FILE="$(_find_compose "$(dirname "$SCRIPT_DIR")")" || true
 fi
+# 3) Zjisti z běžícího Docker kontejneru
 if [ -z "${COMPOSE_FILE:-}" ]; then
-  echo "CHYBA: docker-compose.yml nenalezen v $SCRIPT_DIR ani v nadřazeném adresáři" >&2
-  echo "Soubory v adresáři:" >&2
-  ls "$SCRIPT_DIR"/*.yml 2>/dev/null >&2 || echo "  (žádné .yml soubory)" >&2
+  echo "  compose soubor nenalezen ve filesystému, zkouším docker inspect..."
+  COMPOSE_FILE="$(_find_compose_from_docker)" || true
+fi
+if [ -z "${COMPOSE_FILE:-}" ]; then
+  echo "CHYBA: docker-compose.yml nenalezen." >&2
+  echo "Diagnostika:" >&2
+  echo "  Hledáno v: $SCRIPT_DIR a $(dirname "$SCRIPT_DIR")" >&2
+  echo "  Zadej cestu ručně: COMPOSE_FILE=/cesta/k/docker-compose.yml ./deploy.sh" >&2
   exit 1
 fi
 
@@ -35,7 +53,6 @@ COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
 COMPOSE_NAME="$(basename "$COMPOSE_FILE")"
 cd "$COMPOSE_DIR"
 
-PROJECT_NAME="portfolio-paradise"
 HEALTH_URL="http://localhost:3000"
 HEALTH_TIMEOUT=90
 KEEP_ROLLBACK=1
