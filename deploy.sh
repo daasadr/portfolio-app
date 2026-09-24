@@ -23,6 +23,8 @@ if [ -z "$COMPOSE_FILE" ]; then
   exit 1
 fi
 COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
+COMPOSE_NAME="$(basename "$COMPOSE_FILE")"
+cd "$COMPOSE_DIR"   # all docker compose calls run from here with a relative path
 
 # Docker compose project name — must match what's in docker-compose.yml
 # (or the directory name Docker uses by default)
@@ -154,14 +156,14 @@ BUILD_ARGS="--pull"                    # always pull fresh base images
 $NO_CACHE && BUILD_ARGS="$BUILD_ARGS --no-cache"
 
 BUILD_START_TS=$(date +%s)
-docker compose -f "$COMPOSE_FILE" build $BUILD_ARGS 2>&1 | tee -a "$LOG_FILE"
+docker compose -f "$COMPOSE_NAME" build $BUILD_ARGS 2>&1 | tee -a "$LOG_FILE"
 BUILD_END_TS=$(date +%s)
 ok "Build completed in $(( BUILD_END_TS - BUILD_START_TS ))s"
 
 # ── Step 4: Deploy ────────────────────────────────────────────────────────────
 step 4 5 "Deploy containers"
 
-docker compose -f "$COMPOSE_FILE" up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE"
+docker compose -f "$COMPOSE_NAME" up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE"
 
 if ! $SKIP_HEALTH; then
   log "Waiting for app to respond at $HEALTH_URL (max ${HEALTH_TIMEOUT}s)..."
@@ -173,7 +175,7 @@ if ! $SKIP_HEALTH; then
     if [ "$i" -eq "$HEALTH_TIMEOUT" ]; then
       # Print recent logs to help diagnose
       echo -e "\n${RED}Container logs (last 30 lines):${NC}" | tee -a "$LOG_FILE"
-      docker compose -f "$COMPOSE_FILE" logs --tail=30 2>&1 | tee -a "$LOG_FILE"
+      docker compose -f "$COMPOSE_NAME" logs --tail=30 2>&1 | tee -a "$LOG_FILE"
       fail "Health check failed after ${HEALTH_TIMEOUT}s.
   Rollback: docker stop ${PROJECT_NAME} && docker tag $ROLLBACK_TAG <image> && docker compose -f $COMPOSE_FILE up -d"
     fi
@@ -231,7 +233,7 @@ echo ""
 echo "════════════════════════════════════════════════════"
 printf "${GREEN}  ✓ Deploy successful!${NC}  (${TOTAL_TIME}s total)\n"
 echo "  Commit : $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
-echo "  Image  : $(docker compose -f "$COMPOSE_FILE" images 2>/dev/null | tail -1 | awk '{print $2}' || echo '?')"
-[ -n "${ROLLBACK_TAG:-}" ] && echo "  Rollback: docker tag $ROLLBACK_TAG ${PROJECT_NAME}-${PROJECT_NAME}:latest && docker compose -f $COMPOSE_FILE up -d --no-build"
+echo "  Image  : $(docker compose -f "$COMPOSE_NAME" images 2>/dev/null | tail -1 | awk '{print $2}' || echo '?')"
+[ -n "${ROLLBACK_TAG:-}" ] && echo "  Rollback: docker tag $ROLLBACK_TAG ${PROJECT_NAME}-${PROJECT_NAME}:latest && docker compose -f $COMPOSE_NAME up -d --no-build"
 echo "════════════════════════════════════════════════════"
 } | tee -a "$LOG_FILE"
