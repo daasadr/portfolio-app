@@ -71,6 +71,7 @@ export default function GoalsPage() {
   const [dreamForm, setDreamForm] = useState({ title: '', description: '' });
   const [dreamSaving, setDreamSaving] = useState(false);
   const [dreamError, setDreamError] = useState<string | null>(null);
+  const [uploadWarning, setUploadWarning] = useState<string | null>(null);
 
   // Dream images (in dialog)
   const [dreamImages, setDreamImages] = useState<DreamBoardItem[]>([]);
@@ -250,12 +251,35 @@ export default function GoalsPage() {
     setDreamImages(prev => prev.map(i => i.id === item.id ? { ...i, ...body } as DreamBoardItem : i));
   }
 
+  async function compressImage(file: File, maxPx = 1600, quality = 0.82): Promise<File> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file),
+          'image/jpeg', quality
+        );
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
   async function saveDream() {
     if (!student || !dreamForm.title.trim()) return;
     setDreamSaving(true);
     setDreamError(null);
+
+    // ── 1. Save the dream record ──────────────────────────────────────────────
+    let dream: Dream;
     try {
-      let dream: Dream;
       if (editingDream) {
         dream = await directus.request(
           updateItem('dreams', editingDream.id, {
@@ -274,16 +298,31 @@ export default function GoalsPage() {
         ) as Dream;
         setDreams((prev) => [dream, ...prev]);
       }
+    } catch (e) {
+      console.error('Dream save error:', e);
+      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu.');
+      setDreamSaving(false);
+      return;
+    }
 
-      // Upload pending images
-      const newItems: DreamBoardItem[] = [];
-      if (pendingFiles.length > 0) {
-        setUploadingImages(true);
-        for (let i = 0; i < pendingFiles.length; i++) {
-          const file = pendingFiles[i];
+    // ── 2. Upload images (non-fatal — dream is already saved) ─────────────────
+    const newItems: DreamBoardItem[] = [];
+    if (pendingFiles.length > 0) {
+      setUploadingImages(true);
+      const uploadErrors: string[] = [];
+
+      for (let i = 0; i < pendingFiles.length; i++) {
+        try {
+          const compressed = await compressImage(pendingFiles[i]);
           const formData = new FormData();
-          formData.append('file', file, file.name);
+          formData.append('file', compressed, compressed.name);
+
           const uploadRes = await fetch('/api/directus/files', { method: 'POST', body: formData });
+          if (!uploadRes.ok) {
+            const msg = uploadRes.status === 413 ? 'příliš velký soubor' : `chyba ${uploadRes.status}`;
+            uploadErrors.push(`${pendingFiles[i].name}: ${msg}`);
+            continue;
+          }
           const uploadJson = await uploadRes.json();
           const file_id = uploadJson.data?.id;
           if (!file_id) continue;
@@ -303,27 +342,34 @@ export default function GoalsPage() {
               on_board: false,
             }),
           });
-          const itemJson = await itemRes.json();
-          if (itemJson.data) newItems.push(itemJson.data);
+          if (itemRes.ok) {
+            const itemJson = await itemRes.json();
+            if (itemJson.data) newItems.push(itemJson.data);
+          }
+        } catch (e) {
+          console.error('Image upload error:', e);
+          uploadErrors.push(pendingFiles[i].name);
         }
-        setPendingFiles([]);
-        setUploadingImages(false);
       }
 
-      // Sync expanded card view immediately (current dreamImages + new uploads)
-      setExpandedImages(prev => ({
-        ...prev,
-        [dream.id]: [...(prev[dream.id] ?? dreamImages), ...newItems],
-      }));
-
-      setDreamDialogOpen(false);
-    } catch (e) {
-      console.error(e);
+      setPendingFiles([]);
       setUploadingImages(false);
-      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu.');
-    } finally {
-      setDreamSaving(false);
+
+      if (uploadErrors.length > 0) {
+        setUploadWarning(`Sen byl uložen, ale tyto obrázky se nepodařilo nahrát (zkuste menší soubory): ${uploadErrors.join(', ')}`);
+      }
     }
+
+    // ── 3. Sync expanded card & close ─────────────────────────────────────────
+    setExpandedImages(prev => ({
+      ...prev,
+      [dream.id]: [...(prev[dream.id] ?? dreamImages), ...newItems],
+    }));
+
+    setDreamSaving(false);
+    // Dream is always saved at this point — close the modal.
+    // Upload errors are shown in dreamError (non-fatal).
+    setDreamDialogOpen(false);
   }
 
   async function deleteDream(id: string) {
@@ -513,6 +559,12 @@ export default function GoalsPage() {
       {/* ── SNY ── */}
       {activeTab === 'dreams' && (
         <div className="space-y-4">
+          {uploadWarning && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 flex justify-between items-start gap-2">
+              <span>{uploadWarning}</span>
+              <button onClick={() => setUploadWarning(null)} className="shrink-0 text-yellow-500 hover:text-yellow-700 font-bold">×</button>
+            </div>
+          )}
           <div className="flex justify-end">
             <Dialog open={dreamDialogOpen} onOpenChange={(open) => { if (!open) setDreamDialogOpen(false); }}>
               <DialogTrigger asChild>
