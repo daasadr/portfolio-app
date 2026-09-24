@@ -28,7 +28,7 @@ COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
 COMPOSE_NAME="$(basename "$COMPOSE_FILE")"
 cd "$COMPOSE_DIR"
 
-HEALTH_URL="http://localhost:3000"
+HEALTH_URL="http://localhost:3004"
 HEALTH_TIMEOUT=90
 KEEP_ROLLBACK=1
 
