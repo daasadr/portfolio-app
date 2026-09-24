@@ -12,40 +12,15 @@ echo "Portfolio Paradise — deploy.sh (PID $$, $(date '+%Y-%m-%d %H:%M:%S'))"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="portfolio-paradise"
 
-# Hledá compose soubor v daném adresáři
-_find_compose() {
-  local dir="$1"
+# Compose soubor — buď manuální override, nebo vždy vedle deploy.sh
+if [ -z "${COMPOSE_FILE:-}" ]; then
   for name in docker-compose.prod.yml docker-compose.yml; do
-    if [ -f "$dir/$name" ]; then echo "$dir/$name"; return 0; fi
+    if [ -f "$SCRIPT_DIR/$name" ]; then COMPOSE_FILE="$SCRIPT_DIR/$name"; break; fi
   done
-  return 1
-}
-
-# Fallback: zjistí compose adresář z labels běžícího kontejneru
-_find_compose_from_docker() {
-  local dir
-  dir="$(docker inspect "${PROJECT_NAME}" \
-    --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' 2>/dev/null)" || return 1
-  [ -n "${dir:-}" ] || return 1
-  _find_compose "$dir" || return 1
-}
-
-# 1) Zkus adresář skriptu
-COMPOSE_FILE="$(_find_compose "$SCRIPT_DIR")" || true
-# 2) Zkus nadřazený adresář
-if [ -z "${COMPOSE_FILE:-}" ]; then
-  COMPOSE_FILE="$(_find_compose "$(dirname "$SCRIPT_DIR")")" || true
-fi
-# 3) Zjisti z běžícího Docker kontejneru
-if [ -z "${COMPOSE_FILE:-}" ]; then
-  echo "  compose soubor nenalezen ve filesystému, zkouším docker inspect..."
-  COMPOSE_FILE="$(_find_compose_from_docker)" || true
 fi
 if [ -z "${COMPOSE_FILE:-}" ]; then
-  echo "CHYBA: docker-compose.yml nenalezen." >&2
-  echo "Diagnostika:" >&2
-  echo "  Hledáno v: $SCRIPT_DIR a $(dirname "$SCRIPT_DIR")" >&2
-  echo "  Zadej cestu ručně: COMPOSE_FILE=/cesta/k/docker-compose.yml ./deploy.sh" >&2
+  echo "CHYBA: docker-compose.yml nenalezen v $SCRIPT_DIR" >&2
+  echo "  Manuální override: COMPOSE_FILE=/cesta/k/docker-compose.yml ./deploy.sh" >&2
   exit 1
 fi
 
