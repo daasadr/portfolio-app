@@ -43,7 +43,10 @@ async function handle(request: NextRequest, { params }: { params: Promise<{ path
     return NextResponse.json({ message: 'Not allowed' }, { status: 403 });
   }
 
-  const token = request.cookies.get('pp_token')?.value ?? null;
+  // x-pp-token is set by middleware after a proactive token refresh
+  const token = request.headers.get('x-pp-token')
+    ?? request.cookies.get('pp_token')?.value
+    ?? null;
 
   let upstream = await proxyRequest(token, path, request);
 

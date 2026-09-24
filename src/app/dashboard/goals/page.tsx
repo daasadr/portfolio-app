@@ -70,6 +70,7 @@ export default function GoalsPage() {
   const [editingDream, setEditingDream] = useState<Dream | null>(null);
   const [dreamForm, setDreamForm] = useState({ title: '', description: '' });
   const [dreamSaving, setDreamSaving] = useState(false);
+  const [dreamError, setDreamError] = useState<string | null>(null);
 
   // Dream images (in dialog)
   const [dreamImages, setDreamImages] = useState<DreamBoardItem[]>([]);
@@ -252,6 +253,7 @@ export default function GoalsPage() {
   async function saveDream() {
     if (!student || !dreamForm.title.trim()) return;
     setDreamSaving(true);
+    setDreamError(null);
     try {
       let dream: Dream;
       if (editingDream) {
@@ -318,6 +320,7 @@ export default function GoalsPage() {
     } catch (e) {
       console.error(e);
       setUploadingImages(false);
+      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu.');
     } finally {
       setDreamSaving(false);
     }
@@ -644,6 +647,9 @@ export default function GoalsPage() {
                     )}
                   </div>
 
+                  {dreamError && (
+                    <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{dreamError}</p>
+                  )}
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setDreamDialogOpen(false)}>Zrušit</Button>
                     <Button onClick={saveDream} disabled={dreamSaving || uploadingImages || !dreamForm.title.trim()}>
