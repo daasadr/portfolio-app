@@ -251,7 +251,7 @@ export default function GoalsPage() {
     setDreamImages(prev => prev.map(i => i.id === item.id ? { ...i, ...body } as DreamBoardItem : i));
   }
 
-  async function compressImage(file: File, maxPx = 1600, quality = 0.82): Promise<File> {
+  async function compressImage(file: File, maxPx = 1200, maxBytes = 900_000): Promise<File> {
     return new Promise((resolve) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -261,11 +261,21 @@ export default function GoalsPage() {
         const canvas = document.createElement('canvas');
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(
-          (blob) => resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file),
-          'image/jpeg', quality
-        );
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const tryQuality = (q: number) => {
+          canvas.toBlob((blob) => {
+            if (!blob) { resolve(file); return; }
+            if (blob.size <= maxBytes || q <= 0.45) {
+              resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+            } else {
+              tryQuality(Math.round((q - 0.1) * 10) / 10);
+            }
+          }, 'image/jpeg', q);
+        };
+        tryQuality(0.82);
       };
       img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
       img.src = url;
