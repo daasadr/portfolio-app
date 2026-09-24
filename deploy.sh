@@ -7,16 +7,22 @@ set -euo pipefail
 # Absolute path to this script's directory (= git repo root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Auto-detect docker-compose.yml: prefer same dir, fall back to parent
-if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-  COMPOSE_DIR="$SCRIPT_DIR"
-elif [ -f "$(dirname "$SCRIPT_DIR")/docker-compose.yml" ]; then
-  COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
-else
+# Auto-detect compose file — checks same dir then parent, prod variant first
+_find_compose() {
+  local dir="$1"
+  for name in docker-compose.prod.yml docker-compose.yml; do
+    [ -f "$dir/$name" ] && echo "$dir/$name" && return
+  done
+}
+COMPOSE_FILE="$(_find_compose "$SCRIPT_DIR")"
+if [ -z "$COMPOSE_FILE" ]; then
+  COMPOSE_FILE="$(_find_compose "$(dirname "$SCRIPT_DIR")")"
+fi
+if [ -z "$COMPOSE_FILE" ]; then
   echo "ERROR: docker-compose.yml not found in $SCRIPT_DIR or its parent" >&2
   exit 1
 fi
-COMPOSE_FILE="$COMPOSE_DIR/docker-compose.yml"
+COMPOSE_DIR="$(dirname "$COMPOSE_FILE")"
 
 # Docker compose project name — must match what's in docker-compose.yml
 # (or the directory name Docker uses by default)
