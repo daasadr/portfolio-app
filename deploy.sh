@@ -4,10 +4,18 @@
 set -euo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# Absolute path to the directory containing docker-compose.yml
-# Adjust if your docker-compose.yml is not one level above this script
+# Absolute path to this script's directory (= git repo root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"          # parent of portfolio-app/
+
+# Auto-detect docker-compose.yml: prefer same dir, fall back to parent
+if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
+  COMPOSE_DIR="$SCRIPT_DIR"
+elif [ -f "$(dirname "$SCRIPT_DIR")/docker-compose.yml" ]; then
+  COMPOSE_DIR="$(dirname "$SCRIPT_DIR")"
+else
+  echo "ERROR: docker-compose.yml not found in $SCRIPT_DIR or its parent" >&2
+  exit 1
+fi
 COMPOSE_FILE="$COMPOSE_DIR/docker-compose.yml"
 
 # Docker compose project name — must match what's in docker-compose.yml
