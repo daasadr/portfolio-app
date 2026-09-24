@@ -68,8 +68,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     // Only expose the specific category, not all student categories (M4 fix)
     categoriesFilter = `filter[id][_eq]=${link.category_id}`;
   } else {
-    // full_portfolio
-    pagesFilter = `filter[student_id][_eq]=${link.student_id}&filter[visibility][_eq]=shared`;
+    // full_portfolio — žák sdílí celé portfolio, visibility gate není potřeba
+    pagesFilter = `filter[student_id][_eq]=${link.student_id}`;
     categoriesFilter = `filter[student_id][_eq]=${link.student_id}`;
   }
 

@@ -243,8 +243,8 @@ export default function SharePage() {
           <TabsTrigger value="incoming" className="flex items-center gap-2">
             <Inbox className="h-4 w-4" />
             Sdílí se mnou
-            {incomingShares.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1.5">{incomingShares.length}</Badge>
+            {(incomingShares.length + pendingConnections.length) > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs px-1.5">{incomingShares.length + pendingConnections.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="outgoing" className="flex items-center gap-2">
