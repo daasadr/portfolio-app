@@ -35,6 +35,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bg, setBg] = useState(DEFAULT_BG);
+  const [pendingCount, setPendingCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -48,6 +49,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setStudent(studentData);
         const saved = localStorage.getItem(`pp_bg_${studentData.id}`);
         if (saved) setBg(saved);
+
+        if (!studentData.is_teacher) {
+          fetch('/api/connections')
+            .then(r => r.ok ? r.json() : { connections: [] })
+            .then((data: { connections?: { status: string }[] }) => {
+              setPendingCount((data.connections ?? []).filter(c => c.status === 'pending').length);
+            })
+            .catch(() => {});
+        }
       } catch {
         router.push('/login');
       } finally {
@@ -141,6 +151,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 <item.icon className="mr-3 h-5 w-5" />
                 {item.name}
+                {item.href === '/dashboard/share' && pendingCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
@@ -168,6 +183,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 <item.icon className="mr-3 h-5 w-5" />
                 {item.name}
+                {item.href === '/dashboard/share' && pendingCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>

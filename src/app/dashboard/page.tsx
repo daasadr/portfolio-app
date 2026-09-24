@@ -15,6 +15,7 @@ import {
   Circle,
   LayoutDashboard,
   Flame,
+  Bell,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { BADGES } from '@/lib/badges';
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [activeBadges, setActiveBadges] = useState<UserBadge[]>([]);
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingConnections, setPendingConnections] = useState<{ id: number; other_person: { first_name: string; last_name: string } | null }[]>([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -81,6 +83,16 @@ export default function DashboardPage() {
         setRecentPages(pagesData ?? []);
         setTodayEntries(entriesData ?? []);
         setBoardItems(boardRes.data ?? []);
+
+        if (!studentData.is_teacher) {
+          const connRes = await fetch('/api/connections');
+          if (connRes.ok) {
+            const connData = await connRes.json() as {
+              connections?: { id: number; status: string; other_person: { first_name: string; last_name: string } | null }[]
+            };
+            setPendingConnections((connData.connections ?? []).filter(c => c.status === 'pending'));
+          }
+        }
 
         // Load active badges
         const badgeRes = await fetch('/api/user-badges');
@@ -132,6 +144,32 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {pendingConnections.length > 0 && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="flex-shrink-0 bg-amber-100 rounded-full p-2">
+            <Bell className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-900 text-sm">
+              {pendingConnections.length === 1
+                ? 'Máš novou žádost o propojení od učitele'
+                : `Máš ${pendingConnections.length} nové žádosti o propojení`}
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5 truncate">
+              {pendingConnections
+                .map(c => c.other_person ? `${c.other_person.first_name} ${c.other_person.last_name}` : null)
+                .filter(Boolean)
+                .join(', ')}
+            </p>
+          </div>
+          <Link href="/dashboard/share">
+            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white whitespace-nowrap flex-shrink-0">
+              Zobrazit žádosti →
+            </Button>
+          </Link>
+        </div>
+      )}
+
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Vítejte, {student?.first_name}! 👋</h1>
         <p className="text-blue-100">Jaký je váš dnešní plán? Podívejte se na své cíle a portfolio.</p>
