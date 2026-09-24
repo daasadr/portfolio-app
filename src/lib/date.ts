@@ -16,6 +16,19 @@ export function formatDate(date: string | Date, formatStr: string = 'dd. MM. yyy
 }
 
 /**
+ * Bezpečné formátování — vrátí '' pro null/undefined/neplatné datum.
+ * Chrání před Directus hodnotami 0, "0" nebo jiným neplatným timestampem.
+ */
+export function safeFormatDate(date: string | number | null | undefined, formatStr: string = 'dd. MM. yyyy'): string {
+  if (!date) return '';
+  const dateObj = typeof date === 'string' ? parseISO(date) : new Date(date);
+  if (isNaN(dateObj.getTime())) return '';
+  // Odmítnout data před rokem 2000 — jsou to nejspíš chybné hodnoty z DB (epoch 0, null timestamp…)
+  if (dateObj.getFullYear() < 2000) return '';
+  return format(dateObj, formatStr, { locale: cs });
+}
+
+/**
  * Naformátuje datum jako relativní čas (např. "před 2 dny")
  */
 export function formatRelativeTime(date: string | Date): string {

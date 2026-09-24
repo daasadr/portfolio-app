@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { safeFormatDate } from '@/lib/date';
 import type { PortfolioPage, Category, PersonalGoal, Dream, DreamBoardItem } from '@/types';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -82,7 +83,7 @@ function generateHtml(opts: {
       return `
       <article class="page">
         <h3>${page.title}</h3>
-        <p class="meta">${page.visibility === 'shared' ? '🌐 Sdílená' : '🔒 Soukromá'} · Upraveno ${new Date(page.updated_at).toLocaleDateString('cs-CZ')}</p>
+        <p class="meta">${page.visibility === 'shared' ? '🌐 Sdílená' : '🔒 Soukromá'}${safeFormatDate(page.updated_at) ? ` · Upraveno ${safeFormatDate(page.updated_at)}` : ''}</p>
         <div class="content">${page.content || '<em>Bez obsahu</em>'}</div>
         ${arr.length ? `<div class="attachments">${attachmentsHtml}</div>` : ''}
       </article>`;
@@ -299,7 +300,7 @@ export async function POST(request: NextRequest) {
 
         const lines = [
           `Název: ${page.title}`,
-          `Datum: ${new Date(page.updated_at).toLocaleDateString('cs-CZ')}`,
+          ...(safeFormatDate(page.updated_at) ? [`Datum: ${safeFormatDate(page.updated_at)}`] : []),
           `Kategorie: ${catName}`,
           `Viditelnost: ${page.visibility === 'shared' ? 'Sdílená' : 'Soukromá'}`,
           '',

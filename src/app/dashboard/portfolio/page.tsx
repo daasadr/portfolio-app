@@ -8,6 +8,7 @@ import {
   BookOpen, Plus, Search, Pencil, Trash2, Globe, Lock, FolderOpen, Eye,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, deleteItem } from '@/lib/directus';
+import { safeFormatDate } from '@/lib/date';
 import { bgStyle, catTextStyle } from '@/components/portfolio/CategoryEditor';
 import CategoryEditor from '@/components/portfolio/CategoryEditor';
 import type { Student, PortfolioPage, Category } from '@/types';
@@ -238,7 +239,7 @@ function PageGrid({
                 <p className="font-medium truncate">{page.title}</p>
                 {cat && <p className="text-xs text-gray-400 mt-0.5">{cat.name}</p>}
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                  {safeFormatDate(page.updated_at)}
                 </p>
               </div>
             </div>
@@ -259,7 +260,7 @@ function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: strin
         : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{page.title}</p>
-        <p className="text-xs text-gray-400">{new Date(page.updated_at).toLocaleDateString('cs-CZ')}</p>
+        <p className="text-xs text-gray-400">{safeFormatDate(page.updated_at)}</p>
       </div>
       <PageActions page={page} onDelete={onDelete} compact />
     </div>

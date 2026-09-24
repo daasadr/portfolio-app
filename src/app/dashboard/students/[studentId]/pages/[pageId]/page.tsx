@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeFormatDate } from '@/lib/date';
 import { use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -91,7 +92,7 @@ export default function TeacherPageView({
           {page.title}
         </h1>
         <p className="text-white/70 text-xs mt-1">
-          {studentName} · {(page.updated_at ?? page.created_at) ? `Upraveno ${new Date(page.updated_at ?? page.created_at).toLocaleDateString('cs-CZ')}` : ''}
+          {studentName}{safeFormatDate(page.updated_at ?? page.created_at) ? ` · Upraveno ${safeFormatDate(page.updated_at ?? page.created_at)}` : ''}
         </p>
       </div>
 

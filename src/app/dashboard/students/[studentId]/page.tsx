@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeFormatDate } from '@/lib/date';
 import { use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {new Date(page.updated_at ?? page.created_at).toLocaleDateString('cs-CZ')}
+                              {safeFormatDate(page.updated_at ?? page.created_at)}
                             </p>
                           </div>
                           <Badge variant={page.visibility === 'shared' ? 'secondary' : 'outline'} className="text-xs flex-shrink-0">
@@ -125,7 +126,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {new Date(page.updated_at ?? page.created_at).toLocaleDateString('cs-CZ')}
+                              {safeFormatDate(page.updated_at ?? page.created_at)}
                             </p>
                           </div>
                         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeFormatDate } from '@/lib/date';
 import { use } from 'react';
 import DOMPurify from 'dompurify';
 import Link from 'next/link';
@@ -88,7 +89,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                 {selectedPage.title}
               </h1>
               <p className="text-white/70 text-xs mt-1">
-                {student?.first_name} {student?.last_name} · {new Date(selectedPage.updated_at).toLocaleDateString('cs-CZ')}
+                {student?.first_name} {student?.last_name}{safeFormatDate(selectedPage.updated_at) ? ` · ${safeFormatDate(selectedPage.updated_at)}` : ''}
               </p>
             </div>
             <div className="bg-white px-6 py-6">
@@ -171,7 +172,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                              {safeFormatDate(page.updated_at)}
                             </p>
                           </div>
                         </div>
@@ -202,7 +203,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                              {safeFormatDate(page.updated_at)}
                             </p>
                           </div>
                         </div>

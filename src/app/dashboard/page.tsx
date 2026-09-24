@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeFormatDate } from '@/lib/date';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -350,7 +351,7 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{page.title}</p>
                         <p className="text-xs text-gray-500">
-                          {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                          {safeFormatDate(page.updated_at)}
                         </p>
                       </div>
                       <Badge variant={page.visibility === 'shared' ? 'default' : 'secondary'}>

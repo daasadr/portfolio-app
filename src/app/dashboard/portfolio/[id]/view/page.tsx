@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { safeFormatDate } from '@/lib/date';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -223,7 +224,7 @@ export default function ViewPortfolioPage({ params }: Props) {
                 </Badge>
               )}
               <span className="text-white/70 text-xs">
-                Upraveno {new Date(page.updated_at).toLocaleDateString('cs-CZ')}
+                {safeFormatDate(page.updated_at) ? `Upraveno ${safeFormatDate(page.updated_at)}` : ''}
               </span>
             </div>
           </div>

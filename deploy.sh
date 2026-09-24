@@ -40,6 +40,10 @@ KEEP_ROLLBACK=1
 LOG_FILE="$COMPOSE_DIR/deploy.log"
 LOCK_FILE="/tmp/${PROJECT_NAME}.deploy.lock"
 
+# Redirect ALL output (stdout + stderr) through tee so every line appears in
+# the terminal AND gets appended to the log file — no per-command | tee needed.
+exec 1> >(tee -a "$LOG_FILE") 2>&1
+
 # ── Flags ─────────────────────────────────────────────────────────────────────
 NO_CACHE=false
 SKIP_HEALTH=false
@@ -61,14 +65,14 @@ BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 ts()   { date '+%H:%M:%S'; }
-log()  { echo -e "${BLUE}[$(ts)]${NC} $*" | tee -a "$LOG_FILE"; }
-ok()   { echo -e "${GREEN}  ✓${NC} $*" | tee -a "$LOG_FILE"; }
-warn() { echo -e "${YELLOW}  ⚠${NC} $*" | tee -a "$LOG_FILE"; }
-fail() { echo -e "${RED}  ✗ FAILED:${NC} $*" | tee -a "$LOG_FILE"; exit 1; }
+log()  { echo -e "${BLUE}[$(ts)]${NC} $*"; }
+ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
+warn() { echo -e "${YELLOW}  ⚠${NC} $*"; }
+fail() { echo -e "${RED}  ✗ FAILED:${NC} $*"; exit 1; }
 
 step() {
   STEP_NUM=$1; STEP_TOTAL=$2; shift 2
-  echo -e "\n${BOLD}${CYAN}── Step ${STEP_NUM}/${STEP_TOTAL}: $*${NC}" | tee -a "$LOG_FILE"
+  echo -e "\n${BOLD}${CYAN}── Step ${STEP_NUM}/${STEP_TOTAL}: $*${NC}"
 }
 
 # ── Sanity checks ─────────────────────────────────────────────────────────────
@@ -92,16 +96,14 @@ fi
 echo $$ > "$LOCK_FILE"
 
 # ── Header ────────────────────────────────────────────────────────────────────
-{
 echo ""
 echo "════════════════════════════════════════════════════"
 echo "  Portfolio Paradise — Deploy  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "  Compose: $COMPOSE_FILE"
 echo "  Project: $PROJECT_NAME"
-$NO_CACHE    && echo "  Mode: --no-cache (full rebuild)"
-$SKIP_HEALTH && echo "  Health check: skipped"
+if [ "$NO_CACHE" = true ];    then echo "  Mode: --no-cache (full rebuild)"; fi
+if [ "$SKIP_HEALTH" = true ]; then echo "  Health check: skipped"; fi
 echo "════════════════════════════════════════════════════"
-} | tee -a "$LOG_FILE"
 
 DEPLOY_START=$(date +%s)
 
@@ -113,11 +115,11 @@ cd "$SCRIPT_DIR"
 # Stash any local server-side tweaks (shouldn't exist, but be safe)
 if ! git diff --quiet || ! git diff --cached --quiet; then
   warn "Local changes detected — stashing automatically"
-  git stash push -u -m "pre-deploy-stash-$(date +%s)" 2>&1 | tee -a "$LOG_FILE"
+  git stash push -u -m "pre-deploy-stash-$(date +%s)"
 fi
 
 BEFORE_COMMIT=$(git rev-parse HEAD)
-git fetch origin 2>&1 | tee -a "$LOG_FILE"
+git fetch origin
 BEHIND=$(git rev-list HEAD..origin/master --count 2>/dev/null \
          || git rev-list HEAD..origin/main --count 2>/dev/null)
 
@@ -128,8 +130,7 @@ else
   git reset --hard origin/master 2>/dev/null || git reset --hard origin/main
   AFTER_COMMIT=$(git rev-parse HEAD)
   ok "Pulled $BEHIND new commit(s):"
-  git log --oneline "${BEFORE_COMMIT}..${AFTER_COMMIT}" \
-    | sed 's/^/    /' | tee -a "$LOG_FILE"
+  git log --oneline "${BEFORE_COMMIT}..${AFTER_COMMIT}" | sed 's/^/    /'
   SKIP_BUILD_PROMPT=false
 fi
 
@@ -153,19 +154,19 @@ fi
 step 3 5 "Docker build"
 
 BUILD_ARGS="--pull"                    # always pull fresh base images
-$NO_CACHE && BUILD_ARGS="$BUILD_ARGS --no-cache"
+if [ "$NO_CACHE" = true ]; then BUILD_ARGS="$BUILD_ARGS --no-cache"; fi
 
 BUILD_START_TS=$(date +%s)
-docker compose -f "$COMPOSE_NAME" build $BUILD_ARGS 2>&1 | tee -a "$LOG_FILE"
+docker compose -f "$COMPOSE_NAME" build $BUILD_ARGS
 BUILD_END_TS=$(date +%s)
 ok "Build completed in $(( BUILD_END_TS - BUILD_START_TS ))s"
 
 # ── Step 4: Deploy ────────────────────────────────────────────────────────────
 step 4 5 "Deploy containers"
 
-docker compose -f "$COMPOSE_NAME" up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE"
+docker compose -f "$COMPOSE_NAME" up -d --remove-orphans
 
-if ! $SKIP_HEALTH; then
+if [ "$SKIP_HEALTH" = false ]; then
   log "Waiting for app to respond at $HEALTH_URL (max ${HEALTH_TIMEOUT}s)..."
   for i in $(seq 1 "$HEALTH_TIMEOUT"); do
     if curl -sf --max-time 3 "$HEALTH_URL" > /dev/null 2>&1; then
@@ -173,9 +174,8 @@ if ! $SKIP_HEALTH; then
       break
     fi
     if [ "$i" -eq "$HEALTH_TIMEOUT" ]; then
-      # Print recent logs to help diagnose
-      echo -e "\n${RED}Container logs (last 30 lines):${NC}" | tee -a "$LOG_FILE"
-      docker compose -f "$COMPOSE_NAME" logs --tail=30 2>&1 | tee -a "$LOG_FILE"
+      echo -e "\n${RED}Container logs (last 30 lines):${NC}"
+      docker compose -f "$COMPOSE_NAME" logs --tail=30
       fail "Health check failed after ${HEALTH_TIMEOUT}s.
   Rollback: docker stop ${PROJECT_NAME} && docker tag $ROLLBACK_TAG <image> && docker compose -f $COMPOSE_FILE up -d"
     fi
@@ -191,7 +191,7 @@ step 5 5 "Cleanup Docker artifacts"
 # 5a. Dangling (untagged) images — these are always build intermediates, safe globally
 DANGLING_COUNT=$(docker images -f "dangling=true" -q | wc -l)
 if [ "$DANGLING_COUNT" -gt 0 ]; then
-  docker image prune -f 2>&1 | tee -a "$LOG_FILE"
+  docker image prune -f
   ok "Removed $DANGLING_COUNT dangling image(s)"
 else
   ok "No dangling images"
@@ -208,7 +208,7 @@ ROLLBACK_COUNT=$(echo "$ROLLBACK_TAGS" | grep -c . || true)
 if [ "$ROLLBACK_COUNT" -gt "$KEEP_ROLLBACK" ]; then
   TO_DELETE=$(echo "$ROLLBACK_TAGS" | head -n $(( ROLLBACK_COUNT - KEEP_ROLLBACK )))
   echo "$TO_DELETE" | while read -r tag; do
-    docker rmi "$tag" 2>&1 | tee -a "$LOG_FILE" && warn "Removed old rollback: $tag" || true
+    docker rmi "$tag" && warn "Removed old rollback: $tag" || true
   done
 else
   ok "Rollback snapshots within limit ($ROLLBACK_COUNT/$KEEP_ROLLBACK)"
@@ -228,12 +228,12 @@ ok "Docker images: $IMAGES_SIZE"
 DEPLOY_END=$(date +%s)
 TOTAL_TIME=$(( DEPLOY_END - DEPLOY_START ))
 
-{
 echo ""
 echo "════════════════════════════════════════════════════"
 printf "${GREEN}  ✓ Deploy successful!${NC}  (${TOTAL_TIME}s total)\n"
 echo "  Commit : $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
 echo "  Image  : $(docker compose -f "$COMPOSE_NAME" images 2>/dev/null | tail -1 | awk '{print $2}' || echo '?')"
-[ -n "${ROLLBACK_TAG:-}" ] && echo "  Rollback: docker tag $ROLLBACK_TAG ${PROJECT_NAME}-${PROJECT_NAME}:latest && docker compose -f $COMPOSE_NAME up -d --no-build"
+if [ -n "${ROLLBACK_TAG:-}" ]; then
+  echo "  Rollback: docker tag $ROLLBACK_TAG ${PROJECT_NAME}:latest && docker compose -f $COMPOSE_NAME up -d --no-build"
+fi
 echo "════════════════════════════════════════════════════"
-} | tee -a "$LOG_FILE"
