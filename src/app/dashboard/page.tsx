@@ -18,8 +18,18 @@ import {
   Bell,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
-import { BADGES } from '@/lib/badges';
+import { BADGES, type Badge as BadgeDef } from '@/lib/badges';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
+
+// Deterministic confetti — same positions every time, no Math.random() in render
+const CONFETTI = Array.from({ length: 52 }, (_, i) => ({
+  left: `${((i * 19) % 100).toFixed(1)}%`,
+  color: ['#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444','#f97316','#ec4899'][i % 7],
+  size: 6 + (i % 5) * 2,
+  delay: `${((i * 0.07) % 1.8).toFixed(2)}s`,
+  dur: `${(2.2 + (i % 6) * 0.35).toFixed(2)}s`,
+  round: i % 3 === 0,
+}));
 
 interface UserBadge {
   id: number;
@@ -38,6 +48,7 @@ export default function DashboardPage() {
   const [activeBadges, setActiveBadges] = useState<UserBadge[]>([]);
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [celebratedBadge, setCelebratedBadge] = useState<BadgeDef | null>(null);
   const [pendingConnections, setPendingConnections] = useState<{ id: number; other_person: { first_name: string; last_name: string } | null }[]>([]);
 
   useEffect(() => {
@@ -116,7 +127,10 @@ export default function DashboardPage() {
     if (res.ok) {
       const data = await res.json() as { completed?: boolean };
       if (data.completed) {
-        setActiveBadges(prev => prev.filter(ub => ub.id !== ubId));
+        const ub = activeBadges.find(b => b.id === ubId);
+        const badge = ub ? BADGES.find(b => b.slug === ub.badge_slug) : null;
+        if (badge) setCelebratedBadge(badge);
+        setActiveBadges(prev => prev.filter(b => b.id !== ubId));
       } else {
         setActiveBadges(prev => prev.map(ub =>
           ub.id === ubId
@@ -449,6 +463,59 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Celebration overlay ── */}
+      {celebratedBadge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <style>{`
+            @keyframes confettiFall {
+              0%   { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
+              85%  { opacity: 1; }
+              100% { transform: translateY(110vh) rotate(740deg) scale(0.6); opacity: 0; }
+            }
+            .pp-confetti { animation: confettiFall linear forwards; position: absolute; top: -10px; }
+          `}</style>
+
+          {/* Confetti layer */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {CONFETTI.map((c, i) => (
+              <div
+                key={i}
+                className="pp-confetti"
+                style={{
+                  left: c.left,
+                  width: c.size,
+                  height: c.size,
+                  background: c.color,
+                  borderRadius: c.round ? '50%' : '2px',
+                  animationDelay: c.delay,
+                  animationDuration: c.dur,
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setCelebratedBadge(null)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-3xl px-8 py-10 text-center shadow-2xl max-w-xs w-full mx-4">
+            <div className="text-7xl mb-4 select-none">🦫</div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Máš bobříka!</h2>
+            <p className="text-base font-semibold text-teal-600 mb-1">{celebratedBadge.name}</p>
+            <p className="text-xs text-gray-400 mb-7">Platnost 1 rok · zobrazí se v tvém profilu</p>
+            <button
+              onClick={() => setCelebratedBadge(null)}
+              className="w-full bg-teal-500 hover:bg-teal-600 active:bg-teal-700 text-white rounded-2xl py-3 font-bold text-base transition-colors"
+            >
+              Hurá! 🎉
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

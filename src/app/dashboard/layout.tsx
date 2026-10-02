@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
+import { BADGES } from '@/lib/badges';
 import type { Student } from '@/types';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bg, setBg] = useState(DEFAULT_BG);
   const [pendingCount, setPendingCount] = useState(0);
+  const [earnedBadgeSlugs, setEarnedBadgeSlugs] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -58,6 +60,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             })
             .catch(() => {});
         }
+
+        // Načti splněné bobříky pro zobrazení v top baru
+        fetch('/api/user-badges')
+          .then(r => r.ok ? r.json() : { user_badges: [] })
+          .then((data: { user_badges?: { badge_slug: string; status: string; expires_at: string | null }[] }) => {
+            const now = new Date().toISOString();
+            const earned = (data.user_badges ?? [])
+              .filter(ub => ub.status === 'completed' && (!ub.expires_at || ub.expires_at > now))
+              .map(ub => ub.badge_slug);
+            setEarnedBadgeSlugs(earned);
+          })
+          .catch(() => {});
       } catch {
         router.push('/login');
       } finally {
@@ -216,6 +230,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1" />
             <div className="flex items-center gap-x-4 lg:gap-x-6">
+              {/* Splněné bobříci */}
+              {earnedBadgeSlugs.length > 0 && (
+                <Link href="/dashboard/world" className="flex items-center gap-1">
+                  {earnedBadgeSlugs.map(slug => {
+                    const badge = BADGES.find(b => b.slug === slug);
+                    if (!badge) return null;
+                    return (
+                      <span
+                        key={slug}
+                        title={badge.name}
+                        className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium hover:bg-teal-100 transition-colors"
+                      >
+                        🦫 <span className="hidden sm:inline truncate max-w-[100px]">{badge.name.replace('Bobřík ', '')}</span>
+                      </span>
+                    );
+                  })}
+                </Link>
+              )}
               <div className="text-sm flex items-center gap-2">
                 <span className="font-medium text-gray-900">
                   {student?.first_name} {student?.last_name}

@@ -39,15 +39,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!conns?.length) return NextResponse.json({ message: 'Nemáte přístup k tomuto žákovi' }, { status: 403 });
 
   // Načti data žáka
-  const [studentRes, pagesRes, catsRes] = await Promise.all([
+  const [studentRes, pagesRes, catsRes, badgesRes] = await Promise.all([
     fetch(`${directusUrl}/items/students/${studentId}`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=name`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/user_badges?filter[student_id][_eq]=${studentId}&filter[status][_eq]=completed&sort[]=-completed_at`, { headers: adminHeaders() }),
   ]);
 
   const { data: student } = await studentRes.json() as { data: unknown };
   const pagesJson = await pagesRes.json() as { data: unknown[]; errors?: unknown };
   const { data: categories } = await catsRes.json() as { data: unknown[] };
+  const { data: rawBadges } = await badgesRes.json() as { data: { badge_slug: string; completed_at: string | null; expires_at: string | null }[] };
+  const now = new Date().toISOString();
+  const badges = (rawBadges ?? []).filter(b => !b.expires_at || b.expires_at > now);
 
-  return NextResponse.json({ student, pages: pagesJson.data ?? [], categories: categories ?? [] });
+  return NextResponse.json({ student, pages: pagesJson.data ?? [], categories: categories ?? [], badges });
 }

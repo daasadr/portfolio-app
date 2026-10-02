@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BookOpen, FileText, FolderOpen } from 'lucide-react';
+import { BADGES } from '@/lib/badges';
 import type { Student, Category, PortfolioPage } from '@/types';
 
 export default function StudentPortfolioPage({ params }: { params: Promise<{ studentId: string }> }) {
@@ -15,6 +16,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
   const [student, setStudent] = useState<Student | null>(null);
   const [pages, setPages] = useState<PortfolioPage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [earnedBadgeSlugs, setEarnedBadgeSlugs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -27,10 +29,11 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
         setIsLoading(false);
         return;
       }
-      const data = await res.json() as { student: Student; pages: PortfolioPage[]; categories: Category[] };
+      const data = await res.json() as { student: Student; pages: PortfolioPage[]; categories: Category[]; badges?: { badge_slug: string }[] };
       setStudent(data.student);
       setPages(data.pages);
       setCategories(data.categories);
+      setEarnedBadgeSlugs((data.badges ?? []).map(b => b.badge_slug));
       setIsLoading(false);
     };
     load();
@@ -59,15 +62,32 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <Link href="/dashboard/students">
           <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Zpět</Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">
             Portfolio — {student?.first_name} {student?.last_name}
           </h1>
           <p className="text-sm text-gray-500">Zobrazení portfolia žáka (jen pro čtení)</p>
+          {earnedBadgeSlugs.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {earnedBadgeSlugs.map(slug => {
+                const badge = BADGES.find(b => b.slug === slug);
+                if (!badge) return null;
+                return (
+                  <span
+                    key={slug}
+                    title={badge.name}
+                    className="inline-flex items-center gap-1.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1 text-xs font-semibold"
+                  >
+                    🦫 {badge.name}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
