@@ -2,6 +2,8 @@ export interface Badge {
   slug: string;
   name: string;
   tagline: string;
+  /** Hřejivá pochvala zobrazená při dokončení bobříka */
+  praise: string;
   icon: string;
   total_steps: number;
   article: string;
@@ -12,6 +14,7 @@ export const BADGES: Badge[] = [
     slug: 'pomahani-doma',
     name: 'Bobřík pomáhání doma',
     tagline: '7 dní po sobě přispěj k chodu domácnosti',
+    praise: 'Sedm dní v kuse přikládáš ruku k dílu — to umí jen opravdu velké srdce. Díky tobě je u vás doma o kousek víc pohody a lásky. 💛',
     icon: 'bobrik_pomahani_doma_fixed.jpg',
     total_steps: 7,
     article: `Víš, co je největší tajemství šťastné rodiny? Každý přiloží ruku k dílu!
@@ -31,6 +34,7 @@ Pomáhej každý den po 7 dní v řadě — každý den stačí jedna věc, mal�
     slug: 'delani-radosti',
     name: 'Bobřík dělání radosti',
     tagline: '7 dní po sobě udělej záměrně někomu radost',
+    praise: 'Celý týden rozdáváš úsměvy a svět je díky tobě o kousek laskavější. Každá radost, kterou posíláš dál, se k tobě jednou vrátí. 🌈',
     icon: 'bobrik_delani_radosti_fixed.jpg',
     total_steps: 7,
     article: `Věděl/a jsi, že dělat radost ostatním je jeden z nejlepších způsobů, jak udělat radost i sobě?
@@ -53,6 +57,7 @@ Po 7 dní v řadě každý den záměrně udělej někomu radost — klidně jin
     slug: 'pece-o-prirodu',
     name: 'Bobřík péče o přírodu',
     tagline: '7 dní po sobě udělej něco dobrého pro přírodu',
+    praise: 'Stromy, ptáci i broučci by ti teď nejspíš zatleskali! Každá tvoje drobná laskavost dělá svět zelenějším — příroda má v tobě skvělého kamaráda. 🌳',
     icon: 'bobrik_pece_o_prirodu_fixed.jpg',
     total_steps: 7,
     article: `Příroda se o nás stará každý den — dává nám vzduch, vodu, jídlo, stín a krásu. Je fér, když se my postaráme trochu o ni.

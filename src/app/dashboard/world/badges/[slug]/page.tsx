@@ -128,7 +128,8 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
         <div className="mb-6 rounded-xl bg-amber-50 border-2 border-amber-300 p-5 text-center">
           <Trophy className="h-10 w-10 text-amber-500 mx-auto mb-2" />
           <p className="text-xl font-bold text-amber-800">Gratulujeme! Bobřík je tvůj! 🏅</p>
-          <p className="text-amber-700 text-sm mt-1">Odznáček ti bude platit celý rok.</p>
+          <p className="text-gray-700 text-sm leading-relaxed mt-3 max-w-md mx-auto">{badge.praise}</p>
+          <p className="text-amber-700 text-xs mt-3">Odznáček ti bude platit celý rok.</p>
         </div>
       )}
 

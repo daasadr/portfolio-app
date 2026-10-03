@@ -505,7 +505,10 @@ export default function DashboardPage() {
           <div className="relative bg-white rounded-3xl px-8 py-10 text-center shadow-2xl max-w-xs w-full mx-4">
             <div className="text-7xl mb-4 select-none">🦫</div>
             <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Máš bobříka!</h2>
-            <p className="text-base font-semibold text-teal-600 mb-1">{celebratedBadge.name}</p>
+            <p className="text-base font-semibold text-teal-600 mb-4">{celebratedBadge.name}</p>
+            <p className="text-sm text-gray-700 leading-relaxed bg-amber-50 rounded-2xl px-4 py-3 mb-4">
+              {celebratedBadge.praise}
+            </p>
             <p className="text-xs text-gray-400 mb-7">Platnost 1 rok · zobrazí se v tvém profilu</p>
             <button
               onClick={() => setCelebratedBadge(null)}
