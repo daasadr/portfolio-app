@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isValidId } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -26,6 +27,7 @@ async function getStudentFromToken(request: NextRequest) {
 // DELETE /api/page-shares/[id] — odesílatel nebo příjemce může zrušit sdílení
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
   const student = await getStudentFromToken(request);
   if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 

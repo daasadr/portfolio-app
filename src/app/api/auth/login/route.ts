@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isRateLimited, getClientIp } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const isProd = process.env.NODE_ENV === 'production';
@@ -20,6 +21,14 @@ export async function POST(request: NextRequest) {
 
   if (!email || !password) {
     return NextResponse.json({ message: 'Chybí přihlašovací údaje' }, { status: 400 });
+  }
+
+  // Strict per account, generous per IP (a whole class shares one school IP)
+  if (
+    isRateLimited(`login-email:${String(email).trim().toLowerCase()}`, 10, 900) ||
+    isRateLimited(`login-ip:${getClientIp(request)}`, 200, 900)
+  ) {
+    return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
   }
 
   const res = await fetch(`${directusUrl}/auth/login`, {

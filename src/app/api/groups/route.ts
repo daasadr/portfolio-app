@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isValidId } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
   if (all) {
     let url = `${directusUrl}/items/groups?sort[]=name&limit=50`;
     if (search) url += `&filter[name][_icontains]=${encodeURIComponent(search)}`;
-    if (orgId) url += `&filter[organisation_id][_eq]=${orgId}`;
+    if (orgId && isValidId(orgId)) url += `&filter[organisation_id][_eq]=${orgId}`;
     const res = await fetch(url, { headers: h() });
     const { data } = await res.json() as { data: unknown[] };
     return NextResponse.json({ groups: data ?? [] });

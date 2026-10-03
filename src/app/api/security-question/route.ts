@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { hashAnswer } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -50,7 +51,7 @@ export async function PATCH(request: NextRequest) {
     headers: h(),
     body: JSON.stringify({
       security_question,
-      security_answer: security_answer.trim().toLowerCase(),
+      security_answer: await hashAnswer(security_answer),
     }),
   });
   return NextResponse.json({ success: true });

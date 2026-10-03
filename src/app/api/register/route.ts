@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PREDEFINED_CATEGORIES } from '@/types';
-import { hashAnswer } from '@/lib/security';
+import { hashAnswer, isRateLimited, getClientIp } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -14,6 +14,9 @@ function adminHeaders() {
 }
 
 export async function POST(request: NextRequest) {
+  if (isRateLimited(`register-ip:${getClientIp(request)}`, 60, 3600)) {
+    return NextResponse.json({ message: 'Příliš mnoho registrací. Zkuste to později.' }, { status: 429 });
+  }
   try {
     // isTeacher is intentionally excluded — teacher accounts are created by admins only (C1)
     const { email, password, firstName, lastName, securityQuestion, securityAnswer } = await request.json() as {

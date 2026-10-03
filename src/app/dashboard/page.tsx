@@ -125,7 +125,10 @@ export default function DashboardPage() {
     setCheckingIn(ubId);
     const res = await fetch(`/api/user-badges/${ubId}/checkin`, { method: 'POST' });
     if (res.ok) {
-      const data = await res.json() as { completed?: boolean };
+      const data = await res.json() as {
+        completed?: boolean;
+        user_badge?: { steps_done: number; last_step_date: string | null };
+      };
       if (data.completed) {
         const ub = activeBadges.find(b => b.id === ubId);
         const badge = ub ? BADGES.find(b => b.slug === ub.badge_slug) : null;
@@ -134,7 +137,8 @@ export default function DashboardPage() {
       } else {
         setActiveBadges(prev => prev.map(ub =>
           ub.id === ubId
-            ? { ...ub, steps_done: ub.steps_done + 1, last_step_date: new Date().toISOString().slice(0, 10) }
+            // Server is the source of truth — a skipped day restarts the streak
+            ? { ...ub, steps_done: data.user_badge?.steps_done ?? ub.steps_done + 1, last_step_date: data.user_badge?.last_step_date ?? new Date().toLocaleDateString('en-CA') }
             : ub
         ));
       }
@@ -242,7 +246,7 @@ export default function DashboardPage() {
               {activeBadges.map(ub => {
                 const badge = BADGES.find(b => b.slug === ub.badge_slug);
                 if (!badge) return null;
-                const today = new Date().toISOString().slice(0, 10);
+                const today = new Date().toLocaleDateString('en-CA');
                 const doneTodayAlready = ub.last_step_date?.slice(0, 10) === today;
                 return (
                   <div key={ub.id} className="rounded-lg border border-gray-200 p-3 space-y-2">

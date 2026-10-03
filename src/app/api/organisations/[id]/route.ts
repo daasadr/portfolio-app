@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isValidId } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -20,6 +21,7 @@ async function getStudent(request: NextRequest) {
 // POST /api/organisations/[id] → připojit se
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
   const student = await getStudent(request);
   if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 
@@ -42,6 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 // DELETE /api/organisations/[id] → odejít nebo smazat (admin)
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
   const student = await getStudent(request);
   if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isRateLimited } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
   });
   if (!meRes.ok) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
   const { data: user } = await meRes.json() as { data: { id: string; email: string } };
+  if (isRateLimited(`change-pw:${user.id}`, 5, 900)) {
+    return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
+  }
 
   // Verify current password by attempting login
   const loginRes = await fetch(`${directusUrl}/auth/login`, {

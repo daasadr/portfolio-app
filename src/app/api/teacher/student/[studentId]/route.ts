@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isValidId } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -27,6 +28,7 @@ async function getTeacherFromToken(request: NextRequest) {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
+  if (!isValidId(studentId)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
   const teacher = await getTeacherFromToken(request);
   if (!teacher) return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
 
@@ -40,7 +42,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   // Načti data žáka
   const [studentRes, pagesRes, catsRes, badgesRes] = await Promise.all([
-    fetch(`${directusUrl}/items/students/${studentId}`, { headers: adminHeaders() }),
+    // Jen jméno — nikdy security_answer, email ani datum narození
+    fetch(`${directusUrl}/items/students/${studentId}?fields=id,first_name,last_name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/user_badges?filter[student_id][_eq]=${studentId}&filter[status][_eq]=completed&sort[]=-completed_at`, { headers: adminHeaders() }),

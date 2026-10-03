@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isRateLimited, verifyAnswer } from '@/lib/security';
+import { isRateLimited, verifyAnswer, hashAnswer, getClientIp } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -8,19 +8,11 @@ function adminHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` };
 }
 
-function clientIp(request: NextRequest): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    request.headers.get('x-real-ip') ??
-    'unknown'
-  );
-}
-
 // GET /api/reset-password?email=...
 // Always returns 200 to prevent email enumeration (M1).
 // Returns { security_question: number | null } — null when account not found or no question set.
 export async function GET(request: NextRequest) {
-  const ip = clientIp(request);
+  const ip = getClientIp(request);
   if (isRateLimited(`reset-get:${ip}`, 10, 900)) {
     return NextResponse.json({ security_question: null }, { status: 200 });
   }
@@ -50,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/reset-password { email, answer, newPassword }
 export async function POST(request: NextRequest) {
-  const ip = clientIp(request);
+  const ip = getClientIp(request);
   if (isRateLimited(`reset-post:${ip}`, 5, 900)) {
     return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
   }
@@ -64,6 +56,10 @@ export async function POST(request: NextRequest) {
   }
   if (newPassword.length < 8) {
     return NextResponse.json({ message: 'Heslo musí mít alespoň 8 znaků' }, { status: 400 });
+  }
+  // Per-account limit — IP limit alone can be shared/rotated
+  if (isRateLimited(`reset-post-email:${email.trim().toLowerCase()}`, 5, 900)) {
+    return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
   }
 
   const userRes = await fetch(
@@ -82,7 +78,7 @@ export async function POST(request: NextRequest) {
     `${directusUrl}/items/students?filter[user_id][_eq]=${userId}`,
     { headers: adminHeaders() }
   );
-  const studentBody = await studentRes.json() as { data?: { security_answer?: string }[] };
+  const studentBody = await studentRes.json() as { data?: { id: number; security_answer?: string }[] };
   const students = studentBody.data;
   if (!students?.length) return genericError;
 
@@ -91,6 +87,15 @@ export async function POST(request: NextRequest) {
 
   const correct = await verifyAnswer(answer, storedAnswer);
   if (!correct) return genericError;
+
+  // Legacy plaintext answer → store hashed from now on
+  if (!storedAnswer.startsWith('scrypt:')) {
+    await fetch(`${directusUrl}/items/students/${students[0].id}`, {
+      method: 'PATCH',
+      headers: adminHeaders(),
+      body: JSON.stringify({ security_answer: await hashAnswer(answer) }),
+    });
+  }
 
   const patchRes = await fetch(`${directusUrl}/users/${userId}`, {
     method: 'PATCH',

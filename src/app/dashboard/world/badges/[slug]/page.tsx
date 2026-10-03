@@ -95,7 +95,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     setCheckingIn(false);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD, matches server (Europe/Prague)
   const alreadyDoneToday = userBadge?.last_step_date?.slice(0, 10) === today;
   const isActive = userBadge?.status === 'active';
   const isCompleted = userBadge?.status === 'completed';

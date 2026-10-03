@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { isValidId } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -30,6 +31,7 @@ export async function PATCH(
   if (!admin) return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
 
   const { id } = await params;
+  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
   const body = await request.json() as { is_teacher: boolean };
 
   const res = await fetch(`${directusUrl}/items/students/${id}`, {

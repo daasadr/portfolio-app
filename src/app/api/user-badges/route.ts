@@ -6,6 +6,9 @@ const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
 const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` });
 
+// Guards the duplicate check + create against double-clicks
+const starting = new Set<string>();
+
 interface UserBadgeRow {
   id: number;
   student_id: string;
@@ -63,27 +66,36 @@ export async function POST(request: NextRequest) {
   const badge = BADGES.find(b => b.slug === badge_slug);
   if (!badge) return NextResponse.json({ message: 'Bobřík nenalezen' }, { status: 404 });
 
-  // Check for duplicate active/completed
-  const dupRes = await fetch(
-    `${directusUrl}/items/user_badges?filter[student_id][_eq]=${student.id}&filter[badge_slug][_eq]=${badge_slug}&filter[status][_in]=active,completed&limit=1`,
-    { headers: h() }
-  );
-  const { data: dup } = await dupRes.json() as { data: unknown[] };
-  if (dup?.length) {
+  const lockKey = `${student.id}:${badge_slug}`;
+  if (starting.has(lockKey)) {
     return NextResponse.json({ message: 'Tohoto bobříka už máš aktivního nebo splněného' }, { status: 409 });
   }
+  starting.add(lockKey);
+  try {
+    // Check for duplicate active/completed
+    const dupRes = await fetch(
+      `${directusUrl}/items/user_badges?filter[student_id][_eq]=${student.id}&filter[badge_slug][_eq]=${badge_slug}&filter[status][_in]=active,completed&limit=1`,
+      { headers: h() }
+    );
+    const { data: dup } = await dupRes.json() as { data: unknown[] };
+    if (dup?.length) {
+      return NextResponse.json({ message: 'Tohoto bobříka už máš aktivního nebo splněného' }, { status: 409 });
+    }
 
-  const createRes = await fetch(`${directusUrl}/items/user_badges`, {
-    method: 'POST',
-    headers: h(),
-    body: JSON.stringify({
-      student_id: student.id,
-      badge_slug,
-      steps_done: 0,
-      status: 'active',
-      last_step_date: null,
-    }),
-  });
-  const { data: created } = await createRes.json() as { data: UserBadgeRow };
-  return NextResponse.json({ user_badge: { ...created, badge } }, { status: 201 });
+    const createRes = await fetch(`${directusUrl}/items/user_badges`, {
+      method: 'POST',
+      headers: h(),
+      body: JSON.stringify({
+        student_id: student.id,
+        badge_slug,
+        steps_done: 0,
+        status: 'active',
+        last_step_date: null,
+      }),
+    });
+    const { data: created } = await createRes.json() as { data: UserBadgeRow };
+    return NextResponse.json({ user_badge: { ...created, badge } }, { status: 201 });
+  } finally {
+    starting.delete(lockKey);
+  }
 }

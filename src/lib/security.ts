@@ -1,4 +1,31 @@
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
+import type { NextRequest } from 'next/server';
+
+/**
+ * True when `id` is a plain positive integer. Route params are URL-decoded by Next.js,
+ * so an unchecked param like "42#" or "../users" would rewrite admin-token Directus URLs.
+ */
+export function isValidId(id: unknown): id is string {
+  return typeof id === 'string' && /^[1-9]\d{0,15}$/.test(id);
+}
+
+/**
+ * Client IP for rate limiting. nginx `proxy_add_x_forwarded_for` appends the real peer
+ * address to whatever the client sent, so only the LAST entry is trustworthy.
+ */
+export function getClientIp(request: NextRequest): string {
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) {
+    const last = xff.split(',').pop()?.trim();
+    if (last) return last;
+  }
+  return request.headers.get('x-real-ip') ?? 'unknown';
+}
+
+/** Today's date (YYYY-MM-DD) in the Czech timezone — badge days follow the pupil's calendar, not UTC. */
+export function pragueToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(new Date());
+}
 
 // In-memory rate limiter — works for single-instance (single VPS) deployments
 const store = new Map<string, { count: number; resetAt: number }>();
