@@ -19,6 +19,7 @@ import {
   Users,
   Building2,
   Globe2,
+  BookMarked,
 } from 'lucide-react';
 import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
@@ -119,6 +120,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
     { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
     { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
+    { name: 'Čtenářský deník', href: '/dashboard/reading-diary', icon: BookMarked },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
     { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },
@@ -133,6 +135,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
     { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
     { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
+    { name: 'Čtenářský deník', href: '/dashboard/reading-diary', icon: BookMarked },
     { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
     { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
     { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },

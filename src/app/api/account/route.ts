@@ -31,15 +31,17 @@ export async function GET(request: NextRequest) {
   if (!ctx) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
   const { student, userId } = ctx;
 
-  const [userRes, pagesRes, catsRes] = await Promise.all([
+  const [userRes, pagesRes, catsRes, diaryRes] = await Promise.all([
     fetch(`${directusUrl}/users/${userId}?fields=email,first_name,last_name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${student.id}&limit=500`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${student.id}&limit=200`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/reading_diary?filter[student_id][_eq]=${student.id}&limit=-1`, { headers: adminHeaders() }),
   ]);
 
   const { data: user } = await userRes.json() as { data: { email: string; first_name: string; last_name: string } };
   const { data: pages } = await pagesRes.json() as { data: unknown[] };
   const { data: categories } = await catsRes.json() as { data: unknown[] };
+  const readingDiary = diaryRes.ok ? ((await diaryRes.json()) as { data: unknown[] }).data : [];
 
   const exportData = {
     exported_at: new Date().toISOString(),
@@ -51,6 +53,7 @@ export async function GET(request: NextRequest) {
     },
     categories: categories ?? [],
     portfolio_pages: pages ?? [],
+    reading_diary: readingDiary ?? [],
   };
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {
@@ -105,6 +108,11 @@ export async function DELETE(request: NextRequest) {
       .then(r => r.json() as Promise<{ data: { id: number }[] }>)
       .then(({ data }) => Promise.all(
         (data ?? []).map(b => fetch(`${directusUrl}/items/user_badges/${b.id}`, { method: 'DELETE', headers: adminHeaders() }))
+      )),
+    fetch(`${directusUrl}/items/reading_diary?filter[student_id][_eq]=${sid}&fields=id&limit=-1`, { headers: adminHeaders() })
+      .then(r => r.json() as Promise<{ data: { id: number }[] }>)
+      .then(({ data }) => Promise.all(
+        (data ?? []).map(e => fetch(`${directusUrl}/items/reading_diary/${e.id}`, { method: 'DELETE', headers: adminHeaders() }))
       )),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${sid}&filter[is_predefined][_eq]=false`, { headers: adminHeaders() })
       .then(r => r.json() as Promise<{ data: { id: number }[] }>)

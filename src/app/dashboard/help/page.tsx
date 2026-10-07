@@ -7,6 +7,7 @@ import {
   Star,
   LayoutDashboard,
   BookOpen,
+  BookMarked,
   Calendar,
   Share2,
   Building2,
@@ -132,6 +133,23 @@ const guides: Guide[] = [
     ],
   },
   {
+    id: 'reading-diary',
+    icon: <BookMarked className="h-6 w-6" />,
+    title: 'Čtenářský deník',
+    subtitle: 'Jak si zapisovat přečtené knížky',
+    color: 'from-amber-600 to-orange-700',
+    steps: [
+      { heading: 'Otevřít deník', text: 'V levém menu klikněte na „Čtenářský deník". Uvidíte hromádku knih, které už máte přečtené.' },
+      { heading: 'Přidat knihu', text: 'Klikněte na „Přidat knihu" a vyplňte název, autora, stručný obsah, svůj názor a případně poznámky. Datum zápisu se uloží samo.' },
+      { heading: 'Otevřít zápis', text: 'Klikněte na hřbet knížky v hromádce — kniha se otevře a uvidíte celý svůj zápis.' },
+      { heading: 'Upravit nebo smazat', text: 'V otevřené knize jsou dole tlačítka „Upravit" a „Smazat".' },
+    ],
+    tips: [
+      'Nejnovější kniha leží vždy navrchu hromádky.',
+      'Do poznámek si můžete zapsat oblíbený citát nebo komu byste knihu doporučili.',
+    ],
+  },
+  {
     id: 'calendar',
     icon: <Calendar className="h-6 w-6" />,
     title: 'Kalendář',
@@ -156,7 +174,7 @@ const guides: Guide[] = [
     subtitle: 'Jak ukázat portfolio rodičům nebo se propojit s učitelem',
     color: 'from-rose-500 to-pink-600',
     steps: [
-      { heading: 'Sdílení celého portfolia', text: 'V menu klikněte na „Sdílení". Zvolte „Celé portfolio" a klikněte na „Vytvořit odkaz".' },
+      { heading: 'Sdílení celého portfolia', text: 'V menu klikněte na „Sdílení". Zvolte „Celé portfolio" a klikněte na „Vytvořit odkaz". Zobrazí se jen stránky označené jako sdílené — soukromé stránky uvidíte jen vy.' },
       { text: 'Zkopírujte vygenerovaný odkaz a pošlete ho rodičům (e-mailem, přes zprávy, nebo ho vypište na papír).' },
       { heading: 'Sdílení konkrétní stránky', text: 'Místo celého portfolia lze sdílet i jednu konkrétní stránku — vyberte „Jedna stránka" a zvolte, kterou.' },
       { heading: 'Ochrana heslem', text: 'Chcete-li, aby odkaz byl chráněn, nastavte heslo. Příjemce ho bude muset zadat pro zobrazení.' },

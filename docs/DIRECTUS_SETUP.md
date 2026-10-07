@@ -90,6 +90,14 @@ Pro každou kolekci nastav:
 2. Pouze vlastní = `student_id.user_id = $CURRENT_USER`
 3. Pouze vlastní = `uploaded_by = $CURRENT_USER`
 
+**Kolekce spravované jen serverem** (roli Student na ně nedávej žádná oprávnění — aplikace k nim přistupuje přes vlastní API s admin tokenem a `student_id` doplňuje sama):
+`user_badges`, `student_connections`, `page_shares`, `reading_diary`.
+
+Kolekci `reading_diary` (Čtenářský deník) vytvoří skript:
+```
+node directus-setup-reading-diary.mjs
+```
+
 ### Jak nastavit filtry
 
 Pro každou kolekci:

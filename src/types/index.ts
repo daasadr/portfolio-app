@@ -178,6 +178,17 @@ export interface GroupMember {
 }
 
 // Directus Schema interface
+export interface ReadingDiaryEntry {
+  id: number;
+  student_id: number;
+  title: string;
+  author: string;
+  summary: string | null;
+  opinion: string | null;
+  notes: string | null;
+  date_created: string;
+}
+
 export interface Schema {
   students: Student[];
   personal_goals: PersonalGoal[];
@@ -194,6 +205,7 @@ export interface Schema {
   groups: Group[];
   organisation_members: OrganisationMember[];
   group_members: GroupMember[];
+  reading_diary: ReadingDiaryEntry[];
 }
 
 // Utility typy
