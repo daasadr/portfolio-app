@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isRateLimited, getClientIp } from '@/lib/security';
+import { setAuthCookies, type AuthTokens } from '@/lib/auth-cookies';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-const isProd = process.env.NODE_ENV === 'production';
-
-function cookieOpts(maxAge?: number) {
-  return {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: 'strict' as const,
-    path: '/',
-    ...(maxAge != null ? { maxAge } : {}),
-  };
-}
-
 export async function POST(request: NextRequest) {
   const { email, password, remember } = await request.json() as {
     email: string; password: string; remember?: boolean;
@@ -45,29 +34,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data } = await res.json() as {
-    data: { access_token: string; refresh_token: string; expires: number };
-  };
+  const { data } = await res.json() as { data: AuthTokens };
 
-  // remember=true → persistent cookie (30 days); otherwise session cookie
-  const tokenMaxAge = remember ? 60 * 60 * 24 * 30 : undefined;
-  const refreshMaxAge = remember ? 60 * 60 * 24 * 30 : undefined;
-
-  // Expiry timestamp (seconds) — readable by middleware for proactive refresh
-  const expTs = Math.floor((Date.now() + (data.expires ?? 900_000)) / 1000);
-
+  // remember=true → persistent cookies (30 days); otherwise session cookies
   const response = NextResponse.json({ success: true });
-  response.cookies.set('pp_token', data.access_token, cookieOpts(tokenMaxAge));
-  response.cookies.set('pp_refresh', data.refresh_token, {
-    ...cookieOpts(refreshMaxAge),
-    path: '/api/auth',
-  });
-  response.cookies.set('pp_token_exp', String(expTs), {
-    httpOnly: false,
-    secure: isProd,
-    sameSite: 'strict' as const,
-    path: '/',
-    ...(tokenMaxAge != null ? { maxAge: tokenMaxAge } : {}),
-  });
+  setAuthCookies(response, data, remember ? 60 * 60 * 24 * 30 : undefined);
   return response;
 }

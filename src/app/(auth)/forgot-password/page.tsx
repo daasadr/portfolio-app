@@ -209,7 +209,7 @@ export default function ForgotPasswordPage() {
                 onClick={() => setShowAdminInfo(v => !v)}
                 className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1"
               >
-                Nepamatujete si ani odpověď na bezpečnostní otázku?
+                Nepamatujete si odpověď, nebo obnova nefunguje?
                 <ChevronDown className={`h-3 w-3 transition-transform ${showAdminInfo ? 'rotate-180' : ''}`} />
               </button>
               {showAdminInfo && (

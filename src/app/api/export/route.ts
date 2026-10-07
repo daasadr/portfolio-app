@@ -29,6 +29,13 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/** Escape plain-text values for interpolation into the exported HTML. */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function safeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'soubor';
 }
@@ -74,15 +81,15 @@ function generateHtml(opts: {
         const file = fileBuffers.get(att.id);
         const src = file ? `assets/${encodeURIComponent(file.name)}` : '#';
         const t = att.type ?? '';
-        if (t.startsWith('image/')) return `<img src="${src}" alt="${att.name}" class="att-img">`;
-        if (t.startsWith('video/')) return `<video controls class="att-video"><source src="${src}" type="${t}"></video>`;
-        if (t.startsWith('audio/')) return `<audio controls class="att-audio"><source src="${src}" type="${t}"></audio>`;
-        return `<a href="${src}" class="att-file">📎 ${att.name}</a>`;
+        if (t.startsWith('image/')) return `<img src="${src}" alt="${esc(att.name)}" class="att-img">`;
+        if (t.startsWith('video/')) return `<video controls class="att-video"><source src="${src}" type="${esc(t)}"></video>`;
+        if (t.startsWith('audio/')) return `<audio controls class="att-audio"><source src="${src}" type="${esc(t)}"></audio>`;
+        return `<a href="${src}" class="att-file">📎 ${esc(att.name)}</a>`;
       }).join('\n');
 
       return `
       <article class="page">
-        <h3>${page.title}</h3>
+        <h3>${esc(page.title)}</h3>
         <p class="meta">${page.visibility === 'shared' ? '🌐 Sdílená' : '🔒 Soukromá'}${safeFormatDate(page.updated_at) ? ` · Upraveno ${safeFormatDate(page.updated_at)}` : ''}</p>
         <div class="content">${page.content || '<em>Bez obsahu</em>'}</div>
         ${arr.length ? `<div class="attachments">${attachmentsHtml}</div>` : ''}
@@ -91,7 +98,7 @@ function generateHtml(opts: {
 
     return `
     <section class="category">
-      <h2>${catName}</h2>
+      <h2>${esc(catName)}</h2>
       ${articlesHtml}
     </section>`;
   }).join('');
@@ -102,9 +109,9 @@ function generateHtml(opts: {
     <div class="goals-list">
       ${goals.map(g => `
       <div class="goal ${g.completed ? 'completed' : ''}">
-        <span class="goal-type">${GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type}</span>
-        <strong>${g.title}</strong>
-        ${g.description ? `<p>${g.description}</p>` : ''}
+        <span class="goal-type">${esc(GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type)}</span>
+        <strong>${esc(g.title)}</strong>
+        ${g.description ? `<p>${esc(g.description)}</p>` : ''}
         ${g.target_date ? `<p class="meta">Termín: ${new Date(g.target_date).toLocaleDateString('cs-CZ')}</p>` : ''}
         ${g.completed ? '<span class="badge">✓ Splněno</span>' : ''}
       </div>`).join('')}
@@ -116,8 +123,8 @@ function generateHtml(opts: {
     <h2>Dream Board</h2>
     ${dreams.map(d => `
     <article class="page">
-      <h3>${d.title}</h3>
-      ${d.description ? `<p>${d.description}</p>` : ''}
+      <h3>${esc(d.title)}</h3>
+      ${d.description ? `<p>${esc(d.description)}</p>` : ''}
     </article>`).join('')}
     <div class="dreamboard-grid">
       ${dreamItems.map(item => {
@@ -132,7 +139,8 @@ function generateHtml(opts: {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Portfolio – ${student.first_name} ${student.last_name}</title>
+<meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'">
+<title>Portfolio – ${esc(student.first_name)} ${esc(student.last_name)}</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #1a1a1a; }
@@ -173,7 +181,7 @@ function generateHtml(opts: {
 </head>
 <body>
 <header class="header">
-  <h1>${student.first_name} ${student.last_name}</h1>
+  <h1>${esc(student.first_name)} ${esc(student.last_name)}</h1>
   <p>Portfolio Paradise · Exportováno ${exportDate}</p>
 </header>
 <main class="main">
@@ -260,9 +268,13 @@ export async function POST(request: NextRequest) {
   const fileBuffers = new Map<string, { buffer: ArrayBuffer; name: string; type: string }>();
   await Promise.all([...fileIds].map(async (fileId) => {
     try {
+      if (!/^[0-9a-f-]{36}$/i.test(fileId)) return;
       // Get original filename from Directus file metadata
-      const metaRes = await fetch(`${directusUrl}/files/${fileId}?fields=filename_download,type`, { headers: adminH() });
-      const meta = metaRes.ok ? ((await metaRes.json()) as { data: { filename_download: string; type: string } }).data : null;
+      const metaRes = await fetch(`${directusUrl}/files/${fileId}?fields=filename_download,type,uploaded_by`, { headers: adminH() });
+      if (!metaRes.ok) return;
+      const meta = ((await metaRes.json()) as { data: { filename_download: string; type: string; uploaded_by: string | null } }).data;
+      // Attachment ids come from student-written JSON — export only the student's own files
+      if (meta?.uploaded_by !== user.id) return;
 
       const assetRes = await fetch(`${directusUrl}/assets/${fileId}`, { headers: adminH() });
       if (!assetRes.ok) return;
@@ -324,7 +336,7 @@ export async function POST(request: NextRequest) {
       ];
       for (const g of goals) {
         lines.push(
-          `[${GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type}] ${g.title}${g.completed ? ' ✓' : ''}`,
+          `[${esc(GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type)}] ${g.title}${g.completed ? ' ✓' : ''}`,
           ...(g.description ? [`  ${g.description}`] : []),
           ...(g.target_date ? [`  Termín: ${new Date(g.target_date).toLocaleDateString('cs-CZ')}`] : []),
           '',

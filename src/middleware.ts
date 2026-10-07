@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { setAuthCookies, clearAuthCookies, type AuthTokens } from '@/lib/auth-cookies';
 
 const DIRECTUS_URL = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-const isProd = process.env.NODE_ENV === 'production';
 
 // Paths that never need auth checking
 const PUBLIC_PREFIXES = ['/api/auth', '/api/register', '/api/reset-password', '/api/security-question',
@@ -25,11 +25,19 @@ function securityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+/** x-pp-token is an internal header — never accept it from the client. */
+function strippedHeaders(request: NextRequest): Headers {
+  const headers = new Headers(request.headers);
+  headers.delete('x-pp-token');
+  return headers;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const next = () => NextResponse.next({ request: { headers: strippedHeaders(request) } });
 
   if (!needsAuth(pathname) || isPublic(pathname)) {
-    return securityHeaders(NextResponse.next());
+    return securityHeaders(next());
   }
 
   const ppToken = request.cookies.get('pp_token')?.value;
@@ -50,24 +58,14 @@ export async function middleware(request: NextRequest) {
       });
 
       if (refreshRes.ok) {
-        const { data } = await refreshRes.json() as {
-          data: { access_token: string; refresh_token: string; expires?: number };
-        };
-
-        const expTs = Math.floor((Date.now() + (data.expires ?? 900_000)) / 1000);
-        const cookieBase = { secure: isProd, sameSite: 'strict' as const };
+        const { data } = await refreshRes.json() as { data: AuthTokens };
 
         // Forward new token to this request via header so the route handler gets it immediately
-        const requestHeaders = new Headers(request.headers);
+        const requestHeaders = strippedHeaders(request);
         requestHeaders.set('x-pp-token', data.access_token);
 
         const response = NextResponse.next({ request: { headers: requestHeaders } });
-
-        // Set new cookies for future requests
-        response.cookies.set('pp_token', data.access_token, { ...cookieBase, httpOnly: true, path: '/' });
-        response.cookies.set('pp_refresh', data.refresh_token, { ...cookieBase, httpOnly: true, path: '/api/auth' });
-        response.cookies.set('pp_token_exp', String(expTs), { ...cookieBase, httpOnly: false, path: '/' });
-
+        setAuthCookies(response, data);
         return securityHeaders(response);
       }
     } catch { /* network error — fall through */ }
@@ -75,13 +73,11 @@ export async function middleware(request: NextRequest) {
     // Refresh failed — clear cookies and redirect to login if dashboard
     if (pathname.startsWith('/dashboard')) {
       const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.set('pp_token', '', { httpOnly: true, maxAge: 0, path: '/' });
-      response.cookies.set('pp_refresh', '', { httpOnly: true, maxAge: 0, path: '/api/auth' });
-      response.cookies.set('pp_token_exp', '', { httpOnly: false, maxAge: 0, path: '/' });
+      clearAuthCookies(response);
       return response;
     }
     // API call with expired session → 401 will be handled by the route
-    return securityHeaders(NextResponse.next());
+    return securityHeaders(next());
   }
 
   // No token at all — redirect dashboard to login
@@ -91,7 +87,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return securityHeaders(NextResponse.next());
+  return securityHeaders(next());
 }
 
 export const config = {

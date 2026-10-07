@@ -7,11 +7,14 @@ const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS
 // Directus's own role-based permissions apply on top of this whitelist.
 const ALLOWED = [
   /^\/items\/(portfolio_pages|categories|personal_goals|dreams|dream_board_items|calendar_entries|shared_links)(\/[a-z0-9-]+)?$/,
-  /^\/users\/me$/,
   /^\/files(\/[0-9a-f-]+)?$/,
 ];
 
-function isAllowed(path: string): boolean {
+// Read-only paths — profile changes go through dedicated routes (/api/change-password …)
+const READ_ONLY = [/^\/users\/me$/];
+
+function isAllowed(path: string, method: string): boolean {
+  if (READ_ONLY.some(re => re.test(path))) return method === 'GET' || method === 'HEAD';
   return ALLOWED.some(re => re.test(path));
 }
 
@@ -39,7 +42,7 @@ async function handle(request: NextRequest, { params }: { params: Promise<{ path
   const { path: segments } = await params;
   const path = '/' + segments.join('/');
 
-  if (!isAllowed(path)) {
+  if (!isAllowed(path, request.method)) {
     return NextResponse.json({ message: 'Not allowed' }, { status: 403 });
   }
 
@@ -48,19 +51,8 @@ async function handle(request: NextRequest, { params }: { params: Promise<{ path
     ?? request.cookies.get('pp_token')?.value
     ?? null;
 
-  let upstream = await proxyRequest(token, path, request);
-
-  // Auto-refresh on 401 (expired token)
-  if (upstream.status === 401 && request.cookies.get('pp_refresh')?.value) {
-    const refreshRes = await fetch(
-      new URL('/api/auth/refresh', request.url).toString(),
-      { method: 'POST', headers: { cookie: request.headers.get('cookie') ?? '' } }
-    );
-    if (refreshRes.ok) {
-      const newToken = refreshRes.headers.get('set-cookie')?.match(/pp_token=([^;]+)/)?.[1];
-      upstream = await proxyRequest(newToken ?? token, path, request);
-    }
-  }
+  // Expired tokens are refreshed by middleware before we get here (x-pp-token)
+  const upstream = await proxyRequest(token, path, request);
 
   const out = new Headers();
   for (const h of ['content-type', 'content-length', 'cache-control']) {

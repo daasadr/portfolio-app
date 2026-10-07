@@ -443,6 +443,7 @@ export default function SharePage() {
                           <SelectItem value="single_page">Jednu stránku</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-gray-500">Zobrazí se jen stránky označené jako sdílené — soukromé zůstanou jen tvoje.</p>
                     </div>
 
                     {form.share_type === 'category' && (

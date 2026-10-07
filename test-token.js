@@ -15,7 +15,8 @@ const DIRECTUS_ADMIN_TOKEN = process.env.DIRECTUS_ADMIN_TOKEN?.trim();
 
 console.log('🧪 Test připojení k Directus\n');
 console.log(`📡 URL: ${DIRECTUS_URL}`);
-console.log(`🔑 Token: ${DIRECTUS_ADMIN_TOKEN}\n`);
+// Never print the full admin token — terminal output ends up in logs and screenshots
+console.log(`🔑 Token: ${DIRECTUS_ADMIN_TOKEN ? `${DIRECTUS_ADMIN_TOKEN.slice(0, 4)}… (${DIRECTUS_ADMIN_TOKEN.length} znaků)` : 'chybí'}\n`);
 
 // Test 1: Server info (veřejný endpoint)
 console.log('1️⃣ Test: /server/info (veřejný)');

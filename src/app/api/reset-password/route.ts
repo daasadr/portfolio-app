@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
+import { SECURITY_QUESTIONS } from '@/lib/security-questions';
 import { isRateLimited, verifyAnswer, hashAnswer, getClientIp } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -8,9 +10,18 @@ function adminHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` };
 }
 
+/**
+ * Unknown e-mails (or accounts without a question) get a decoy question that is stable
+ * per e-mail, so the response never reveals whether an account exists.
+ */
+function decoyQuestion(email: string): number {
+  const digest = createHmac('sha256', adminToken).update(email).digest();
+  return digest.readUInt32BE(0) % SECURITY_QUESTIONS.length;
+}
+
 // GET /api/reset-password?email=...
-// Always returns 200 to prevent email enumeration (M1).
-// Returns { security_question: number | null } — null when account not found or no question set.
+// Always returns 200 with a question index to prevent email enumeration (M1).
+// Returns { security_question: number | null } — null only for an empty email or when rate-limited.
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
   if (isRateLimited(`reset-get:${ip}`, 10, 900)) {
@@ -25,19 +36,18 @@ export async function GET(request: NextRequest) {
     { headers: adminHeaders() }
   );
   const { data: users } = await userRes.json() as { data: { id: string }[] };
-  if (!users?.length) return NextResponse.json({ security_question: null }, { status: 200 });
+  const decoy = NextResponse.json({ security_question: decoyQuestion(email) }, { status: 200 });
+  if (!users?.length) return decoy;
 
   const userId = users[0].id;
   const studentRes = await fetch(
-    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}`,
+    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}&fields=security_question`,
     { headers: adminHeaders() }
   );
-  const studentBody = await studentRes.json() as { data?: { security_question?: number }[] };
-  const students = studentBody.data;
-  if (!students?.length) return NextResponse.json({ security_question: null }, { status: 200 });
-
-  const q = students[0].security_question;
-  return NextResponse.json({ security_question: q ?? null });
+  const studentBody = await studentRes.json() as { data?: { security_question?: number | null }[] };
+  const q = studentBody.data?.[0]?.security_question;
+  if (q == null) return decoy;
+  return NextResponse.json({ security_question: q });
 }
 
 // POST /api/reset-password { email, answer, newPassword }

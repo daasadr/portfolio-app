@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest } from '@/lib/auth-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -43,6 +44,21 @@ async function serveAsset(id: string, request: NextRequest): Promise<NextRespons
   out.set('content-security-policy', "default-src 'none'");
 
   return new NextResponse(upstream.body, { status: upstream.status, headers: out });
+}
+
+/**
+ * Page attachments are student-written JSON, so a file id listed on a page proves nothing —
+ * the file itself must have been uploaded by that student.
+ */
+export async function isFileOwnedByStudent(fileId: string, studentId: string | number): Promise<boolean> {
+  const [fileRes, studentRes] = await Promise.all([
+    fetch(`${directusUrl}/files/${fileId}?fields=uploaded_by`, { headers: adminHeaders() }),
+    fetch(`${directusUrl}/items/students/${encodeURIComponent(String(studentId))}?fields=user_id`, { headers: adminHeaders() }),
+  ]);
+  if (!fileRes.ok || !studentRes.ok) return false;
+  const { data: file } = await fileRes.json() as { data: { uploaded_by: string | null } };
+  const { data: student } = await studentRes.json() as { data: { user_id: string | null } };
+  return !!file?.uploaded_by && file.uploaded_by === student?.user_id;
 }
 
 // Check if fileId appears in pages accessible via a public share token
@@ -91,7 +107,7 @@ async function isAllowedByShareToken(shareToken: string, fileId: string): Promis
       : typeof raw === 'string'
         ? (JSON.parse(raw) as { id: string }[])
         : [];
-    if (arr.some(a => a.id === fileId)) return true;
+    if (arr.some(a => a.id === fileId)) return isFileOwnedByStudent(fileId, link.student_id);
   }
   return false;
 }
@@ -156,7 +172,7 @@ export async function GET(
   }
 
   // Path 2: Authenticated user (owner or teacher with accepted connection)
-  const ppToken = request.cookies.get('pp_token')?.value;
+  const ppToken = getTokenFromRequest(request);
   if (ppToken) {
     const allowed = await isAllowedByUserToken(ppToken, id);
     if (!allowed) return new NextResponse('Forbidden', { status: 403 });

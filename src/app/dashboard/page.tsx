@@ -79,7 +79,7 @@ export default function DashboardPage() {
             readItems('calendar_entries', {
               filter: {
                 student_id: { _eq: studentData.id },
-                date: { _eq: new Date().toISOString().split('T')[0] },
+                date: { _eq: new Date().toLocaleDateString('en-CA') }, // local YYYY-MM-DD
               },
               sort: ['created_at'],
             })

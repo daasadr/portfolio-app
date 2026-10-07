@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { setAuthCookies, clearAuthCookies, type AuthTokens } from '@/lib/auth-cookies';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
-const isProd = process.env.NODE_ENV === 'production';
 
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get('pp_refresh')?.value;
@@ -17,26 +17,12 @@ export async function POST(request: NextRequest) {
 
   if (!res.ok) {
     const response = NextResponse.json({ message: 'Refresh selhal' }, { status: 401 });
-    response.cookies.set('pp_token', '', { httpOnly: true, maxAge: 0, path: '/' });
-    response.cookies.set('pp_refresh', '', { httpOnly: true, maxAge: 0, path: '/api/auth' });
+    clearAuthCookies(response);
     return response;
   }
 
-  const { data } = await res.json() as {
-    data: { access_token: string; refresh_token: string; expires?: number };
-  };
-
-  const expTs = Math.floor((Date.now() + (data.expires ?? 900_000)) / 1000);
-
+  const { data } = await res.json() as { data: AuthTokens };
   const response = NextResponse.json({ success: true });
-  response.cookies.set('pp_token', data.access_token, {
-    httpOnly: true, secure: isProd, sameSite: 'strict', path: '/',
-  });
-  response.cookies.set('pp_refresh', data.refresh_token, {
-    httpOnly: true, secure: isProd, sameSite: 'strict', path: '/api/auth',
-  });
-  response.cookies.set('pp_token_exp', String(expTs), {
-    httpOnly: false, secure: isProd, sameSite: 'strict', path: '/',
-  });
+  setAuthCookies(response, data);
   return response;
 }
