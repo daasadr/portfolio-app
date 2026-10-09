@@ -186,6 +186,7 @@ export interface ReadingDiaryEntry {
   summary: string | null;
   opinion: string | null;
   notes: string | null;
+  share_with_teacher: boolean;
   date_created: string;
 }
 

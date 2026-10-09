@@ -8,7 +8,7 @@ export const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_D
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
 export const adminHeaders = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` });
 
-export const ENTRY_FIELDS = 'id,student_id,title,author,summary,opinion,notes,date_created';
+export const ENTRY_FIELDS = 'id,student_id,title,author,summary,opinion,notes,share_with_teacher,date_created';
 
 export async function getStudentId(request: NextRequest): Promise<number | null> {
   const token = getTokenFromRequest(request);
@@ -34,6 +34,7 @@ export interface EntryInput {
   summary: string | null;
   opinion: string | null;
   notes: string | null;
+  share_with_teacher: boolean;
 }
 
 /** Validates the form body; returns the cleaned entry or a Czech error message. */
@@ -49,5 +50,6 @@ export function parseEntry(body: unknown): { entry: EntryInput } | { error: stri
   }
   if (!out.title) return { error: 'Vyplň název knihy' };
   if (!out.author) return { error: 'Vyplň autora knihy' };
-  return { entry: out as unknown as EntryInput };
+  // Private unless the pupil explicitly ticks "Ukázat učiteli"
+  return { entry: { ...(out as unknown as Omit<EntryInput, 'share_with_teacher'>), share_with_teacher: src.share_with_teacher === true } };
 }

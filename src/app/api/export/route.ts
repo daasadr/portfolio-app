@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { safeFormatDate } from '@/lib/date';
-import type { PortfolioPage, Category, PersonalGoal, Dream, DreamBoardItem } from '@/types';
+import type { PortfolioPage, Category, PersonalGoal, Dream, DreamBoardItem, ReadingDiaryEntry } from '@/types';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -13,7 +13,7 @@ function adminH() {
 
 interface ExportBody {
   format: 'html' | 'raw';
-  sections: ('portfolio' | 'goals' | 'dreamboard')[];
+  sections: ('portfolio' | 'goals' | 'dreamboard' | 'reading_diary')[];
   privacy: 'all' | 'shared';
 }
 
@@ -57,11 +57,12 @@ function generateHtml(opts: {
   goals: PersonalGoal[];
   dreams: Dream[];
   dreamItems: DreamBoardItem[];
+  readingDiary: ReadingDiaryEntry[];
   fileBuffers: Map<string, { name: string; type: string }>;
   sections: string[];
   exportDate: string;
 }): string {
-  const { student, pages, categories, goals, dreams, dreamItems, fileBuffers, sections, exportDate } = opts;
+  const { student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate } = opts;
   const catMap = new Map(categories.map(c => [c.id, c.name]));
 
   const grouped = new Map<string, PortfolioPage[]>();
@@ -134,6 +135,19 @@ function generateHtml(opts: {
     </div>
   </section>` : '';
 
+  const diaryHtml = sections.includes('reading_diary') && readingDiary.length ? `
+  <section class="category">
+    <h2>Čtenářský deník</h2>
+    ${readingDiary.map(b => `
+    <article class="page book">
+      <h3>${esc(b.title)}</h3>
+      <p class="meta">${esc(b.author)}${safeFormatDate(b.date_created) ? ` · Zapsáno ${safeFormatDate(b.date_created)}` : ''}</p>
+      ${b.summary ? `<h4>O čem kniha je</h4><p class="text">${esc(b.summary)}</p>` : ''}
+      ${b.opinion ? `<h4>Můj názor</h4><p class="text">${esc(b.opinion)}</p>` : ''}
+      ${b.notes ? `<h4>Poznámky</h4><p class="text">${esc(b.notes)}</p>` : ''}
+    </article>`).join('')}
+  </section>` : '';
+
   return `<!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -171,6 +185,8 @@ function generateHtml(opts: {
   .badge { display: inline-block; font-size: 0.75rem; background: #d1fae5; color: #065f46; padding: 0.125rem 0.5rem; border-radius: 99px; margin-top: 0.25rem; }
   .dreamboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
   .dream-img { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
+  .book h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #92400e; margin: 0.9rem 0 0.25rem; }
+  .book .text { white-space: pre-wrap; font-family: Georgia, serif; line-height: 1.6; }
   .footer { text-align: center; padding: 2rem; font-size: 0.75rem; color: #9ca3af; }
   @media print {
     body { background: white; }
@@ -188,6 +204,7 @@ function generateHtml(opts: {
   ${pagesHtml}
   ${goalsHtml}
   ${dreamHtml}
+  ${diaryHtml}
 </main>
 <footer class="footer">Portfolio Paradise · ${exportDate}</footer>
 </body>
@@ -225,6 +242,7 @@ export async function POST(request: NextRequest) {
   let goals: PersonalGoal[] = [];
   let dreams: Dream[] = [];
   let dreamItems: DreamBoardItem[] = [];
+  let readingDiary: ReadingDiaryEntry[] = [];
 
   await Promise.all([
     sections.includes('portfolio') && (async () => {
@@ -252,6 +270,14 @@ export async function POST(request: NextRequest) {
       ]);
       dreams = ((await dr.json()) as { data: Dream[] }).data ?? [];
       dreamItems = ((await ir.json()) as { data: DreamBoardItem[] }).data ?? [];
+    })(),
+
+    sections.includes('reading_diary') && (async () => {
+      const rr = await fetch(
+        `${directusUrl}/items/reading_diary?filter[student_id][_eq]=${student.id}&sort[]=-date_created&limit=-1`,
+        { headers: adminH() }
+      );
+      readingDiary = rr.ok ? ((await rr.json()) as { data: ReadingDiaryEntry[] }).data ?? [] : [];
     })(),
   ].filter(Boolean));
 
@@ -296,7 +322,7 @@ export async function POST(request: NextRequest) {
     for (const { buffer, name } of fileBuffers.values()) {
       assetsFolder.file(name, buffer);
     }
-    zip.file('index.html', generateHtml({ student, pages, categories, goals, dreams, dreamItems, fileBuffers, sections, exportDate }));
+    zip.file('index.html', generateHtml({ student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate }));
 
   } else {
     // Raw format
@@ -336,7 +362,7 @@ export async function POST(request: NextRequest) {
       ];
       for (const g of goals) {
         lines.push(
-          `[${esc(GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type)}] ${g.title}${g.completed ? ' ✓' : ''}`,
+          `[${GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type}] ${g.title}${g.completed ? ' ✓' : ''}`,
           ...(g.description ? [`  ${g.description}`] : []),
           ...(g.target_date ? [`  Termín: ${new Date(g.target_date).toLocaleDateString('cs-CZ')}`] : []),
           '',
@@ -361,6 +387,26 @@ export async function POST(request: NextRequest) {
         if (file) dbFolder.file(file.name, file.buffer);
       }
     }
+  }
+
+  if (format !== 'html' && sections.includes('reading_diary') && readingDiary.length) {
+    const lines = [
+      `ČTENÁŘSKÝ DENÍK — ${student.first_name} ${student.last_name}`,
+      `Exportováno: ${exportDate}`,
+      '',
+    ];
+    for (const b of readingDiary) {
+      lines.push(
+        '────────────────────────────────────────',
+        `${b.title} — ${b.author}`,
+        ...(safeFormatDate(b.date_created) ? [`Zapsáno: ${safeFormatDate(b.date_created)}`] : []),
+        ...(b.summary ? ['', 'O čem kniha je:', b.summary] : []),
+        ...(b.opinion ? ['', 'Můj názor:', b.opinion] : []),
+        ...(b.notes ? ['', 'Poznámky:', b.notes] : []),
+        '',
+      );
+    }
+    zip.file('ctenarsky-denik/ctenarsky-denik.txt', lines.join('\n'));
   }
 
   const zipBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });

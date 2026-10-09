@@ -41,12 +41,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!conns?.length) return NextResponse.json({ message: 'Nemáte přístup k tomuto žákovi' }, { status: 403 });
 
   // Načti data žáka
-  const [studentRes, pagesRes, catsRes, badgesRes] = await Promise.all([
+  const [studentRes, pagesRes, catsRes, badgesRes, diaryRes] = await Promise.all([
     // Jen jméno — nikdy security_answer, email ani datum narození
     fetch(`${directusUrl}/items/students/${studentId}?fields=id,first_name,last_name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/user_badges?filter[student_id][_eq]=${studentId}&filter[status][_eq]=completed&sort[]=-completed_at`, { headers: adminHeaders() }),
+    // Čtenářský deník — jen knihy, které žák sám označil „Ukázat učiteli“
+    fetch(`${directusUrl}/items/reading_diary?filter[student_id][_eq]=${studentId}&filter[share_with_teacher][_eq]=true&fields=id,student_id,title,author,summary,opinion,notes,share_with_teacher,date_created&sort[]=-date_created&limit=-1`, { headers: adminHeaders() }),
   ]);
 
   const { data: student } = await studentRes.json() as { data: unknown };
@@ -56,5 +58,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const now = new Date().toISOString();
   const badges = (rawBadges ?? []).filter(b => !b.expires_at || b.expires_at > now);
 
-  return NextResponse.json({ student, pages: pagesJson.data ?? [], categories: categories ?? [], badges });
+  const readingDiary = diaryRes.ok ? ((await diaryRes.json()) as { data: unknown[] }).data ?? [] : [];
+
+  return NextResponse.json({ student, pages: pagesJson.data ?? [], categories: categories ?? [], badges, readingDiary });
 }

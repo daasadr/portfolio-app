@@ -7,9 +7,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BookOpen, FileText, FolderOpen } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ArrowLeft, BookOpen, BookMarked, FileText, FolderOpen } from 'lucide-react';
 import { BADGES } from '@/lib/badges';
-import type { Student, Category, PortfolioPage } from '@/types';
+import {
+  BookshelfStyles, BookSpine, BookTable, OpenBook, OPEN_BOOK_DIALOG_CLASS, booksLabel,
+} from '@/components/reading-diary/Bookshelf';
+import type { Student, Category, PortfolioPage, ReadingDiaryEntry } from '@/types';
 
 export default function StudentPortfolioPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
@@ -17,6 +21,8 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
   const [pages, setPages] = useState<PortfolioPage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [earnedBadgeSlugs, setEarnedBadgeSlugs] = useState<string[]>([]);
+  const [diary, setDiary] = useState<ReadingDiaryEntry[]>([]);
+  const [openBook, setOpenBook] = useState<ReadingDiaryEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,11 +35,15 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
         setIsLoading(false);
         return;
       }
-      const data = await res.json() as { student: Student; pages: PortfolioPage[]; categories: Category[]; badges?: { badge_slug: string }[] };
+      const data = await res.json() as {
+        student: Student; pages: PortfolioPage[]; categories: Category[];
+        badges?: { badge_slug: string }[]; readingDiary?: ReadingDiaryEntry[];
+      };
       setStudent(data.student);
       setPages(data.pages);
       setCategories(data.categories);
       setEarnedBadgeSlugs((data.badges ?? []).map(b => b.badge_slug));
+      setDiary(data.readingDiary ?? []);
       setIsLoading(false);
     };
     load();
@@ -157,6 +167,33 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Čtenářský deník — jen knihy, které žák ukazuje učiteli */}
+      {diary.length > 0 && (
+        <div>
+          <BookshelfStyles />
+          <div className="flex items-center gap-2 mb-3">
+            <BookMarked className="h-4 w-4 text-amber-700" />
+            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Čtenářský deník</h2>
+            <span className="text-xs text-gray-400">({booksLabel(diary.length)})</span>
+          </div>
+          <div className="max-w-2xl bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-gray-100 px-4 sm:px-10 pt-8 pb-5">
+            <div className="flex flex-col gap-[3px]">
+              {diary.map(entry => (
+                <BookSpine key={entry.id} entry={entry} onOpen={() => setOpenBook(entry)} />
+              ))}
+            </div>
+            <BookTable />
+            <p className="text-center text-xs text-gray-400 mt-4">Zobrazují se jen knihy, které žák sám nasdílel.</p>
+          </div>
+
+          <Dialog open={!!openBook} onOpenChange={open => { if (!open) setOpenBook(null); }}>
+            <DialogContent className={OPEN_BOOK_DIALOG_CLASS}>
+              {openBook && <OpenBook entry={openBook} />}
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>

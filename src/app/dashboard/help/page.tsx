@@ -143,10 +143,12 @@ const guides: Guide[] = [
       { heading: 'Přidat knihu', text: 'Klikněte na „Přidat knihu" a vyplňte název, autora, stručný obsah, svůj názor a případně poznámky. Datum zápisu se uloží samo.' },
       { heading: 'Otevřít zápis', text: 'Klikněte na hřbet knížky v hromádce — kniha se otevře a uvidíte celý svůj zápis.' },
       { heading: 'Upravit nebo smazat', text: 'V otevřené knize jsou dole tlačítka „Upravit" a „Smazat".' },
+      { heading: 'Ukázat učiteli', text: 'Ve formuláři zaškrtněte „Ukázat učiteli". Knížka dostane zlatou záložku a uvidí ji učitel, se kterým jste propojeni. Bez zaškrtnutí zůstává zápis jen váš.' },
     ],
     tips: [
       'Nejnovější kniha leží vždy navrchu hromádky.',
       'Do poznámek si můžete zapsat oblíbený citát nebo komu byste knihu doporučili.',
+      'Čtenářský deník můžete stáhnout v Nastavení → „Export mých dat" spolu s portfoliem.',
     ],
   },
   {

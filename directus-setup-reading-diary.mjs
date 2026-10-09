@@ -66,6 +66,11 @@ const FIELDS = [
   { field: 'opinion', type: 'text', meta: { interface: 'input-multiline', note: 'Můj názor' } },
   { field: 'notes', type: 'text', meta: { interface: 'input-multiline', note: 'Poznámky' } },
   {
+    field: 'share_with_teacher', type: 'boolean',
+    meta: { interface: 'boolean', note: 'Žák zápis ukazuje učiteli' },
+    schema: { default_value: false, is_nullable: false },
+  },
+  {
     field: 'date_created', type: 'timestamp',
     meta: { interface: 'datetime', special: ['date-created'], readonly: true, note: 'Datum zápisu' },
   },

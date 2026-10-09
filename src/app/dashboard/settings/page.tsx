@@ -56,7 +56,7 @@ export default function SettingsPage() {
   // Export
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'html' | 'raw'>('html');
-  const [exportSections, setExportSections] = useState({ portfolio: true, goals: true, dreamboard: true });
+  const [exportSections, setExportSections] = useState({ portfolio: true, goals: true, dreamboard: true, reading_diary: true });
   const [exportPrivacy, setExportPrivacy] = useState<'all' | 'shared'>('all');
   const [exporting, setExporting] = useState(false);
 
@@ -603,6 +603,7 @@ export default function SettingsPage() {
                       ['portfolio', 'Portfolio stránky'] as const,
                       ['goals', 'Cíle a přání'] as const,
                       ['dreamboard', 'Dream board'] as const,
+                      ['reading_diary', 'Čtenářský deník'] as const,
                     ]).map(([key, label]) => (
                       <label key={key} className="flex items-center gap-3 cursor-pointer py-1">
                         <input type="checkbox" checked={exportSections[key]}
