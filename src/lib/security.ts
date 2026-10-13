@@ -22,11 +22,6 @@ export function getClientIp(request: NextRequest): string {
   return request.headers.get('x-real-ip') ?? 'unknown';
 }
 
-/** Today's date (YYYY-MM-DD) in the Czech timezone — badge days follow the pupil's calendar, not UTC. */
-export function pragueToday(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Prague' }).format(new Date());
-}
-
 // In-memory rate limiter — works for single-instance (single VPS) deployments
 const store = new Map<string, { count: number; resetAt: number }>();
 

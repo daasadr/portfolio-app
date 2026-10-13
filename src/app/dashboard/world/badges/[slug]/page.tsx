@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2, Flame, Trophy } from 'lucide-react';
 import { BADGES } from '@/lib/badges';
+import { pragueToday, toPragueDate } from '@/lib/prague-date';
 
 interface UserBadge {
   id: number;
@@ -85,18 +86,23 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     const res = await fetch(`/api/user-badges/${userBadge.id}/checkin`, {
       method: 'POST',
     });
-    const data = await res.json() as { message?: string; completed?: boolean };
+    const data = await res.json().catch(() => ({})) as { message?: string; completed?: boolean; restarted?: boolean };
     if (!res.ok) {
-      setMessage(data.message ?? 'Chyba');
+      setMessage(data.message ?? 'Uložení se nepovedlo, zkus to prosím znovu.');
     } else {
-      if (data.completed) setJustCompleted(true);
+      if (data.completed) {
+        setJustCompleted(true);
+        window.dispatchEvent(new Event('pp-badges-changed')); // top bar shows the new badge
+      } else if (data.restarted) {
+        setMessage('Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪');
+      }
       await loadMyBadge();
     }
     setCheckingIn(false);
   }
 
-  const today = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD, matches server (Europe/Prague)
-  const alreadyDoneToday = userBadge?.last_step_date?.slice(0, 10) === today;
+  const today = pragueToday();
+  const alreadyDoneToday = toPragueDate(userBadge?.last_step_date) === today;
   const isActive = userBadge?.status === 'active';
   const isCompleted = userBadge?.status === 'completed';
 
@@ -183,7 +189,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
           )}
 
           {message && (
-            <p className="text-sm text-center text-red-500">{message}</p>
+            <p className="text-sm text-center text-amber-700">{message}</p>
           )}
         </div>
       )}

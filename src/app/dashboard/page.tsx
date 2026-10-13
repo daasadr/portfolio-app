@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { BADGES, type Badge as BadgeDef } from '@/lib/badges';
+import { pragueToday, toPragueDate } from '@/lib/prague-date';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
 
 // Deterministic confetti — same positions every time, no Math.random() in render
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [checkingIn, setCheckingIn] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [celebratedBadge, setCelebratedBadge] = useState<BadgeDef | null>(null);
+  const [badgeNotice, setBadgeNotice] = useState<Record<number, string>>({});
   const [pendingConnections, setPendingConnections] = useState<{ id: number; other_person: { first_name: string; last_name: string } | null }[]>([]);
 
   useEffect(() => {
@@ -123,10 +125,15 @@ export default function DashboardPage() {
 
   async function handleCheckin(ubId: number) {
     setCheckingIn(ubId);
-    const res = await fetch(`/api/user-badges/${ubId}/checkin`, { method: 'POST' });
-    if (res.ok) {
+    setBadgeNotice(prev => ({ ...prev, [ubId]: '' }));
+    const res = await fetch(`/api/user-badges/${ubId}/checkin`, { method: 'POST' }).catch(() => null);
+    if (!res?.ok) {
+      const err = res ? await res.json().catch(() => ({})) as { message?: string } : {};
+      setBadgeNotice(prev => ({ ...prev, [ubId]: err.message ?? 'Uložení se nepovedlo, zkus to prosím znovu.' }));
+    } else {
       const data = await res.json() as {
         completed?: boolean;
+        restarted?: boolean;
         user_badge?: { steps_done: number; last_step_date: string | null };
       };
       if (data.completed) {
@@ -134,11 +141,15 @@ export default function DashboardPage() {
         const badge = ub ? BADGES.find(b => b.slug === ub.badge_slug) : null;
         if (badge) setCelebratedBadge(badge);
         setActiveBadges(prev => prev.filter(b => b.id !== ubId));
+        window.dispatchEvent(new Event('pp-badges-changed')); // top bar shows the new badge
       } else {
+        if (data.restarted) {
+          setBadgeNotice(prev => ({ ...prev, [ubId]: 'Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪' }));
+        }
         setActiveBadges(prev => prev.map(ub =>
           ub.id === ubId
             // Server is the source of truth — a skipped day restarts the streak
-            ? { ...ub, steps_done: data.user_badge?.steps_done ?? ub.steps_done + 1, last_step_date: data.user_badge?.last_step_date ?? new Date().toLocaleDateString('en-CA') }
+            ? { ...ub, steps_done: data.user_badge?.steps_done ?? ub.steps_done + 1, last_step_date: data.user_badge?.last_step_date ?? pragueToday() }
             : ub
         ));
       }
@@ -246,8 +257,8 @@ export default function DashboardPage() {
               {activeBadges.map(ub => {
                 const badge = BADGES.find(b => b.slug === ub.badge_slug);
                 if (!badge) return null;
-                const today = new Date().toLocaleDateString('en-CA');
-                const doneTodayAlready = ub.last_step_date?.slice(0, 10) === today;
+                const today = pragueToday();
+                const doneTodayAlready = toPragueDate(ub.last_step_date) === today;
                 return (
                   <div key={ub.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
                     <p className="font-medium text-sm text-gray-900 leading-tight">{badge.name}</p>
@@ -273,6 +284,7 @@ export default function DashboardPage() {
                         ? <span className="flex items-center justify-center gap-1"><CheckCircle className="h-3 w-3" /> Dnes splněno</span>
                         : <span className="flex items-center justify-center gap-1"><Flame className="h-3 w-3" /> Dnes splněno</span>}
                     </button>
+                    {badgeNotice[ub.id] && <p className="text-xs text-amber-700">{badgeNotice[ub.id]}</p>}
                   </div>
                 );
               })}

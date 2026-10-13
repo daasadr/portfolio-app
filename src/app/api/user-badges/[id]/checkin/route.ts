@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BADGES } from '@/lib/badges';
 import { getTokenFromRequest } from '@/lib/auth-server';
-import { isValidId, pragueToday } from '@/lib/security';
+import { isValidId } from '@/lib/security';
+import { pragueToday, toPragueDate, previousDay } from '@/lib/prague-date';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -22,12 +23,6 @@ async function getStudentId(token: string): Promise<string | null> {
   if (!sr.ok) return null;
   const { data } = await sr.json() as { data: { id: string }[] };
   return data?.[0]?.id ?? null;
-}
-
-function previousDay(isoDate: string): string {
-  const d = new Date(`${isoDate}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -56,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (ub.status !== 'active') return NextResponse.json({ message: 'Bobřík není aktivní' }, { status: 400 });
 
     const today = pragueToday();
-    const lastDay = ub.last_step_date?.slice(0, 10) ?? null;
+    const lastDay = toPragueDate(ub.last_step_date);
     if (lastDay === today) {
       return NextResponse.json({ message: 'Dnes jsi bobříka již splnil/a. Zítra zase!' }, { status: 409 });
     }
@@ -78,12 +73,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       patch.expires_at = exp.toISOString();
     }
 
-    const patchRes = await fetch(`${directusUrl}/items/user_badges/${id}`, {
+    const save = (body: Record<string, unknown>) => fetch(`${directusUrl}/items/user_badges/${id}`, {
       method: 'PATCH',
       headers: h(),
-      body: JSON.stringify(patch),
+      body: JSON.stringify(body),
     });
-    if (!patchRes.ok) return NextResponse.json({ message: 'Chyba při ukládání' }, { status: 500 });
+
+    let patchRes = await save(patch);
+    if (!patchRes.ok) {
+      console.error('[badge checkin] Directus PATCH failed', patchRes.status, await patchRes.text(), JSON.stringify(patch));
+      // Never lose the finished last day because of the optional date fields
+      if (isCompleted) {
+        patchRes = await save({ steps_done: newSteps, last_step_date: today, status: 'completed' });
+        if (!patchRes.ok) console.error('[badge checkin] minimal completion PATCH failed', patchRes.status, await patchRes.text());
+      }
+    }
+    if (!patchRes.ok) return NextResponse.json({ message: 'Uložení se nepovedlo, zkus to prosím znovu.' }, { status: 500 });
     const { data: updated } = await patchRes.json() as { data: unknown };
     return NextResponse.json({ user_badge: updated, completed: isCompleted, restarted });
   } finally {

@@ -32,6 +32,19 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// Splněné (a ještě platné) bobříky pro zobrazení v top baru
+function fetchEarnedBadgeSlugs(): Promise<string[]> {
+  return fetch('/api/user-badges')
+    .then(r => r.ok ? r.json() : { user_badges: [] })
+    .then((data: { user_badges?: { badge_slug: string; status: string; expires_at: string | null }[] }) => {
+      const now = new Date().toISOString();
+      return (data.user_badges ?? [])
+        .filter(ub => ub.status === 'completed' && (!ub.expires_at || ub.expires_at > now))
+        .map(ub => ub.badge_slug);
+    })
+    .catch(() => []);
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +53,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [pendingCount, setPendingCount] = useState(0);
   const [earnedBadgeSlugs, setEarnedBadgeSlugs] = useState<string[]>([]);
   const router = useRouter();
+
+  const loadEarnedBadges = () => { fetchEarnedBadgeSlugs().then(setEarnedBadgeSlugs); };
+
+  // Pages fire this after a badge is completed so the top bar updates without a reload
+  useEffect(() => {
+    window.addEventListener('pp-badges-changed', loadEarnedBadges);
+    return () => window.removeEventListener('pp-badges-changed', loadEarnedBadges);
+  }, []);
 
   useEffect(() => {
     const loadStudent = async () => {
@@ -62,17 +83,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             .catch(() => {});
         }
 
-        // Načti splněné bobříky pro zobrazení v top baru
-        fetch('/api/user-badges')
-          .then(r => r.ok ? r.json() : { user_badges: [] })
-          .then((data: { user_badges?: { badge_slug: string; status: string; expires_at: string | null }[] }) => {
-            const now = new Date().toISOString();
-            const earned = (data.user_badges ?? [])
-              .filter(ub => ub.status === 'completed' && (!ub.expires_at || ub.expires_at > now))
-              .map(ub => ub.badge_slug);
-            setEarnedBadgeSlugs(earned);
-          })
-          .catch(() => {});
+        loadEarnedBadges();
       } catch {
         router.push('/login');
       } finally {
