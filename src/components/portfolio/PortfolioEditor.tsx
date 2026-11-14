@@ -255,7 +255,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         await directus.request(updateItem('portfolio_pages', pageId, pageData));
       } else {
         await directus.request(
-          createItem('portfolio_pages', { ...pageData, student_id: student.id, sort_order: 0 })
+          createItem('portfolio_pages', { ...pageData, student_id: student.id })
         );
       }
 

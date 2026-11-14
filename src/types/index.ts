@@ -75,7 +75,6 @@ export interface PortfolioPage {
   attachments?: Array<{ id: string; name: string; type: string }>;
   structured_data?: any;
   visibility: 'private' | 'shared';
-  sort_order: number;
   created_at: string;
   updated_at: string;
 }
