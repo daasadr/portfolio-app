@@ -27,8 +27,43 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, uploadFile } from '@/lib/directus';
+import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import type { Student, Category, PortfolioPage } from '@/types';
 import RichEditor from './RichEditor';
+
+interface PageDraft {
+  title: string;
+  content: string;
+  categoryId: string;
+  visibility: 'private' | 'shared';
+}
+
+const EMPTY_PAGE: PageDraft = { title: '', content: '', categoryId: 'none', visibility: 'private' };
+
+/** TipTap leaves "<p></p>" in an empty editor — treat it as no content. */
+function sameDraft(a: PageDraft, b: PageDraft) {
+  const norm = (html: string) => html.replace(/<p><\/p>/g, '').trim();
+  return a.title.trim() === b.title.trim() && norm(a.content) === norm(b.content)
+    && a.categoryId === b.categoryId && a.visibility === b.visibility;
+}
+
+/** Turns a Directus error into a message a pupil understands. */
+function saveErrorMessage(e: unknown): string {
+  const errs = e && typeof e === 'object' && 'errors' in e
+    ? (e as { errors: Array<{ message: string; extensions?: { code?: string } }> }).errors
+    : null;
+  const code = errs?.[0]?.extensions?.code;
+  const detail = errs?.length ? errs.map(x => x.message).join('\n') : String(e);
+  const kept = '\n\nTvůj text zůstal uložený jako koncept v tomto prohlížeči, nic se neztratilo.';
+  if (code === 'FORBIDDEN') {
+    return `Stránku se nepodařilo uložit — tvůj účet k tomu nemá oprávnění. Dej prosím vědět správci aplikace.${kept}\n\n(Podrobnosti: ${detail})`;
+  }
+  if (code === 'TOKEN_EXPIRED' || code === 'INVALID_CREDENTIALS') {
+    return `Přihlášení vypršelo. Přihlas se prosím znovu v nové záložce a pak zkus uložit znovu.${kept}`;
+  }
+  return `Stránku se nepodařilo uložit. Zkus to prosím za chvíli znovu.${kept}\n\n(Podrobnosti: ${detail})`;
+}
 
 interface Attachment {
   id?: string;
@@ -65,6 +100,36 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
   const [visibility, setVisibility] = useState<'private' | 'shared'>('private');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
+  // Autosaved draft — survives reloads, closed tabs and failed saves
+  const draftKey = `portfolio:${pageId ?? 'new'}`;
+  const [baseline, setBaseline] = useState<PageDraft>(EMPTY_PAGE);
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
+  const current: PageDraft = { title, content, categoryId, visibility };
+  useDraftAutosave(isLoading ? null : draftKey, current, d => sameDraft(d, baseline));
+
+  function applyDraft(d: PageDraft) {
+    setTitle(d.title);
+    setContent(d.content);
+    setCategoryId(d.categoryId);
+    setVisibility(d.visibility);
+  }
+
+  function discardRestoredDraft() {
+    discardDraft(draftKey);
+    applyDraft(baseline);
+    setEditorKey(k => k + 1); // RichEditor only reads `content` on mount
+    setRestoredAt(null);
+  }
+
+  // Files picked but not uploaded yet cannot be kept in a draft — warn before leaving
+  useEffect(() => {
+    if (!attachments.some(a => a.isNew)) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [attachments]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -80,6 +145,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         ) as Category[];
         setCategories(cats ?? []);
 
+        let loaded: PageDraft = EMPTY_PAGE;
         if (pageId) {
           const pages = await directus.request(
             readItems('portfolio_pages', {
@@ -89,10 +155,13 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
           ) as PortfolioPage[];
           const page = pages[0];
           if (page) {
-            setTitle(page.title);
-            setContent(page.content ?? '');
-            setCategoryId(page.category_id != null ? String(page.category_id) : 'none');
-            setVisibility(page.visibility);
+            loaded = {
+              title: page.title,
+              content: page.content ?? '',
+              categoryId: page.category_id != null ? String(page.category_id) : 'none',
+              visibility: page.visibility,
+            };
+            applyDraft(loaded);
             if (page.attachments) {
               const rawAtts = page.attachments;
               const saved: Array<{ id: string; name: string; type: string }> =
@@ -106,6 +175,14 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             }
           }
         }
+        setBaseline(loaded);
+
+        // Unsaved text from last time? Bring it back.
+        const draft = loadDraft<PageDraft>(`portfolio:${pageId ?? 'new'}`);
+        if (draft && !sameDraft(draft.data, loaded)) {
+          applyDraft({ ...loaded, ...draft.data });
+          setRestoredAt(draft.savedAt);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -113,6 +190,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId]);
 
   async function handleImageUpload(file: File): Promise<string> {
@@ -181,19 +259,11 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         );
       }
 
+      discardDraft(draftKey);
       router.push('/dashboard/portfolio');
     } catch (e: unknown) {
       console.error('Save error full:', JSON.stringify(e, null, 2));
-      let msg = 'Chyba při ukládání:';
-      if (e && typeof e === 'object' && 'errors' in e) {
-        const errs = (e as { errors: Array<{ message: string; extensions?: Record<string, unknown> }> }).errors;
-        if (errs?.length) {
-          msg += '\n' + errs.map((x) => `${x.message} | ${JSON.stringify(x.extensions ?? {})}`).join('\n');
-        }
-      } else {
-        msg += '\n' + String(e);
-      }
-      alert(msg);
+      alert(saveErrorMessage(e));
     } finally {
       setIsSaving(false);
     }
@@ -223,6 +293,14 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
           {isSaving ? 'Ukládám...' : 'Uložit'}
         </Button>
       </div>
+
+      {restoredAt && (
+        <DraftNotice
+          savedAt={restoredAt}
+          onDiscard={discardRestoredDraft}
+          discardLabel={pageId ? 'Vrátit uloženou verzi' : 'Zahodit koncept'}
+        />
+      )}
 
       {/* Metadata */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
@@ -290,10 +368,12 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       <div className="space-y-1">
         <Label>Obsah</Label>
         <RichEditor
+          key={editorKey}
           content={content}
           onChange={setContent}
           onFileUpload={handleImageUpload}
         />
+        <DraftHint />
       </div>
 
       {/* Přílohy */}

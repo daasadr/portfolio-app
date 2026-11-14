@@ -24,6 +24,7 @@ import {
 import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import { BADGES } from '@/lib/badges';
+import { setDraftOwner, clearOwnDrafts } from '@/lib/drafts';
 import type { Student } from '@/types';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
@@ -70,6 +71,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           router.push('/login');
           return;
         }
+        setDraftOwner(studentData.id);
         setStudent(studentData);
         const saved = localStorage.getItem(`pp_bg_${studentData.id}`);
         if (saved) setBg(saved);
@@ -106,6 +108,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogout = async () => {
     try {
+      clearOwnDrafts(); // shared school computers — drafts must not outlive the session
       await logout();
       router.push('/login');
     } catch (error) {

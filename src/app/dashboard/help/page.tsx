@@ -182,7 +182,7 @@ const guides: Guide[] = [
       { heading: 'Ochrana heslem', text: 'Chcete-li, aby odkaz byl chráněn, nastavte heslo. Příjemce ho bude muset zadat pro zobrazení.' },
       { heading: 'Zrušit sdílení', text: 'V přehledu sdílených odkazů klikněte na „Deaktivovat". Odkaz přestane fungovat.' },
       { heading: 'Propojení s učitelem', text: 'Pokud vás učitel pozval do své třídy, zobrazí se v sekci „Propojení s učiteli" jeho jméno a tlačítka „Přijmout" a „Odmítnout".' },
-      { text: 'Po přijetí má učitel přístup k vašemu portfoliu v režimu jen pro čtení. Propojení můžete kdykoli zrušit tlačítkem „Odebrat".' },
+      { text: 'Po přijetí vidí učitel vaše sdílené stránky portfolia (jen pro čtení). Soukromé stránky neuvidí. Propojení můžete kdykoli zrušit tlačítkem „Odebrat".' },
     ],
     tips: [
       'Sdílený odkaz zobrazí portfolio jen pro čtení — nikdo nemůže vaše portfolio měnit.',

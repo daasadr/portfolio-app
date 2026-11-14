@@ -34,6 +34,24 @@ import {
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
+import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { DraftNotice, DraftHint } from '@/components/DraftNotice';
+
+type GoalForm = { title: string; description: string; goal_type: GoalType; target_date: string };
+type DreamForm = { title: string; description: string };
+const EMPTY_GOAL: GoalForm = { title: '', description: '', goal_type: 'short_term', target_date: '' };
+const EMPTY_DREAM: DreamForm = { title: '', description: '' };
+
+function sameFields<T extends Record<string, string>>(a: T, b: T) {
+  return Object.keys(b).every(k => (a[k] ?? '').trim() === (b[k] ?? '').trim());
+}
+
+/** Refill a form from an unsaved draft, if there is one that differs from `base`. */
+function withDraft<T extends Record<string, string>>(key: string, base: T): { form: T; restoredAt: number | null } {
+  const draft = loadDraft<T>(key);
+  if (draft && !sameFields({ ...base, ...draft.data }, base)) return { form: { ...base, ...draft.data }, restoredAt: draft.savedAt };
+  return { form: base, restoredAt: null };
+}
 
 const GOAL_TYPE_LABELS: Record<GoalType, string> = {
   short_term: 'Krátkodobý',
@@ -64,6 +82,9 @@ export default function GoalsPage() {
     target_date: '',
   });
   const [goalSaving, setGoalSaving] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
+  const [goalBase, setGoalBase] = useState<GoalForm>(EMPTY_GOAL);
+  const [goalRestoredAt, setGoalRestoredAt] = useState<number | null>(null);
 
   // Dream form state
   const [dreamDialogOpen, setDreamDialogOpen] = useState(false);
@@ -71,6 +92,8 @@ export default function GoalsPage() {
   const [dreamForm, setDreamForm] = useState({ title: '', description: '' });
   const [dreamSaving, setDreamSaving] = useState(false);
   const [dreamError, setDreamError] = useState<string | null>(null);
+  const [dreamBase, setDreamBase] = useState<DreamForm>(EMPTY_DREAM);
+  const [dreamRestoredAt, setDreamRestoredAt] = useState<number | null>(null);
   const [uploadWarning, setUploadWarning] = useState<string | null>(null);
 
   // Dream images (in dialog)
@@ -121,27 +144,41 @@ export default function GoalsPage() {
     load();
   }, []);
 
+  // ── Drafts (autosaved while a dialog is open) ─────────
+  const goalDraftKey = `goal:${editingGoal?.id ?? 'new'}`;
+  const dreamDraftKey = `dream:${editingDream?.id ?? 'new'}`;
+  useDraftAutosave(goalDialogOpen ? goalDraftKey : null, goalForm, f => sameFields(f, goalBase));
+  useDraftAutosave(dreamDialogOpen ? dreamDraftKey : null, dreamForm, f => sameFields(f, dreamBase));
+
   // ── Goals ──────────────────────────────────────────────
+  function startGoalForm(key: string, base: GoalForm) {
+    const { form, restoredAt } = withDraft(key, base);
+    setGoalBase(base);
+    setGoalForm(form);
+    setGoalRestoredAt(restoredAt);
+    setGoalError(null);
+    setGoalDialogOpen(true);
+  }
+
   function openNewGoal() {
     setEditingGoal(null);
-    setGoalForm({ title: '', description: '', goal_type: 'short_term', target_date: '' });
-    setGoalDialogOpen(true);
+    startGoalForm('goal:new', EMPTY_GOAL);
   }
 
   function openEditGoal(goal: PersonalGoal) {
     setEditingGoal(goal);
-    setGoalForm({
+    startGoalForm(`goal:${goal.id}`, {
       title: goal.title,
       description: goal.description ?? '',
       goal_type: goal.goal_type,
       target_date: goal.target_date ?? '',
     });
-    setGoalDialogOpen(true);
   }
 
   async function saveGoal() {
     if (!student || !goalForm.title.trim()) return;
     setGoalSaving(true);
+    setGoalError(null);
     try {
       if (editingGoal) {
         const updated = await directus.request(
@@ -166,9 +203,12 @@ export default function GoalsPage() {
         ) as PersonalGoal;
         setGoals((prev) => [created, ...prev]);
       }
+      discardDraft(goalDraftKey);
+      setGoalRestoredAt(null);
       setGoalDialogOpen(false);
     } catch (e) {
       console.error(e);
+      setGoalError('Cíl se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.');
     } finally {
       setGoalSaving(false);
     }
@@ -193,7 +233,10 @@ export default function GoalsPage() {
   // ── Dreams ─────────────────────────────────────────────
   async function openNewDream() {
     setEditingDream(null);
-    setDreamForm({ title: '', description: '' });
+    const { form, restoredAt } = withDraft('dream:new', EMPTY_DREAM);
+    setDreamBase(EMPTY_DREAM);
+    setDreamForm(form);
+    setDreamRestoredAt(restoredAt);
     setDreamImages([]);
     setPendingFiles([]);
     setDreamDialogOpen(true);
@@ -201,7 +244,11 @@ export default function GoalsPage() {
 
   async function openEditDream(dream: Dream) {
     setEditingDream(dream);
-    setDreamForm({ title: dream.title, description: dream.description ?? '' });
+    const base = { title: dream.title, description: dream.description ?? '' };
+    const { form, restoredAt } = withDraft(`dream:${dream.id}`, base);
+    setDreamBase(base);
+    setDreamForm(form);
+    setDreamRestoredAt(restoredAt);
     setPendingFiles([]);
     // Load existing images
     try {
@@ -308,9 +355,11 @@ export default function GoalsPage() {
         ) as Dream;
         setDreams((prev) => [dream, ...prev]);
       }
+      discardDraft(dreamDraftKey);
+      setDreamRestoredAt(null);
     } catch (e) {
       console.error('Dream save error:', e);
-      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu.');
+      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu — rozepsaný text máte uložený jako koncept.');
       setDreamSaving(false);
       return;
     }
@@ -478,6 +527,12 @@ export default function GoalsPage() {
                   <DialogDescription>Vyplňte informace o cíli</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
+                  {goalRestoredAt && (
+                    <DraftNotice
+                      savedAt={goalRestoredAt}
+                      onDiscard={() => { discardDraft(goalDraftKey); setGoalForm(goalBase); setGoalRestoredAt(null); }}
+                    />
+                  )}
                   <div className="space-y-1">
                     <Label>Název cíle *</Label>
                     <Input
@@ -519,6 +574,10 @@ export default function GoalsPage() {
                       onChange={(e) => setGoalForm((f) => ({ ...f, target_date: e.target.value }))}
                     />
                   </div>
+                  {goalError && (
+                    <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{goalError}</p>
+                  )}
+                  <DraftHint />
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setGoalDialogOpen(false)}>Zrušit</Button>
                     <Button onClick={saveGoal} disabled={goalSaving || !goalForm.title.trim()}>
@@ -589,6 +648,12 @@ export default function GoalsPage() {
                   <DialogDescription>Vyplňte název, popis a přidejte obrázky</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
+                  {dreamRestoredAt && (
+                    <DraftNotice
+                      savedAt={dreamRestoredAt}
+                      onDiscard={() => { discardDraft(dreamDraftKey); setDreamForm(dreamBase); setDreamRestoredAt(null); }}
+                    />
+                  )}
                   <div className="space-y-1">
                     <Label>Název *</Label>
                     <Input
@@ -712,6 +777,7 @@ export default function GoalsPage() {
                   {dreamError && (
                     <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{dreamError}</p>
                   )}
+                  <DraftHint />
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setDreamDialogOpen(false)}>Zrušit</Button>
                     <Button onClick={saveDream} disabled={dreamSaving || uploadingImages || !dreamForm.title.trim()}>

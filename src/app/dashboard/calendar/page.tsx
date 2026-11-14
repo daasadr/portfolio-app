@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,7 +73,7 @@ export default function CalendarPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState(today.toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(today.toLocaleDateString('en-CA')); // local YYYY-MM-DD
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
@@ -80,6 +82,27 @@ export default function CalendarPage() {
     entry_type: 'plan' as EntryType,
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Autosaved draft for the selected day's new entry
+  const draftKey = `calendar:${selectedDate}`;
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+  const isEmptyForm = (f: typeof form) => !f.title.trim() && !f.description.trim();
+  useDraftAutosave(dialogOpen ? draftKey : null, form, isEmptyForm);
+
+  function handleDialogOpenChange(open: boolean) {
+    if (open) {
+      setSaveError(null);
+      const draft = loadDraft<typeof form>(draftKey);
+      if (draft && !isEmptyForm(draft.data)) {
+        setForm({ ...form, ...draft.data });
+        setRestoredAt(draft.savedAt);
+      } else {
+        setRestoredAt(null);
+      }
+    }
+    setDialogOpen(open);
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +144,7 @@ export default function CalendarPage() {
   async function handleSave() {
     if (!student) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const created = await directus.request(
         createItem('calendar_entries', {
@@ -133,10 +157,13 @@ export default function CalendarPage() {
         })
       ) as CalendarEntry;
       setEntries((prev) => [...prev, created]);
+      discardDraft(draftKey);
+      setRestoredAt(null);
       setForm({ title: '', description: '', entry_type: 'plan' });
       setDialogOpen(false);
     } catch (e) {
       console.error(e);
+      setSaveError('Záznam se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.');
     } finally {
       setSaving(false);
     }
@@ -269,7 +296,7 @@ export default function CalendarPage() {
                   month: 'long',
                 })}
               </CardTitle>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4" />
@@ -280,6 +307,16 @@ export default function CalendarPage() {
                     <DialogTitle>Nový záznam</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
+                    {restoredAt && (
+                      <DraftNotice
+                        savedAt={restoredAt}
+                        onDiscard={() => {
+                          discardDraft(draftKey);
+                          setForm({ title: '', description: '', entry_type: 'plan' });
+                          setRestoredAt(null);
+                        }}
+                      />
+                    )}
                     <div className="space-y-1">
                       <Label>Typ záznamu</Label>
                       <Select
@@ -313,6 +350,10 @@ export default function CalendarPage() {
                         rows={3}
                       />
                     </div>
+                    {saveError && (
+                      <p className="text-sm text-red-600 bg-red-50 rounded-md px-3 py-2">{saveError}</p>
+                    )}
+                    <DraftHint />
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setDialogOpen(false)}>Zrušit</Button>
                       <Button onClick={handleSave} disabled={saving}>

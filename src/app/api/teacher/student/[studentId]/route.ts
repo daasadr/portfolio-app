@@ -44,7 +44,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const [studentRes, pagesRes, catsRes, badgesRes, diaryRes] = await Promise.all([
     // Jen jméno — nikdy security_answer, email ani datum narození
     fetch(`${directusUrl}/items/students/${studentId}?fields=id,first_name,last_name`, { headers: adminHeaders() }),
-    fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&sort[]=title`, { headers: adminHeaders() }),
+    // Jen sdílené stránky — editor žákovi slibuje, že soukromé učitel neuvidí
+    fetch(`${directusUrl}/items/portfolio_pages?filter[student_id][_eq]=${studentId}&filter[visibility][_eq]=shared&sort[]=title`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/categories?filter[student_id][_eq]=${studentId}&sort[]=name`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/user_badges?filter[student_id][_eq]=${studentId}&filter[status][_eq]=completed&sort[]=-completed_at`, { headers: adminHeaders() }),
     // Čtenářský deník — jen knihy, které žák sám označil „Ukázat učiteli“

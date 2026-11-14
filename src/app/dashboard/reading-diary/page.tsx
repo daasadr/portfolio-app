@@ -17,9 +17,16 @@ import { BookMarked, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   BookshelfStyles, BookSpine, BookTable, OpenBook, OPEN_BOOK_DIALOG_CLASS, booksLabel, formatDiaryDate,
 } from '@/components/reading-diary/Bookshelf';
+import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import type { ReadingDiaryEntry } from '@/types';
 
 const EMPTY_FORM = { title: '', author: '', summary: '', opinion: '', notes: '', share_with_teacher: false };
+type DiaryForm = typeof EMPTY_FORM;
+
+const sameForm = (a: DiaryForm, b: DiaryForm) =>
+  (Object.keys(EMPTY_FORM) as (keyof DiaryForm)[]).every(k =>
+    typeof a[k] === 'string' ? String(a[k]).trim() === String(b[k]).trim() : a[k] === b[k]);
 
 export default function ReadingDiaryPage() {
   const [entries, setEntries] = useState<ReadingDiaryEntry[]>([]);
@@ -34,6 +41,27 @@ export default function ReadingDiaryPage() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Autosaved draft of the open form
+  const draftKey = formOpen ? `reading-diary:${editing?.id ?? 'new'}` : null;
+  const [formBaseline, setFormBaseline] = useState<DiaryForm>(EMPTY_FORM);
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+  useDraftAutosave(draftKey, form, f => sameForm(f, formBaseline));
+
+  /** Opens the form with `base`, refilled from an unsaved draft when there is one. */
+  function startForm(key: string, base: DiaryForm) {
+    setFormBaseline(base);
+    const draft = loadDraft<DiaryForm>(key);
+    if (draft && !sameForm({ ...base, ...draft.data }, base)) {
+      setForm({ ...base, ...draft.data });
+      setRestoredAt(draft.savedAt);
+    } else {
+      setForm(base);
+      setRestoredAt(null);
+    }
+    setFormError('');
+    setFormOpen(true);
+  }
+
   useEffect(() => {
     fetch('/api/reading-diary')
       .then(async r => {
@@ -47,14 +75,13 @@ export default function ReadingDiaryPage() {
 
   function openNewForm() {
     setEditing(null);
-    setForm(EMPTY_FORM);
-    setFormError('');
-    setFormOpen(true);
+    startForm('reading-diary:new', EMPTY_FORM);
   }
 
   function openEditForm(entry: ReadingDiaryEntry) {
     setEditing(entry);
-    setForm({
+    setOpenEntry(null);
+    startForm(`reading-diary:${entry.id}`, {
       title: entry.title,
       author: entry.author,
       summary: entry.summary ?? '',
@@ -62,9 +89,6 @@ export default function ReadingDiaryPage() {
       notes: entry.notes ?? '',
       share_with_teacher: !!entry.share_with_teacher,
     });
-    setFormError('');
-    setOpenEntry(null);
-    setFormOpen(true);
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -81,10 +105,12 @@ export default function ReadingDiaryPage() {
     setSaving(false);
     if (!res?.ok) {
       const err = res ? await res.json().catch(() => ({})) as { message?: string } : {};
-      setFormError(err.message ?? 'Uložení se nepovedlo. Zkus to znovu.');
+      setFormError(`${err.message ?? 'Uložení se nepovedlo. Zkus to znovu.'} Rozepsaný text máš uložený jako koncept.`);
       return;
     }
     const { entry } = await res.json() as { entry: ReadingDiaryEntry };
+    discardDraft(`reading-diary:${editing?.id ?? 'new'}`);
+    setRestoredAt(null);
     if (editing) {
       setEntries(prev => prev.map(x => x.id === entry.id ? entry : x));
       setOpenEntry(entry);
@@ -205,6 +231,16 @@ export default function ReadingDiaryPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
+            {restoredAt && (
+              <DraftNotice
+                savedAt={restoredAt}
+                onDiscard={() => {
+                  discardDraft(`reading-diary:${editing?.id ?? 'new'}`);
+                  setForm(formBaseline);
+                  setRestoredAt(null);
+                }}
+              />
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="rd-title">Název knihy *</Label>
               <Input id="rd-title" value={form.title} maxLength={200} required
@@ -239,6 +275,7 @@ export default function ReadingDiaryPage() {
               </span>
             </label>
             {formError && <p className="text-sm text-red-600">{formError}</p>}
+            <DraftHint />
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
               <Button type="submit" disabled={saving} className="bg-amber-700 hover:bg-amber-800">
