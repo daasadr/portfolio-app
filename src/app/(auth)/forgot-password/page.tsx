@@ -5,10 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Check, X, Mail, ChevronDown } from 'lucide-react';
-import { SECURITY_QUESTIONS } from '@/lib/security-questions';
+import { questionLabel } from '@/lib/security-questions';
 
 function getStrength(pwd: string) {
   if (!pwd) return { score: 0, label: '', color: '' };
@@ -26,7 +27,7 @@ function getStrength(pwd: string) {
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<'email' | 'question' | 'done'>('email');
   const [email, setEmail] = useState('');
-  const [questionIndex, setQuestionIndex] = useState<number | null>(null);
+  const [questionText, setQuestionText] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -44,12 +45,12 @@ export default function ForgotPasswordPage() {
     setError('');
     try {
       const res = await fetch(`/api/reset-password?email=${encodeURIComponent(email)}`);
-      const data = await res.json() as { security_question: number | null };
+      const data = await res.json() as { security_question: number | null; security_question_text?: string | null };
       if (data.security_question === null) {
         setError('Pokud je e-mail zaregistrován a má nastavenou bezpečnostní otázku, zobrazí se formulář. Jinak kontaktujte správce.');
         return;
       }
-      setQuestionIndex(data.security_question);
+      setQuestionText(questionLabel(data.security_question, data.security_question_text));
       setStep('question');
     } catch {
       setError('Chyba připojení. Zkuste to znovu.');
@@ -125,11 +126,11 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          {step === 'question' && questionIndex != null && (
+          {step === 'question' && questionText && (
             <form onSubmit={handleReset} className="space-y-4">
               <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
                 <p className="font-medium mb-1">Bezpečnostní otázka:</p>
-                <p>{SECURITY_QUESTIONS[questionIndex]}</p>
+                <p>{questionText}</p>
               </div>
 
               <div className="space-y-1.5">
@@ -145,9 +146,8 @@ export default function ForgotPasswordPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="newPassword">Nové heslo</Label>
-                <Input
+                <PasswordInput
                   id="newPassword"
-                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
@@ -169,9 +169,8 @@ export default function ForgotPasswordPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="confirmPassword">Potvrdit nové heslo</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

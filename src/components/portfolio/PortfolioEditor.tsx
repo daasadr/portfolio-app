@@ -200,12 +200,11 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
 
   const MAX_FILE_MB = 30;
 
-  async function handleAttachmentAdd(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  function addFiles(files: File[]) {
+    if (files.length === 0) return;
     const oversized = files.filter(f => f.size > MAX_FILE_MB * 1024 * 1024);
     if (oversized.length > 0) {
       alert(`Tyto soubory jsou příliš velké (max ${MAX_FILE_MB} MB):\n${oversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join('\n')}`);
-      e.target.value = '';
       return;
     }
     const newAttachments: Attachment[] = files.map((f) => ({
@@ -216,8 +215,30 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       file: f,
     }));
     setAttachments((prev) => [...prev, ...newAttachments]);
+  }
+
+  function handleAttachmentAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    addFiles(Array.from(e.target.files ?? []));
     e.target.value = '';
   }
+
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const dropHandlers = {
+    onDragOver: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault(); // otherwise the browser opens the dropped file instead
+      setIsDraggingFiles(true);
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDraggingFiles(false);
+    },
+    onDrop: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes('Files')) return;
+      e.preventDefault();
+      setIsDraggingFiles(false);
+      addFiles(Array.from(e.dataTransfer.files));
+    },
+  };
 
   function removeAttachment(index: number) {
     setAttachments((prev) => {
@@ -377,7 +398,10 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       </div>
 
       {/* Přílohy */}
-      <div className="space-y-3">
+      <div
+        className={`space-y-3 rounded-lg transition-shadow ${isDraggingFiles ? 'ring-2 ring-blue-400 ring-offset-4' : ''}`}
+        {...dropHandlers}
+      >
         <div className="flex items-center justify-between">
           <Label>Přílohy</Label>
           <Button
@@ -401,12 +425,12 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
 
         {attachments.length === 0 ? (
           <div
-            className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center text-gray-400 cursor-pointer hover:border-gray-300 transition-colors"
+            className={`border-2 border-dashed rounded-lg p-8 text-center text-gray-700 cursor-pointer transition-colors ${isDraggingFiles ? 'border-blue-400 bg-blue-50/95' : 'border-gray-300 bg-white/85 hover:border-gray-400 hover:bg-white/95'}`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <Paperclip className="h-8 w-8 mx-auto mb-2 text-gray-500" />
             <p className="text-sm">Přetáhněte soubory nebo klikněte pro výběr</p>
-            <p className="text-xs mt-1">Obrázky, videa, zvuk, dokumenty (PDF, Word…)</p>
+            <p className="text-xs mt-1 text-gray-600">Obrázky, videa, zvuk, dokumenty (PDF, Word…)</p>
           </div>
         ) : (
           <div className="space-y-2">

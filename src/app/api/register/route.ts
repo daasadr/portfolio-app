@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PREDEFINED_CATEGORIES } from '@/types';
-import { hashAnswer, isRateLimited, getClientIp } from '@/lib/security';
+import { hashAnswer, isRateLimited, getClientIp, customQuestionSupported } from '@/lib/security';
+import { CUSTOM_QUESTION, parseQuestionChoice } from '@/lib/security-questions';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -19,10 +20,18 @@ export async function POST(request: NextRequest) {
   }
   try {
     // isTeacher is intentionally excluded — teacher accounts are created by admins only (C1)
-    const { email, password, firstName, lastName, securityQuestion, securityAnswer } = await request.json() as {
+    const { email, password, firstName, lastName, securityQuestion, securityQuestionText, securityAnswer } = await request.json() as {
       email: string; password: string; firstName: string; lastName: string;
-      securityQuestion?: number; securityAnswer?: string;
+      securityQuestion?: number; securityQuestionText?: string; securityAnswer?: string;
     };
+
+    // Validate the question before creating the account, so a bad choice does not leave a half-made user
+    const choice = securityQuestion != null ? parseQuestionChoice(securityQuestion, securityQuestionText) : null;
+    if (choice && !choice.ok) return NextResponse.json({ message: choice.message }, { status: 400 });
+    const customReady = await customQuestionSupported(directusUrl, adminToken);
+    if (choice?.ok && choice.security_question === CUSTOM_QUESTION && !customReady) {
+      return NextResponse.json({ message: 'Vlastní otázku zatím nejde uložit — vyberte prosím jednu z nabízených.' }, { status: 503 });
+    }
 
     const userRes = await fetch(`${directusUrl}/users`, {
       method: 'POST',
@@ -59,7 +68,8 @@ export async function POST(request: NextRequest) {
         first_name: firstName,
         last_name: lastName,
         is_teacher: false,
-        ...(securityQuestion != null && { security_question: securityQuestion }),
+        ...(choice?.ok && { security_question: choice.security_question }),
+        ...(choice?.ok && customReady && { security_question_text: choice.security_question_text }),
         ...(hashedAnswer && { security_answer: hashedAnswer }),
       }),
     });

@@ -87,3 +87,21 @@ export async function verifyAnswer(answer: string, stored: string): Promise<bool
   // Legacy plaintext — only used as migration fallback for existing accounts
   return normalized === stored.trim().toLowerCase();
 }
+
+let customQuestionFieldReady = false;
+
+/**
+ * True once `students.security_question_text` exists in Directus (directus-setup-custom-question.mjs).
+ * The admin token silently drops unknown fields, so without this check a custom question
+ * would be saved without its text and the account could never be recovered.
+ */
+export async function customQuestionSupported(directusUrl: string, adminToken: string): Promise<boolean> {
+  if (customQuestionFieldReady) return true;
+  try {
+    const res = await fetch(`${directusUrl}/fields/students/security_question_text`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    customQuestionFieldReady = res.ok;
+  } catch { /* treat as unavailable */ }
+  return customQuestionFieldReady;
+}

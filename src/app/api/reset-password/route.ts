@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
-import { SECURITY_QUESTIONS } from '@/lib/security-questions';
-import { isRateLimited, verifyAnswer, hashAnswer, getClientIp } from '@/lib/security';
+import { SECURITY_QUESTIONS, CUSTOM_QUESTION, questionLabel } from '@/lib/security-questions';
+import { isRateLimited, verifyAnswer, hashAnswer, getClientIp, customQuestionSupported } from '@/lib/security';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -40,14 +40,19 @@ export async function GET(request: NextRequest) {
   if (!users?.length) return decoy;
 
   const userId = users[0].id;
+  const fields = (await customQuestionSupported(directusUrl, adminToken))
+    ? 'security_question,security_question_text'
+    : 'security_question';
   const studentRes = await fetch(
-    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}&fields=security_question`,
+    `${directusUrl}/items/students?filter[user_id][_eq]=${userId}&fields=${fields}`,
     { headers: adminHeaders() }
   );
-  const studentBody = await studentRes.json() as { data?: { security_question?: number | null }[] };
+  const studentBody = await studentRes.json() as { data?: { security_question?: number | null; security_question_text?: string | null }[] };
   const q = studentBody.data?.[0]?.security_question;
-  if (q == null) return decoy;
-  return NextResponse.json({ security_question: q });
+  const text = questionLabel(q, studentBody.data?.[0]?.security_question_text);
+  if (q == null || !text) return decoy;
+  // The user's own question is returned as text; it is shown only to whoever already knows the e-mail.
+  return NextResponse.json({ security_question: q, security_question_text: q === CUSTOM_QUESTION ? text : null });
 }
 
 // POST /api/reset-password { email, answer, newPassword }

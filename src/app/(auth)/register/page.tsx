@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, X, ShieldQuestion } from 'lucide-react';
 import { register } from '@/lib/directus';
-import { SECURITY_QUESTIONS } from '@/lib/security-questions';
+import { CUSTOM_QUESTION } from '@/lib/security-questions';
+import { SecurityQuestionPicker } from '@/components/SecurityQuestionPicker';
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
@@ -45,6 +47,7 @@ export default function RegisterPage() {
   });
   const [securityQuestion, setSecurityQuestion] = useState<number>(-1);
   const [securityAnswer, setSecurityAnswer] = useState('');
+  const [securityQuestionText, setSecurityQuestionText] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +90,10 @@ export default function RegisterPage() {
       setError('Vyberte bezpečnostní otázku pro obnovu hesla.');
       return;
     }
+    if (securityQuestion === CUSTOM_QUESTION && securityQuestionText.trim().length < 5) {
+      setError('Napište svou bezpečnostní otázku (alespoň 5 znaků).');
+      return;
+    }
     if (!securityAnswer.trim()) {
       setError('Vyplňte odpověď na bezpečnostní otázku.');
       return;
@@ -95,7 +102,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError('');
     try {
-      await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer);
+      await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer, securityQuestionText);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba při registraci. Zkuste to znovu.');
@@ -152,10 +159,9 @@ export default function RegisterPage() {
             {/* Heslo */}
             <div className="space-y-1.5">
               <Label htmlFor="password">Heslo</Label>
-              <Input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
@@ -194,10 +200,9 @@ export default function RegisterPage() {
             {/* Potvrdit heslo */}
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Potvrdit heslo</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
@@ -223,23 +228,14 @@ export default function RegisterPage() {
                 Bezpečnostní otázka pro obnovu hesla
               </div>
               <p className="text-xs text-gray-400">Použijete ji, pokud zapomenete heslo.</p>
-              <select
-                value={securityQuestion}
-                onChange={(e) => setSecurityQuestion(Number(e.target.value))}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value={-1} disabled>— Vyberte otázku —</option>
-                {SECURITY_QUESTIONS.map((q, i) => (
-                  <option key={i} value={i}>{q}</option>
-                ))}
-              </select>
-              <Input
-                value={securityAnswer}
-                onChange={(e) => setSecurityAnswer(e.target.value)}
-                placeholder="Vaše odpověď..."
-                disabled={securityQuestion < 0}
+              <SecurityQuestionPicker
+                question={securityQuestion}
+                onQuestion={setSecurityQuestion}
+                customText={securityQuestionText}
+                onCustomText={setSecurityQuestionText}
+                answer={securityAnswer}
+                onAnswer={setSecurityAnswer}
               />
-              <p className="text-xs text-gray-400">Odpověď není citlivá na velká/malá písmena.</p>
             </div>
 
             {/* Souhlas se zpracováním osobních údajů (GDPR čl. 6) */}

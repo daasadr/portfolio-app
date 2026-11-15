@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,10 +16,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Eye, EyeOff, Download, AlertTriangle } from 'lucide-react';
+import { Save, Plus, Trash2, User, Tag, Pencil, Palette, Check, Lock, ShieldQuestion, Download, AlertTriangle } from 'lucide-react';
 import { getCurrentStudent, getCurrentUser, directus, readItems, updateItem, createItem, deleteItem, logout } from '@/lib/directus';
 import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
-import { SECURITY_QUESTIONS } from '@/lib/security-questions';
+import { CUSTOM_QUESTION, questionLabel } from '@/lib/security-questions';
+import { SecurityQuestionPicker } from '@/components/SecurityQuestionPicker';
 import type { Student, Category } from '@/types';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
@@ -51,7 +53,6 @@ export default function SettingsPage() {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState(false);
-  const [showPw, setShowPw] = useState(false);
 
   // Export
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -66,8 +67,8 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('');
 
   // Bezpečnostní otázka
-  const [sqCurrent, setSqCurrent] = useState<number | null>(null);
-  const [sqForm, setSqForm] = useState({ question: -1, answer: '' });
+  const [sqCurrent, setSqCurrent] = useState<string | null>(null);
+  const [sqForm, setSqForm] = useState({ question: -1, customText: '', answer: '' });
   const [sqSaving, setSqSaving] = useState(false);
   const [sqError, setSqError] = useState('');
   const [sqSuccess, setSqSuccess] = useState(false);
@@ -105,8 +106,8 @@ export default function SettingsPage() {
         // Load current security question index
         const sqRes = await fetch('/api/security-question');
         if (sqRes.ok) {
-          const sqData = await sqRes.json() as { security_question: number | null };
-          setSqCurrent(sqData.security_question);
+          const sqData = await sqRes.json() as { security_question: number | null; security_question_text: string | null };
+          setSqCurrent(questionLabel(sqData.security_question, sqData.security_question_text));
         }
       } catch (e) {
         console.error(e);
@@ -203,18 +204,19 @@ export default function SettingsPage() {
     setSqError('');
     setSqSuccess(false);
     if (sqForm.question < 0) { setSqError('Vyberte otázku.'); return; }
+    if (sqForm.question === CUSTOM_QUESTION && sqForm.customText.trim().length < 5) { setSqError('Napište svou otázku (alespoň 5 znaků).'); return; }
     if (!sqForm.answer.trim()) { setSqError('Vyplňte odpověď.'); return; }
     setSqSaving(true);
     const res = await fetch('/api/security-question', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ security_question: sqForm.question, security_answer: sqForm.answer }),
+      body: JSON.stringify({ security_question: sqForm.question, security_question_text: sqForm.customText, security_answer: sqForm.answer }),
     });
     const data = await res.json() as { message?: string };
     if (!res.ok) { setSqError(data.message ?? 'Chyba'); } else {
       setSqSuccess(true);
-      setSqCurrent(sqForm.question);
-      setSqForm({ question: -1, answer: '' });
+      setSqCurrent(questionLabel(sqForm.question, sqForm.customText));
+      setSqForm({ question: -1, customText: '', answer: '' });
     }
     setSqSaving(false);
   }
@@ -454,23 +456,17 @@ export default function SettingsPage() {
           <form onSubmit={changePassword} className="space-y-3">
             <div className="space-y-1">
               <Label>Stávající heslo</Label>
-              <div className="relative">
-                <Input
-                  type={showPw ? 'text' : 'password'}
-                  value={pwForm.current}
-                  onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
-                  placeholder="••••••••"
-                  required
-                />
-                <button type="button" className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600" onClick={() => setShowPw(v => !v)}>
-                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+              <PasswordInput
+                value={pwForm.current}
+                onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
+                placeholder="••••••••"
+                required
+              />
             </div>
             <div className="space-y-1">
               <Label>Nové heslo</Label>
-              <Input
-                type="password"
+              <PasswordInput
+
                 value={pwForm.next}
                 onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))}
                 placeholder="Alespoň 8 znaků"
@@ -479,8 +475,8 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-1">
               <Label>Potvrdit nové heslo</Label>
-              <Input
-                type="password"
+              <PasswordInput
+
                 value={pwForm.confirm}
                 onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
                 placeholder="••••••••"
@@ -508,34 +504,22 @@ export default function SettingsPage() {
           </CardTitle>
           <CardDescription>
             {sqCurrent != null
-              ? `Aktuální otázka: ${SECURITY_QUESTIONS[sqCurrent]}`
+              ? `Aktuální otázka: ${sqCurrent}`
               : 'Bezpečnostní otázka není nastavena — slouží pro obnovu zapomenutého hesla.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={saveSecurityQuestion} className="space-y-3">
             <div className="space-y-1">
-              <Label>Nová otázka</Label>
-              <select
-                value={sqForm.question}
-                onChange={e => setSqForm(f => ({ ...f, question: Number(e.target.value) }))}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value={-1} disabled>— Vyberte otázku —</option>
-                {SECURITY_QUESTIONS.map((q, i) => (
-                  <option key={i} value={i}>{q}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Odpověď</Label>
-              <Input
-                value={sqForm.answer}
-                onChange={e => setSqForm(f => ({ ...f, answer: e.target.value }))}
-                placeholder="Vaše odpověď..."
-                disabled={sqForm.question < 0}
+              <Label>Nová otázka a odpověď</Label>
+              <SecurityQuestionPicker
+                question={sqForm.question}
+                onQuestion={question => setSqForm(f => ({ ...f, question }))}
+                customText={sqForm.customText}
+                onCustomText={customText => setSqForm(f => ({ ...f, customText }))}
+                answer={sqForm.answer}
+                onAnswer={answer => setSqForm(f => ({ ...f, answer }))}
               />
-              <p className="text-xs text-gray-400">Odpověď není citlivá na velká/malá písmena.</p>
             </div>
             {sqError && <p className="text-sm text-red-500">{sqError}</p>}
             {sqSuccess && <p className="text-sm text-green-600">Bezpečnostní otázka byla aktualizována.</p>}
