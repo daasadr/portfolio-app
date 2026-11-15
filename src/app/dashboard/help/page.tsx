@@ -207,8 +207,24 @@ const guides: Guide[] = [
     ],
     tips: [
       'Buďte k sobě poctiví — bobřík má smysl jen tehdy, když podmínku skutečně splníte. Nikdo jiný to nekontroluje, jen vy sami.',
-      'Nevynechejte den — pokud den přeskočíte, postup se neztrácí, ale výzva trvá déle.',
+      'Nevynechejte den — bobřík se loví 7 dní po sobě. Když den vynecháte, začíná se znovu od prvního dne.',
       'Zlatý bobřík: kdo získá všechny dostupné bobříky v daném roce, získá zlatého bobříka!',
+    ],
+  },
+  {
+    id: 'achievements',
+    icon: <Star className="h-6 w-6" />,
+    title: 'Odznaky za aktivitu',
+    subtitle: 'Jak se sbírají odznaky pod menu',
+    color: 'from-amber-400 to-orange-500',
+    steps: [
+      { heading: 'Co jsou odznaky?', text: 'Za pilnou práci v aplikaci dostáváš odznaky — třeba „Začínající poctivý student" za 5 stránek portfolia nebo „Knihomol" za 5 knih ve čtenářském deníku. Sbírají se v levém menu pod položkami.' },
+      { heading: 'Za co se dávají?', text: 'Za stránky portfolia, knihy ve čtenářském deníku, splněné osobní cíle, ulovené bobříky, záznamy v kalendáři a sny na nástěnce. Každá oblast má několik úrovní.' },
+      { heading: 'Nový odznak', text: 'Jakmile dosáhneš další úrovně, objeví se oslava s pochvalou. Na odznak v menu můžeš kdykoli kliknout a pochvalu si připomenout.' },
+      { heading: 'Co dál?', text: 'Pod odznaky vidíš, který odznak je nejblíž a kolik ti k němu chybí.' },
+    ],
+    tips: [
+      'Odznaky se počítají z toho, co v aplikaci opravdu máš — když stránku smažeš, může se odznak zase schovat.',
     ],
   },
   {

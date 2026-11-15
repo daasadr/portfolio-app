@@ -50,7 +50,7 @@ async function serveAsset(id: string, request: NextRequest): Promise<NextRespons
  * Page attachments are student-written JSON, so a file id listed on a page proves nothing —
  * the file itself must have been uploaded by that student.
  */
-export async function isFileOwnedByStudent(fileId: string, studentId: string | number): Promise<boolean> {
+async function isFileOwnedByStudent(fileId: string, studentId: string | number): Promise<boolean> {
   const [fileRes, studentRes] = await Promise.all([
     fetch(`${directusUrl}/files/${fileId}?fields=uploaded_by`, { headers: adminHeaders() }),
     fetch(`${directusUrl}/items/students/${encodeURIComponent(String(studentId))}?fields=user_id`, { headers: adminHeaders() }),

@@ -18,6 +18,7 @@ import {
   BookshelfStyles, BookSpine, BookTable, OpenBook, OPEN_BOOK_DIALOG_CLASS, booksLabel, formatDiaryDate,
 } from '@/components/reading-diary/Bookshelf';
 import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { notifyAchievementsChanged } from '@/components/achievements/AchievementShelf';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import type { ReadingDiaryEntry } from '@/types';
 
@@ -111,6 +112,7 @@ export default function ReadingDiaryPage() {
     const { entry } = await res.json() as { entry: ReadingDiaryEntry };
     discardDraft(`reading-diary:${editing?.id ?? 'new'}`);
     setRestoredAt(null);
+    notifyAchievementsChanged();
     if (editing) {
       setEntries(prev => prev.map(x => x.id === entry.id ? entry : x));
       setOpenEntry(entry);

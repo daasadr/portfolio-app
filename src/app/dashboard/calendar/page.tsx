@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { notifyAchievementsChanged } from '@/components/achievements/AchievementShelf';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -159,6 +160,7 @@ export default function CalendarPage() {
       setEntries((prev) => [...prev, created]);
       discardDraft(draftKey);
       setRestoredAt(null);
+      notifyAchievementsChanged();
       setForm({ title: '', description: '', entry_type: 'plan' });
       setDialogOpen(false);
     } catch (e) {

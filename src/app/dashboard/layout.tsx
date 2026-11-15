@@ -25,6 +25,8 @@ import { getCurrentStudent, logout } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import { BADGES } from '@/lib/badges';
 import { setDraftOwner, clearOwnDrafts } from '@/lib/drafts';
+import { AchievementShelf, AchievementModal, useAchievements } from '@/components/achievements/AchievementShelf';
+import type { Achievement } from '@/lib/achievements';
 import type { Student } from '@/types';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
@@ -54,6 +56,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [pendingCount, setPendingCount] = useState(0);
   const [earnedBadgeSlugs, setEarnedBadgeSlugs] = useState<string[]>([]);
   const router = useRouter();
+  const { counts: achievementCounts, fresh: freshAchievements, dismissFresh } = useAchievements(student?.id ?? null);
+  const [openedAchievement, setOpenedAchievement] = useState<Achievement | null>(null);
 
   const loadEarnedBadges = () => { fetchEarnedBadgeSlugs().then(setEarnedBadgeSlugs); };
 
@@ -172,7 +176,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <nav className="flex-1 px-4 py-4">
+          <div className="flex-1 overflow-y-auto">
+          <nav className="px-4 pt-4 pb-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -190,6 +195,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             ))}
           </nav>
+          <AchievementShelf counts={achievementCounts} onOpen={setOpenedAchievement} />
+          </div>
           <div className="border-t px-4 py-4">
             <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="mr-3 h-5 w-5" />
@@ -205,7 +212,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex h-16 items-center px-4">
             <h1 className="text-lg font-semibold">Portfolio Paradise</h1>
           </div>
-          <nav className="flex-1 px-4 py-4">
+          <div className="flex-1 overflow-y-auto">
+          <nav className="px-4 pt-4 pb-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -222,6 +230,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </Link>
             ))}
           </nav>
+          <AchievementShelf counts={achievementCounts} onOpen={setOpenedAchievement} />
+          </div>
           <div className="border-t px-4 py-4">
             <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="mr-3 h-5 w-5" />
@@ -286,6 +296,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </main>
       </div>
+
+      {freshAchievements.length > 0 ? (
+        <AchievementModal key={freshAchievements.map(a => a.id).join()} items={freshAchievements} celebrate onClose={dismissFresh} />
+      ) : openedAchievement && (
+        <AchievementModal key={openedAchievement.id} items={[openedAchievement]} celebrate={false} onClose={() => setOpenedAchievement(null)} />
+      )}
     </div>
   );
 }

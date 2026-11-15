@@ -35,6 +35,7 @@ import {
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
 import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { notifyAchievementsChanged } from '@/components/achievements/AchievementShelf';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 
 type GoalForm = { title: string; description: string; goal_type: GoalType; target_date: string };
@@ -204,6 +205,7 @@ export default function GoalsPage() {
         setGoals((prev) => [created, ...prev]);
       }
       discardDraft(goalDraftKey);
+      notifyAchievementsChanged();
       setGoalRestoredAt(null);
       setGoalDialogOpen(false);
     } catch (e) {
@@ -220,6 +222,7 @@ export default function GoalsPage() {
         updateItem('personal_goals', goal.id, { completed: !goal.completed })
       ) as PersonalGoal;
       setGoals((prev) => prev.map((g) => (g.id === goal.id ? updated : g)));
+      notifyAchievementsChanged();
     } catch (e) {
       console.error('toggleGoal error:', e);
     }
@@ -356,6 +359,7 @@ export default function GoalsPage() {
         setDreams((prev) => [dream, ...prev]);
       }
       discardDraft(dreamDraftKey);
+      notifyAchievementsChanged();
       setDreamRestoredAt(null);
     } catch (e) {
       console.error('Dream save error:', e);

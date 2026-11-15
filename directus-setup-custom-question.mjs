@@ -55,4 +55,4 @@ if (existing.ok) {
   console.log('✅ Pole students.security_question_text přidáno');
 }
 
-console.log('\n🎉 Hotovo. Restartujte aplikaci (./deploy.sh), aby si změny všimla.');
+console.log('\n🎉 Hotovo — aplikace si pole najde sama, nic dalšího není potřeba.');
