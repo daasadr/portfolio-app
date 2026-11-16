@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PREDEFINED_CATEGORIES } from '@/types';
 import { hashAnswer, isRateLimited, getClientIp, customQuestionSupported } from '@/lib/security';
 import { CUSTOM_QUESTION, parseQuestionChoice } from '@/lib/security-questions';
+import { getRequestLocale } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -15,6 +16,7 @@ function adminHeaders() {
 }
 
 export async function POST(request: NextRequest) {
+  const locale = getRequestLocale(request);
   if (isRateLimited(`register-ip:${getClientIp(request)}`, 60, 3600)) {
     return NextResponse.json({ message: 'Příliš mnoho registrací. Zkuste to později.' }, { status: 429 });
   }
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Validate the question before creating the account, so a bad choice does not leave a half-made user
-    const choice = securityQuestion != null ? parseQuestionChoice(securityQuestion, securityQuestionText) : null;
+    const choice = securityQuestion != null ? parseQuestionChoice(securityQuestion, securityQuestionText, locale) : null;
     if (choice && !choice.ok) return NextResponse.json({ message: choice.message }, { status: 400 });
     const customReady = await customQuestionSupported(directusUrl, adminToken);
     if (choice?.ok && choice.security_question === CUSTOM_QUESTION && !customReady) {
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
       await fetch(`${directusUrl}/items/categories`, {
         method: 'POST',
         headers: adminHeaders(),
-        body: JSON.stringify({ ...cat, student_id: student.id, is_predefined: true }),
+        body: JSON.stringify({ name: cat.name[locale], sort_order: cat.sort_order, student_id: student.id, is_predefined: true }),
       });
     }
 

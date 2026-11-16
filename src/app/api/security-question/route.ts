@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { hashAnswer, customQuestionSupported } from '@/lib/security';
 import { CUSTOM_QUESTION, parseQuestionChoice } from '@/lib/security-questions';
+import { getRequestLocale } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -46,7 +47,7 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as {
     security_question?: unknown; security_question_text?: unknown; security_answer?: unknown;
   };
-  const choice = parseQuestionChoice(body.security_question, body.security_question_text);
+  const choice = parseQuestionChoice(body.security_question, body.security_question_text, getRequestLocale(request));
   if (!choice.ok) return NextResponse.json({ message: choice.message }, { status: 400 });
   const answer = typeof body.security_answer === 'string' ? body.security_answer.trim() : '';
   if (!answer || answer.length > 200) {

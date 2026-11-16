@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { intlLocale, type Locale } from '@/lib/i18n';
 
 /**
  * Rozepsané koncepty — průběžně ukládané v prohlížeči (localStorage), aby se text
@@ -92,12 +93,14 @@ function pruneOldDrafts() {
   } catch { /* ignore */ }
 }
 
-/** "dnes ve 14:32" / "12. 11. ve 14:32" */
-export function draftTimeLabel(savedAt: number) {
+/** "dnes v 14:32" / "12. 11. v 14:32" — or "today at 14:32" / "12 Nov at 14:32" */
+export function draftTimeLabel(savedAt: number, locale: Locale = 'cs') {
   const d = new Date(savedAt);
-  const time = d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+  const intl = intlLocale(locale);
+  const time = d.toLocaleTimeString(intl, { hour: '2-digit', minute: '2-digit' });
   const sameDay = d.toDateString() === new Date().toDateString();
-  return sameDay ? `dnes v ${time}` : `${d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} v ${time}`;
+  if (locale === 'en') return sameDay ? `today at ${time}` : `${d.toLocaleDateString(intl, { day: 'numeric', month: 'short' })} at ${time}`;
+  return sameDay ? `dnes v ${time}` : `${d.toLocaleDateString(intl, { day: 'numeric', month: 'numeric' })} v ${time}`;
 }
 
 /**

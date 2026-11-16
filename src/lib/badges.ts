@@ -1,23 +1,30 @@
+import type { L10n } from '@/lib/i18n';
+
+/** Texts are in both languages — pick one with `t(badge.name)` from useLocale(). */
 export interface Badge {
   slug: string;
-  name: string;
-  tagline: string;
+  name: L10n;
+  tagline: L10n;
   /** Hřejivá pochvala zobrazená při dokončení bobříka */
-  praise: string;
+  praise: L10n;
   icon: string;
   total_steps: number;
-  article: string;
+  article: L10n;
 }
 
 export const BADGES: Badge[] = [
   {
     slug: 'pomahani-doma',
-    name: 'Bobřík pomáhání doma',
-    tagline: '7 dní po sobě přispěj k chodu domácnosti',
-    praise: 'Sedm dní v kuse přikládáš ruku k dílu — to umí jen opravdu velké srdce. Díky tobě je u vás doma o kousek víc pohody a lásky. 💛',
+    name: { cs: 'Bobřík pomáhání doma', en: 'Helping at Home Beaver' },
+    tagline: { cs: '7 dní po sobě přispěj k chodu domácnosti', en: 'Help keep your home running for 7 days in a row' },
+    praise: {
+      cs: 'Sedm dní v kuse přikládáš ruku k dílu — to umí jen opravdu velké srdce. Díky tobě je u vás doma o kousek víc pohody a lásky. 💛',
+      en: 'Seven days in a row you\'ve lent a hand — only a truly big heart can do that. Thanks to you, your home is a little cosier and full of love. 💛',
+    },
     icon: 'bobrik_pomahani_doma_fixed.jpg',
     total_steps: 7,
-    article: `Víš, co je největší tajemství šťastné rodiny? Každý přiloží ruku k dílu!
+    article: {
+      cs: `Víš, co je největší tajemství šťastné rodiny? Každý přiloží ruku k dílu!
 
 Doma se toho každý den stihne hodně — vaření, úklid, nákupy, zalévání květin, krmení mazlíčků... A rodiče to zvládají i přesto, že jsou celý den v práci nebo mají spoustu starostí. Když jim pomůžeš, nejen že jim ulehčíš den, ale navíc pocítíš ten skvělý pocit, že jsi byl opravdu potřebný.
 
@@ -29,15 +36,32 @@ Bobřík pomáhání funguje jen tehdy, když opravdu pomůžeš — ne jen tak 
 
 **Jak bobříka získat?**
 Pomáhej každý den po 7 dní v řadě — každý den stačí jedna věc, malá i velká. Každý den klikni na „Dnes splněno" — a za týden je bobřík tvůj! 🦫`,
+      en: `Do you know the biggest secret of a happy family? Everyone pitches in!
+
+So much happens at home every day — cooking, tidying, shopping, watering the plants, feeding the pets... And grown-ups manage it all even after a long day at work or with lots on their minds. When you help them, you don't just make their day easier — you also get that wonderful feeling of being truly needed.
+
+**What counts as helping?**
+Almost anything! Putting away your toys or the shoes in the hallway, washing the dishes, taking out the rubbish, sweeping the floor, welcoming mum or dad home from work, helping water the plants (but only as much water as mum says — too much would hurt them 🌱), making a snack for your parents or siblings, walking the dog, feeding the cat, or anything else that makes home a nice, calm place.
+
+**Why is it important to be honest with yourself?**
+The helping beaver only works when you really help — not just for show. It doesn't matter whether anyone sees it. What matters is how you feel inside. Real help comes from the heart — and it always counts!
+
+**How do I earn the beaver?**
+Help every day for 7 days in a row — one thing a day is enough, big or small. Each day click "Done today" — and in a week the beaver is yours! 🦫`,
+    },
   },
   {
     slug: 'delani-radosti',
-    name: 'Bobřík dělání radosti',
-    tagline: '7 dní po sobě udělej záměrně někomu radost',
-    praise: 'Celý týden rozdáváš úsměvy a svět je díky tobě o kousek laskavější. Každá radost, kterou posíláš dál, se k tobě jednou vrátí. 🌈',
+    name: { cs: 'Bobřík dělání radosti', en: 'Spreading Joy Beaver' },
+    tagline: { cs: '7 dní po sobě udělej záměrně někomu radost', en: 'Make someone happy on purpose, 7 days in a row' },
+    praise: {
+      cs: 'Celý týden rozdáváš úsměvy a svět je díky tobě o kousek laskavější. Každá radost, kterou posíláš dál, se k tobě jednou vrátí. 🌈',
+      en: 'All week long you\'ve been handing out smiles, and the world is a little kinder because of you. Every bit of joy you pass on will come back to you one day. 🌈',
+    },
     icon: 'bobrik_delani_radosti_fixed.jpg',
     total_steps: 7,
-    article: `Věděl/a jsi, že dělat radost ostatním je jeden z nejlepších způsobů, jak udělat radost i sobě?
+    article: {
+      cs: `Věděl/a jsi, že dělat radost ostatním je jeden z nejlepších způsobů, jak udělat radost i sobě?
 
 Radost totiž funguje jako kouzelná šňůra — když ji pošleš dál, vrátí se ti zpátky, jen větší. Stačí maličkost: hezké slovo, nečekaný úsměv, nakreslený obrázek pro maminku, pomoc kamarádovi se svačinou nebo jen to, že se usměješ na starého pejska a potěšíš tím jeho pána.
 
@@ -52,15 +76,35 @@ Svět je hezčí, když v něm lidé záměrně šíří dobrou náladu. A ty m�
 
 **Jak bobříka získat?**
 Po 7 dní v řadě každý den záměrně udělej někomu radost — klidně jinému člověku každý den. Pak klikni „Dnes splněno". Za týden máš bobříka! 🦫`,
+      en: `Did you know that making others happy is one of the best ways to make yourself happy too?
+
+Joy works like a magic string — when you pass it on, it comes back to you, only bigger. A little thing is enough: a kind word, an unexpected smile, a drawing for mum, helping a friend with their snack, or simply smiling at an old dog and cheering up its owner.
+
+**Who can I make happy?**
+Anyone! Mum, dad, your brother or sister, a friend from school, the neighbour, the shop assistant, or a complete stranger. Every joy you make on purpose — knowing you're doing it so the other person smiles — counts.
+
+**Ideas for spreading joy:**
+Draw a picture and leave it on the table. Praise a friend's drawing. Make your sibling's bed without being asked. Bring mum a cup of tea. Smile at a stranger. Say out loud "I'm glad I have you." Help a classmate with their backpack. Or just think about what would make someone happy — and do it.
+
+**Why does it matter?**
+The world is nicer when people spread good cheer on purpose. And you have the power to make it a little nicer — every day, one joy at a time.
+
+**How do I earn the beaver?**
+For 7 days in a row, make someone happy on purpose each day — it can be a different person every day. Then click "Done today". In a week the beaver is yours! 🦫`,
+    },
   },
   {
     slug: 'pece-o-prirodu',
-    name: 'Bobřík péče o přírodu',
-    tagline: '7 dní po sobě udělej něco dobrého pro přírodu',
-    praise: 'Stromy, ptáci i broučci by ti teď nejspíš zatleskali! Každá tvoje drobná laskavost dělá svět zelenějším — příroda má v tobě skvělého kamaráda. 🌳',
+    name: { cs: 'Bobřík péče o přírodu', en: 'Caring for Nature Beaver' },
+    tagline: { cs: '7 dní po sobě udělej něco dobrého pro přírodu', en: 'Do something good for nature, 7 days in a row' },
+    praise: {
+      cs: 'Stromy, ptáci i broučci by ti teď nejspíš zatleskali! Každá tvoje drobná laskavost dělá svět zelenějším — příroda má v tobě skvělého kamaráda. 🌳',
+      en: 'The trees, the birds and the bugs would probably give you a round of applause right now! Every small kindness of yours makes the world greener — nature has a great friend in you. 🌳',
+    },
     icon: 'bobrik_pece_o_prirodu_fixed.jpg',
     total_steps: 7,
-    article: `Příroda se o nás stará každý den — dává nám vzduch, vodu, jídlo, stín a krásu. Je fér, když se my postaráme trochu o ni.
+    article: {
+      cs: `Příroda se o nás stará každý den — dává nám vzduch, vodu, jídlo, stín a krásu. Je fér, když se my postaráme trochu o ni.
 
 Nemusíš sázet les ani zachraňovat velryby (i když to by bylo fakt super 🐋). Stačí malé věci, které mají velký smysl. Třeba sebrat jeden odpadek z chodníku nebo parku. Pomoct rodičům vynést vytříděné plasty nebo papíry do kontejneru. Zasadit semínko nebo rostlinku. Nezapomenout zhasnout, když odcházíš z pokoje. Nepustit vodu zbytečně při čištění zubů. Nebo jednoduše jít ven a všimnout si, jak je příroda okolo nás krásná — a říct si, že stojí za to ji chránit.
 
@@ -69,5 +113,15 @@ Každý malý čin pomáhá. Když každý z nás sebere jeden odpadek denně, z
 
 **Jak bobříka získat?**
 Po 7 dní v řadě každý den udělej něco pro přírodu nebo životní prostředí — klidně jiný čin každý den. Hlavně aby byl opravdový. Klikni „Dnes splněno" a za týden máš bobříka přírody! 🦫`,
+      en: `Nature looks after us every day — it gives us air, water, food, shade and beauty. It's only fair that we look after it a little too.
+
+You don't have to plant a forest or save the whales (although that would be amazing 🐋). Small things that make a big difference are enough. Like picking up one piece of litter from the pavement or the park. Helping your parents take the sorted plastic or paper to the recycling bins. Planting a seed or a little plant. Remembering to switch off the light when you leave the room. Not leaving the tap running while you brush your teeth. Or simply going outside, noticing how beautiful nature around us is — and deciding it's worth protecting.
+
+**Why does it matter?**
+Every small act helps. If each of us picked up one piece of litter a day, millions of pieces would disappear every single day. Nature remembers every kindness — and we remember how good it feels to be out in it.
+
+**How do I earn the beaver?**
+For 7 days in a row, do something for nature or the environment each day — it can be a different thing every day. Just make sure it's real. Click "Done today" and in a week the nature beaver is yours! 🦫`,
+    },
   },
 ];

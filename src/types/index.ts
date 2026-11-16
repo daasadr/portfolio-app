@@ -274,18 +274,18 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Předdefinované kategorie
+// Předdefinované kategorie — nový účet je dostane v jazyce, ve kterém se registroval
 export const PREDEFINED_CATEGORIES = [
-  { name: 'Matematika', sort_order: 1 },
-  { name: 'Čeština', sort_order: 2 },
-  { name: 'Angličtina', sort_order: 3 },
-  { name: 'Přírodověda', sort_order: 4 },
-  { name: 'Dějepis', sort_order: 5 },
-  { name: 'Zeměpis', sort_order: 6 },
-  { name: 'Umění', sort_order: 7 },
-  { name: 'Hudba', sort_order: 8 },
-  { name: 'Tělesná výchova', sort_order: 9 },
-  { name: 'Projekty', sort_order: 10 },
-  { name: 'Výlety a události', sort_order: 11 },
-  { name: 'Ostatní', sort_order: 12 },
+  { name: { cs: 'Matematika', en: 'Maths' }, sort_order: 1 },
+  { name: { cs: 'Čeština', en: 'Czech' }, sort_order: 2 },
+  { name: { cs: 'Angličtina', en: 'English' }, sort_order: 3 },
+  { name: { cs: 'Přírodověda', en: 'Science' }, sort_order: 4 },
+  { name: { cs: 'Dějepis', en: 'History' }, sort_order: 5 },
+  { name: { cs: 'Zeměpis', en: 'Geography' }, sort_order: 6 },
+  { name: { cs: 'Umění', en: 'Art' }, sort_order: 7 },
+  { name: { cs: 'Hudba', en: 'Music' }, sort_order: 8 },
+  { name: { cs: 'Tělesná výchova', en: 'PE' }, sort_order: 9 },
+  { name: { cs: 'Projekty', en: 'Projects' }, sort_order: 10 },
+  { name: { cs: 'Výlety a události', en: 'Trips and events' }, sort_order: 11 },
+  { name: { cs: 'Ostatní', en: 'Other' }, sort_order: 12 },
 ] as const;

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   );
   const studentBody = await studentRes.json() as { data?: { security_question?: number | null; security_question_text?: string | null }[] };
   const q = studentBody.data?.[0]?.security_question;
-  const text = questionLabel(q, studentBody.data?.[0]?.security_question_text);
+  const text = questionLabel(q, studentBody.data?.[0]?.security_question_text, 'cs');
   if (q == null || !text) return decoy;
   // The user's own question is returned as text; it is shown only to whoever already knows the e-mail.
   return NextResponse.json({ security_question: q, security_question_text: q === CUSTOM_QUESTION ? text : null });

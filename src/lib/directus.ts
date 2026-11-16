@@ -9,6 +9,7 @@ import {
   uploadFiles,
 } from '@directus/sdk';
 import type { Schema, Student } from '@/types';
+import { tr, clientLocale } from '@/lib/i18n';
 
 // new URL('/api/directus') throws in both Node.js and browser — URL constructor requires an absolute URL.
 // Client: use window.location.origin to build an absolute URL dynamically.
@@ -29,7 +30,7 @@ export async function login(email: string, password: string, remember = false) {
   });
   if (!res.ok) {
     const err = await res.json() as { message?: string };
-    throw new Error(err.message ?? 'Chyba přihlášení');
+    throw new Error(err.message ?? tr(clientLocale(), 'Chyba přihlášení', 'Login failed'));
   }
 }
 
@@ -55,9 +56,9 @@ export async function register(
   if (!res.ok) {
     const err = await res.json() as { code?: string; message?: string };
     if (err.code === 'RECORD_NOT_UNIQUE') {
-      throw new Error('Účet s tímto emailem již existuje. Přihlaste se nebo použijte jiný email.');
+      throw new Error(tr(clientLocale(), 'Účet s tímto emailem již existuje. Přihlaste se nebo použijte jiný email.', 'An account with this e-mail already exists. Log in or use a different e-mail.'));
     }
-    throw new Error(err.message || 'Chyba při registraci');
+    throw new Error(err.message || tr(clientLocale(), 'Chyba při registraci', 'Registration failed'));
   }
 
   // Login after registration — sets the HttpOnly cookie
