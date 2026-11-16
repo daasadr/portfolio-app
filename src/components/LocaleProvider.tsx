@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LOCALE_COOKIE, intlLocale, plural, tr, type L10n, type Locale } from '@/lib/i18n';
 
@@ -19,6 +19,13 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 export function LocaleProvider({ initialLocale, children }: { initialLocale: Locale; children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const router = useRouter();
+
+  // Pin the language the server picked (from Accept-Language) so API messages and later visits agree
+  useEffect(() => {
+    if (!document.cookie.includes(`${LOCALE_COOKIE}=`)) {
+      document.cookie = `${LOCALE_COOKIE}=${initialLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    }
+  }, [initialLocale]);
 
   const setLocale = useCallback((l: Locale) => {
     document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
