@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setAuthCookies, clearAuthCookies, type AuthTokens } from '@/lib/auth-cookies';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const refreshToken = request.cookies.get('pp_refresh')?.value;
   if (!refreshToken) {
-    return NextResponse.json({ message: 'Žádný refresh token' }, { status: 401 });
+    return NextResponse.json({ message: t('Žádný refresh token', 'No refresh token') }, { status: 401 });
   }
 
   const res = await fetch(`${directusUrl}/auth/refresh`, {
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!res.ok) {
-    const response = NextResponse.json({ message: 'Refresh selhal' }, { status: 401 });
+    const response = NextResponse.json({ message: t('Refresh selhal', 'Refresh failed') }, { status: 401 });
     clearAuthCookies(response);
     return response;
   }

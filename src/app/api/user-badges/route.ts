@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BADGES } from '@/lib/badges';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -36,10 +37,11 @@ async function getStudent(token: string): Promise<{ id: string } | null> {
 
 // GET: my user_badges with badge definition merged
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const student = await getStudent(token);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const res = await fetch(
     `${directusUrl}/items/user_badges?filter[student_id][_eq]=${student.id}&sort=-date_created`,
@@ -57,18 +59,19 @@ export async function GET(request: NextRequest) {
 
 // POST: start a badge { badge_slug }
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const student = await getStudent(token);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const { badge_slug } = await request.json() as { badge_slug: string };
   const badge = BADGES.find(b => b.slug === badge_slug);
-  if (!badge) return NextResponse.json({ message: 'Bobřík nenalezen' }, { status: 404 });
+  if (!badge) return NextResponse.json({ message: t('Bobřík nenalezen', 'Beaver not found') }, { status: 404 });
 
   const lockKey = `${student.id}:${badge_slug}`;
   if (starting.has(lockKey)) {
-    return NextResponse.json({ message: 'Tohoto bobříka už máš aktivního nebo splněného' }, { status: 409 });
+    return NextResponse.json({ message: t('Tohoto bobříka už máš aktivního nebo splněného', 'You already have this beaver active or completed') }, { status: 409 });
   }
   starting.add(lockKey);
   try {
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
     );
     const { data: dup } = await dupRes.json() as { data: unknown[] };
     if (dup?.length) {
-      return NextResponse.json({ message: 'Tohoto bobříka už máš aktivního nebo splněného' }, { status: 409 });
+      return NextResponse.json({ message: t('Tohoto bobříka už máš aktivního nebo splněného', 'You already have this beaver active or completed') }, { status: 409 });
     }
 
     const createRes = await fetch(`${directusUrl}/items/user_badges`, {

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Globe2, Flame, CheckCircle2, Lock } from 'lucide-react';
 import { BADGES } from '@/lib/badges';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface UserBadge {
   id: number;
@@ -19,6 +20,7 @@ interface UserBadge {
 }
 
 export default function WorldPage() {
+  const { t, intl } = useLocale();
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,10 +45,10 @@ export default function WorldPage() {
       <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white">
         <div className="flex items-center gap-3 mb-2">
           <Globe2 className="h-8 w-8" />
-          <h1 className="text-3xl font-bold">Světoběžník</h1>
+          <h1 className="text-3xl font-bold">{t('Světoběžník', 'Globetrotter')}</h1>
         </div>
         <p className="text-emerald-100 text-lg">
-          Objevuj svět, rozvíjej se a sbírej bobříky za výzvy, které tě posunou dál.
+          {t('Objevuj svět, rozvíjej se a sbírej bobříky za výzvy, které tě posunou dál.', 'Explore the world, grow and collect beavers for challenges that help you move forward.')}
         </p>
       </div>
 
@@ -55,8 +57,8 @@ export default function WorldPage() {
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">🦫</span>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Bobříci</h2>
-            <p className="text-gray-500 text-sm">Týdenní výzvy, které tě naučí skvělé návyky</p>
+            <h2 className="text-xl font-bold text-gray-900">{t('Bobříci', 'Beavers')}</h2>
+            <p className="text-gray-500 text-sm">{t('Týdenní výzvy, které tě naučí skvělé návyky', 'Week-long challenges that teach you great habits')}</p>
           </div>
         </div>
 
@@ -76,14 +78,14 @@ export default function WorldPage() {
                   <div className="relative h-44 w-full bg-gray-100">
                     <Image
                       src={`/images/bobrici/${badge.icon}`}
-                      alt={badge.name}
+                      alt={t(badge.name)}
                       fill
                       className="object-cover"
                     />
                     {isCompleted && (
                       <div className="absolute inset-0 bg-amber-400/20 flex items-center justify-center">
                         <span className="bg-amber-400 text-white text-sm font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="h-4 w-4" /> Splněno!
+                          <CheckCircle2 className="h-4 w-4" /> {t('Splněno!', 'Done!')}
                         </span>
                       </div>
                     )}
@@ -91,20 +93,20 @@ export default function WorldPage() {
                   <CardContent className="pt-4 pb-4 space-y-3">
                     <div>
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-bold text-gray-900 leading-tight">{badge.name}</h3>
+                        <h3 className="font-bold text-gray-900 leading-tight">{t(badge.name)}</h3>
                         {isActive && (
                           <Badge variant="secondary" className="flex-shrink-0 bg-teal-100 text-teal-700 text-xs">
                             <Flame className="h-3 w-3 mr-1" />
-                            Lovím
+                            {t('Lovím', 'In progress')}
                           </Badge>
                         )}
                         {isCompleted && (
                           <Badge className="flex-shrink-0 bg-amber-100 text-amber-700 text-xs border-0">
-                            🏅 Mám!
+                            🏅 {t('Mám!', 'Got it!')}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{badge.tagline}</p>
+                      <p className="text-sm text-gray-500 mt-1">{t(badge.tagline)}</p>
                     </div>
 
                     {isActive && ub && (
@@ -119,13 +121,13 @@ export default function WorldPage() {
                             />
                           ))}
                         </div>
-                        <p className="text-xs text-gray-400">{ub.steps_done} / {badge.total_steps} dní</p>
+                        <p className="text-xs text-gray-400">{ub.steps_done} / {badge.total_steps} {t('dní', 'days')}</p>
                       </div>
                     )}
 
                     {isCompleted && ub?.expires_at && (
                       <p className="text-xs text-amber-600">
-                        Platí do {new Date(ub.expires_at).toLocaleDateString('cs-CZ')}
+                        {t('Platí do', 'Valid until')} {new Date(ub.expires_at).toLocaleDateString(intl)}
                       </p>
                     )}
 
@@ -135,7 +137,7 @@ export default function WorldPage() {
                         className="w-full"
                         variant={isCompleted ? 'outline' : 'default'}
                       >
-                        {isActive ? 'Zobrazit postup' : isCompleted ? 'Zobrazit' : 'Zjistit více'}
+                        {isActive ? t('Zobrazit postup', 'View progress') : isCompleted ? t('Zobrazit', 'View') : t('Zjistit více', 'Find out more')}
                       </Button>
                     </Link>
                   </CardContent>
@@ -151,18 +153,21 @@ export default function WorldPage() {
         <div className="flex items-center gap-3 mb-4">
           <span className="text-2xl">🌍</span>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Brzy přibyde</h2>
-            <p className="text-gray-500 text-sm">Připravujeme pro tebe další dobrodružství</p>
+            <h2 className="text-xl font-bold text-gray-900">{t('Brzy přibyde', 'Coming soon')}</h2>
+            <p className="text-gray-500 text-sm">{t('Připravujeme pro tebe další dobrodružství', 'We’re preparing more adventures for you')}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {['Ankety a hlasování', 'Sdílení zálib'].map(name => (
-            <Card key={name} className="opacity-60">
+          {[
+            { cs: 'Ankety a hlasování', en: 'Polls and voting' },
+            { cs: 'Sdílení zálib', en: 'Sharing hobbies' },
+          ].map(name => (
+            <Card key={name.cs} className="opacity-60">
               <CardContent className="pt-4 pb-4 flex items-center gap-3">
                 <Lock className="h-5 w-5 text-gray-400 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-700">{name}</p>
-                  <p className="text-xs text-gray-400">Již brzy...</p>
+                  <p className="font-medium text-gray-700">{t(name)}</p>
+                  <p className="text-xs text-gray-400">{t('Již brzy...', 'Coming soon...')}</p>
                 </div>
               </CardContent>
             </Card>

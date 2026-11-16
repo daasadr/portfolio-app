@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -27,10 +28,11 @@ async function getTeacherFromToken(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ studentId: string }> }) {
+  const t = requestT(request);
   const { studentId } = await params;
-  if (!isValidId(studentId)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(studentId)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const teacher = await getTeacherFromToken(request);
-  if (!teacher) return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
+  if (!teacher) return NextResponse.json({ message: t('Přístup odepřen', 'Access denied') }, { status: 403 });
 
   // Ověř, že existuje přijaté propojení
   const connRes = await fetch(
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     { headers: adminHeaders() }
   );
   const { data: conns } = await connRes.json() as { data: unknown[] };
-  if (!conns?.length) return NextResponse.json({ message: 'Nemáte přístup k tomuto žákovi' }, { status: 403 });
+  if (!conns?.length) return NextResponse.json({ message: t('Nemáte přístup k tomuto žákovi', 'You do not have access to this pupil') }, { status: 403 });
 
   // Načti data žáka
   const [studentRes, pagesRes, catsRes, badgesRes, diaryRes] = await Promise.all([

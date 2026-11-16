@@ -11,12 +11,14 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ArrowLeft, BookOpen, BookMarked, FileText, FolderOpen } from 'lucide-react';
 import { BADGES } from '@/lib/badges';
 import {
-  BookshelfStyles, BookSpine, BookTable, OpenBook, OPEN_BOOK_DIALOG_CLASS, booksLabel,
+  BookshelfStyles, BookSpine, BookTable, OpenBook, OPEN_BOOK_DIALOG_CLASS,
 } from '@/components/reading-diary/Bookshelf';
 import type { Student, Category, PortfolioPage, ReadingDiaryEntry } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 export default function StudentPortfolioPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
+  const { t, locale, plural } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [pages, setPages] = useState<PortfolioPage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -31,7 +33,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
       const res = await fetch(`/api/teacher/student/${studentId}`);
       if (!res.ok) {
         const data = await res.json() as { message?: string };
-        setError(data.message ?? 'Chyba při načítání');
+        setError(data.message ?? t('Chyba při načítání', 'Error while loading'));
         setIsLoading(false);
         return;
       }
@@ -58,7 +60,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
   if (error) return (
     <div className="text-center py-16 text-gray-500">
       <p className="text-red-500 mb-4">{error}</p>
-      <Link href="/dashboard/students"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Zpět</Button></Link>
+      <Link href="/dashboard/students"><Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />{t('Zpět', 'Back')}</Button></Link>
     </div>
   );
 
@@ -74,13 +76,13 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
     <div className="space-y-6">
       <div className="flex items-start gap-4">
         <Link href="/dashboard/students">
-          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Zpět</Button>
+          <Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />{t('Zpět', 'Back')}</Button>
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">
             Portfolio — {student?.first_name} {student?.last_name}
           </h1>
-          <p className="text-sm text-gray-500">Zobrazení portfolia žáka (jen pro čtení)</p>
+          <p className="text-sm text-gray-500">{t('Zobrazení portfolia žáka (jen pro čtení)', 'Pupil’s portfolio (read-only)')}</p>
           {earnedBadgeSlugs.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {earnedBadgeSlugs.map(slug => {
@@ -89,10 +91,10 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                 return (
                   <span
                     key={slug}
-                    title={badge.name}
+                    title={t(badge.name)}
                     className="inline-flex items-center gap-1.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1 text-xs font-semibold"
                   >
-                    🦫 {badge.name}
+                    🦫 {t(badge.name)}
                   </span>
                 );
               })}
@@ -104,7 +106,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
       {pages.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p>Žák zatím nemá žádné stránky v portfoliu.</p>
+          <p>{t('Žák zatím nemá žádné stránky v portfoliu.', 'This pupil doesn’t have any portfolio pages yet.')}</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -125,11 +127,11 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {safeFormatDate(page.updated_at ?? page.created_at)}
+                              {safeFormatDate(page.updated_at ?? page.created_at, undefined, locale)}
                             </p>
                           </div>
                           <Badge variant={page.visibility === 'shared' ? 'secondary' : 'outline'} className="text-xs flex-shrink-0">
-                            {page.visibility === 'shared' ? 'Sdílená' : 'Soukromá'}
+                            {page.visibility === 'shared' ? t('Sdílená', 'Shared') : t('Soukromá', 'Private')}
                           </Badge>
                         </div>
                       </CardContent>
@@ -144,7 +146,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <FolderOpen className="h-4 w-4 text-gray-400" />
-                <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Bez kategorie</h2>
+                <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('Bez kategorie', 'No category')}</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {uncategorized.map(page => (
@@ -156,7 +158,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {safeFormatDate(page.updated_at ?? page.created_at)}
+                              {safeFormatDate(page.updated_at ?? page.created_at, undefined, locale)}
                             </p>
                           </div>
                         </div>
@@ -176,8 +178,8 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
           <BookshelfStyles />
           <div className="flex items-center gap-2 mb-3">
             <BookMarked className="h-4 w-4 text-amber-700" />
-            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Čtenářský deník</h2>
-            <span className="text-xs text-gray-400">({booksLabel(diary.length)})</span>
+            <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('Čtenářský deník', 'Reading diary')}</h2>
+            <span className="text-xs text-gray-400">({diary.length} {plural(diary.length, ['kniha', 'knihy', 'knih'], ['book', 'books'])})</span>
           </div>
           <div className="max-w-2xl bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-gray-100 px-4 sm:px-10 pt-8 pb-5">
             <div className="flex flex-col gap-[3px]">
@@ -186,7 +188,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
               ))}
             </div>
             <BookTable />
-            <p className="text-center text-xs text-gray-400 mt-4">Zobrazují se jen knihy, které žák sám nasdílel.</p>
+            <p className="text-center text-xs text-gray-400 mt-4">{t('Zobrazují se jen knihy, které žák sám nasdílel.', 'Only books the pupil chose to share are shown.')}</p>
           </div>
 
           <Dialog open={!!openBook} onOpenChange={open => { if (!open) setOpenBook(null); }}>

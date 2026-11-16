@@ -6,6 +6,7 @@ import { ArrowLeft, Trash2, Pencil, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCurrentStudent } from '@/lib/directus';
 import type { DreamBoardItem } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 type DragType = 'move' | 'resize-se' | 'resize-sw' | 'resize-ne' | 'resize-nw';
 
@@ -21,6 +22,7 @@ interface DragState {
 }
 
 export default function DreamBoardPage() {
+  const { t, plural } = useLocale();
   const [items, setItems] = useState<DreamBoardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -128,10 +130,10 @@ export default function DreamBoardPage() {
       <div className="sticky top-0 z-[1000] flex items-center gap-3 px-4 py-3 bg-gray-900/95 backdrop-blur border-b border-gray-800">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-white hover:bg-gray-800">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Zpět
+          {t('Zpět', 'Back')}
         </Button>
-        <h1 className="text-white font-semibold">Nástěnka snů</h1>
-        <span className="text-gray-400 text-sm">{items.length} obrázků</span>
+        <h1 className="text-white font-semibold">{t('Nástěnka snů', 'Dream board')}</h1>
+        <span className="text-gray-400 text-sm">{items.length} {plural(items.length, ['obrázek', 'obrázky', 'obrázků'], ['picture', 'pictures'])}</span>
         <div className="ml-auto">
           {isEditing ? (
             <Button
@@ -140,7 +142,7 @@ export default function DreamBoardPage() {
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Check className="h-4 w-4 mr-2" />
-              Hotovo
+              {t('Hotovo', 'Done')}
             </Button>
           ) : (
             <Button
@@ -150,7 +152,7 @@ export default function DreamBoardPage() {
               className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
               <Pencil className="h-4 w-4 mr-2" />
-              Upravit nástěnku
+              {t('Upravit nástěnku', 'Edit board')}
             </Button>
           )}
         </div>
@@ -158,7 +160,7 @@ export default function DreamBoardPage() {
 
       {isEditing && (
         <div className="bg-blue-900/40 border-b border-blue-700/50 px-4 py-2 text-blue-300 text-sm text-center">
-          Režim úprav — přetahujte obrázky, měňte jejich velikost tažením za rohy nebo je odeberte pomocí koše
+          {t('Režim úprav — přetahujte obrázky, měňte jejich velikost tažením za rohy nebo je odeberte pomocí koše', 'Edit mode — drag pictures around, resize them by dragging the corners, or remove them with the bin')}
         </div>
       )}
 
@@ -171,8 +173,8 @@ export default function DreamBoardPage() {
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-center text-gray-500">
               <div className="text-6xl mb-4">✨</div>
-              <p className="text-xl font-light">Nástěnka je prázdná</p>
-              <p className="text-sm mt-2">Přidejte obrázky ze svých snů na stránce Sny</p>
+              <p className="text-xl font-light">{t('Nástěnka je prázdná', 'The board is empty')}</p>
+              <p className="text-sm mt-2">{t('Přidejte obrázky ze svých snů na stránce Sny', 'Add pictures from your dreams on the Dreams page')}</p>
             </div>
           </div>
         )}
@@ -206,7 +208,7 @@ export default function DreamBoardPage() {
                   className="absolute top-1 right-1 p-1.5 bg-black/70 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
                   onMouseDown={e => e.stopPropagation()}
                   onClick={() => removeFromBoard(item.id)}
-                  title="Odebrat z nástěnky"
+                  title={t('Odebrat z nástěnky', 'Remove from board')}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

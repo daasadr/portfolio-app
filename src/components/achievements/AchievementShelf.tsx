@@ -6,6 +6,7 @@ import {
   ACHIEVEMENTS, TRACKS, earnedAchievements, nextAchievement,
   type Achievement, type AchievementCounts,
 } from '@/lib/achievements';
+import { useLocale } from '@/components/LocaleProvider';
 
 /** Pages fire this after saving something that can earn an achievement. */
 export const ACHIEVEMENTS_CHANGED = 'pp-achievements-changed';
@@ -70,13 +71,14 @@ export function useAchievements(studentId: string | number | null) {
 }
 
 function Medal({ a, size = 'sm', onClick }: { a: Achievement; size?: 'sm' | 'lg'; onClick?: () => void }) {
+  const { t } = useLocale();
   const dims = size === 'lg' ? 'h-24 w-24 text-5xl border-4' : 'h-10 w-10 text-xl border-2';
   return (
     <button
       type="button"
       onClick={onClick}
-      title={a.name}
-      aria-label={a.name}
+      title={t(a.name)}
+      aria-label={t(a.name)}
       className={`pp-medal relative inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br shadow-sm ${a.tone} ${dims} ${onClick ? 'hover:scale-110 transition-transform' : 'cursor-default'}`}
     >
       <span className="select-none leading-none">{a.emoji}</span>
@@ -86,6 +88,7 @@ function Medal({ a, size = 'sm', onClick }: { a: Achievement; size?: 'sm' | 'lg'
 
 /** Grid of earned achievements under the side menu, with a hint toward the next one. */
 export function AchievementShelf({ counts, onOpen }: { counts: AchievementCounts | null; onOpen: (a: Achievement) => void }) {
+  const { t, locale } = useLocale();
   if (!counts) return null;
   const earned = earnedAchievements(counts);
   const next = nextAchievement(counts);
@@ -94,7 +97,7 @@ export function AchievementShelf({ counts, onOpen }: { counts: AchievementCounts
     <div className="px-4 pb-3">
       <div className="rounded-xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white p-3">
         <p className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-amber-800">
-          <span>Moje odznaky</span>
+          <span>{t('Moje odznaky', 'My badges')}</span>
           <span className="font-medium normal-case tracking-normal text-amber-700">{earned.length}/{ACHIEVEMENTS.length}</span>
         </p>
         {earned.length > 0 ? (
@@ -102,14 +105,17 @@ export function AchievementShelf({ counts, onOpen }: { counts: AchievementCounts
             {earned.map(a => <Medal key={a.id} a={a} onClick={() => onOpen(a)} />)}
           </div>
         ) : (
-          <p className="text-xs text-gray-600">Tady se budou sbírat tvoje odznaky za to, jak pilně pracuješ.</p>
+          <p className="text-xs text-gray-600">{t('Tady se budou sbírat tvoje odznaky za to, jak pilně pracuješ.', 'Your badges for all your hard work will be collected here.')}</p>
         )}
         {next && (
           <div className="mt-3">
             <p className="text-[11px] leading-snug text-gray-600">
-              Další: <span className="font-medium text-gray-800">{next.achievement.emoji} {next.achievement.name}</span>
+              {t('Další', 'Next')}: <span className="font-medium text-gray-800">{next.achievement.emoji} {t(next.achievement.name)}</span>
               <br />
-              chybí {next.missing} {TRACKS[next.achievement.track].unit(next.missing)}
+              {t(
+                `chybí ${next.missing} ${TRACKS[next.achievement.track].unit(next.missing, locale)}`,
+                `${next.missing} more ${TRACKS[next.achievement.track].unit(next.missing, locale)} to go`,
+              )}
             </p>
             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-amber-100">
               <div
@@ -139,6 +145,7 @@ const CONFETTI = Array.from({ length: 44 }, (_, i) => ({
  * otherwise it just shows the achievement (when clicked on the shelf).
  */
 export function AchievementModal({ items, celebrate, onClose }: { items: Achievement[]; celebrate: boolean; onClose: () => void }) {
+  const { t, locale } = useLocale();
   const [index, setIndex] = useState(0);
   if (items.length === 0) return null;
   const a = items[Math.min(index, items.length - 1)];
@@ -178,20 +185,20 @@ export function AchievementModal({ items, celebrate, onClose }: { items: Achieve
         <div key={a.id} className="pp-ach-pop mb-4 flex justify-center">
           <Medal a={a} size="lg" />
         </div>
-        {celebrate && <h2 className="mb-1 text-2xl font-extrabold text-gray-900">Nový odznak!</h2>}
-        <p className={`mb-4 font-semibold text-amber-700 ${celebrate ? 'text-base' : 'text-xl'}`}>{a.name}</p>
-        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-relaxed text-gray-700">{a.praise}</p>
+        {celebrate && <h2 className="mb-1 text-2xl font-extrabold text-gray-900">{t('Nový odznak!', 'New badge!')}</h2>}
+        <p className={`mb-4 font-semibold text-amber-700 ${celebrate ? 'text-base' : 'text-xl'}`}>{t(a.name)}</p>
+        <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-relaxed text-gray-700">{t(a.praise)}</p>
         <p className="mb-6 text-xs text-gray-500">
-          {TRACKS[a.track].label} · {a.threshold} {TRACKS[a.track].unit(a.threshold)}
+          {t(TRACKS[a.track].label)} · {a.threshold} {TRACKS[a.track].unit(a.threshold, locale)}
         </p>
         {items.length > 1 && (
-          <p className="mb-3 text-xs text-gray-500">{index + 1} z {items.length}</p>
+          <p className="mb-3 text-xs text-gray-500">{index + 1} {t('z', 'of')} {items.length}</p>
         )}
         <button
           onClick={() => (last ? onClose() : setIndex(i => i + 1))}
           className="w-full rounded-2xl bg-amber-500 py-3 text-base font-bold text-white transition-colors hover:bg-amber-600 active:bg-amber-700"
         >
-          {last ? (celebrate ? 'Hurá! 🎉' : 'Zavřít') : 'Další odznak →'}
+          {last ? (celebrate ? t('Hurá! 🎉', 'Hooray! 🎉') : t('Zavřít', 'Close')) : t('Další odznak →', 'Next badge →')}
         </button>
       </div>
     </div>

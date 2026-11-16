@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import type { ReadingDiaryEntry } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import { intlLocale, plural, type Locale } from '@/lib/i18n';
 
 // Shared look of the reading diary — used by the pupil's own diary and the teacher view.
 
@@ -36,17 +38,15 @@ function bookLook(id: number) {
   };
 }
 
-export function booksLabel(n: number) {
-  if (n === 1) return '1 kniha';
-  if (n >= 2 && n <= 4) return `${n} knihy`;
-  return `${n} knih`;
+export function booksLabel(n: number, locale: Locale = 'cs') {
+  return `${n} ${plural(locale, n, ['kniha', 'knihy', 'knih'], ['book', 'books'])}`;
 }
 
-export function formatDiaryDate(iso: string) {
+export function formatDiaryDate(iso: string, locale: Locale = 'cs') {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? ''
-    : d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' });
+    : d.toLocaleDateString(intlLocale(locale), { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export function BookshelfStyles() {
@@ -102,13 +102,14 @@ export function BookSpine({ entry, isNew = false, ribbon = false, onOpen }: {
   ribbon?: boolean;
   onOpen: () => void;
 }) {
+  const { t } = useLocale();
   const look = bookLook(entry.id);
   const { bg, text } = look.cover;
   return (
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Otevřít záznam: ${entry.title}${ribbon ? ' (sdíleno s učitelem)' : ''}`}
+      aria-label={`${t('Otevřít záznam', 'Open entry')}: ${entry.title}${ribbon ? t(' (sdíleno s učitelem)', ' (shared with your teacher)') : ''}`}
       className={`rd-book group relative block mx-auto rounded-[4px] focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 ${isNew ? 'rd-drop' : ''}`}
       style={{
         width: `${look.width}%`,
@@ -169,37 +170,38 @@ export function BookTable() {
 
 // ── The opened book (render inside a DialogContent) ──
 export function OpenBook({ entry, note, actions }: { entry: ReadingDiaryEntry; note?: ReactNode; actions?: ReactNode }) {
+  const { t, locale } = useLocale();
   const { bg } = bookLook(entry.id).cover;
   return (
     <div className="rounded-2xl p-2.5 sm:p-3 shadow-2xl" style={{ background: bg }}>
       <div className="grid md:grid-cols-2 rounded-lg overflow-hidden max-h-[80vh] overflow-y-auto md:overflow-visible">
         {/* Levá stránka */}
         <div className="rd-page rd-page-left relative px-6 py-7 sm:px-8 md:max-h-[76vh] md:overflow-y-auto">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-amber-900/50 mb-4">Čtenářský deník</p>
+          <p className="text-[11px] uppercase tracking-[0.25em] text-amber-900/50 mb-4">{t('Čtenářský deník', 'Reading diary')}</p>
           <DialogTitle className="font-serif text-2xl sm:text-3xl font-bold leading-tight text-stone-900">
             {entry.title}
           </DialogTitle>
           <DialogDescription className="font-serif italic text-lg text-stone-700 mt-1">
             {entry.author}
           </DialogDescription>
-          <p className="text-xs text-stone-500 mt-3">Zapsáno {formatDiaryDate(entry.date_created)}</p>
+          <p className="text-xs text-stone-500 mt-3">{t('Zapsáno', 'Written on')} {formatDiaryDate(entry.date_created, locale)}</p>
           <p className="text-center text-amber-800/40 my-5 select-none" aria-hidden>❦</p>
-          <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mb-2">O čem kniha je</h3>
+          <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mb-2">{t('O čem kniha je', 'What the book is about')}</h3>
           <p className="font-serif text-[15px] leading-relaxed text-stone-800 whitespace-pre-wrap">
-            {entry.summary || <span className="italic text-stone-400">Bez obsahu</span>}
+            {entry.summary || <span className="italic text-stone-400">{t('Bez obsahu', 'No summary')}</span>}
           </p>
         </div>
 
         {/* Pravá stránka */}
         <div className="rd-page rd-page-right relative px-6 py-7 sm:px-8 flex flex-col md:max-h-[76vh] md:overflow-y-auto">
-          <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mb-2">Můj názor</h3>
+          <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mb-2">{t('Můj názor', 'My opinion')}</h3>
           <p className="font-serif text-[15px] leading-relaxed text-stone-800 whitespace-pre-wrap">
-            {entry.opinion || <span className="italic text-stone-400">Zatím bez názoru</span>}
+            {entry.opinion || <span className="italic text-stone-400">{t('Zatím bez názoru', 'No opinion yet')}</span>}
           </p>
 
           {entry.notes && (
             <>
-              <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mt-6 mb-2">Poznámky</h3>
+              <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-amber-900/70 mt-6 mb-2">{t('Poznámky', 'Notes')}</h3>
               <p className="font-serif text-[15px] leading-relaxed text-stone-800 whitespace-pre-wrap">{entry.notes}</p>
             </>
           )}

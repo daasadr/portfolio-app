@@ -18,6 +18,7 @@ import DOMPurify from 'dompurify';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface Attachment { id: string; name: string; type: string; }
 interface Connection { id: number; other_person: { id: number; first_name: string; last_name: string } | null }
@@ -32,6 +33,7 @@ function FileIcon({ type }: { type: string }) {
 interface Props { params: Promise<{ id: string }>; }
 
 export default function ViewPortfolioPage({ params }: Props) {
+  const { t, locale } = useLocale();
   const router = useRouter();
   const [page, setPage] = useState<PortfolioPage | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
@@ -139,7 +141,7 @@ export default function ViewPortfolioPage({ params }: Props) {
             className="text-white hover:bg-white/20"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Zpět
+            {t('Zpět', 'Back')}
           </Button>
           <div className="flex-1" />
 
@@ -151,17 +153,20 @@ export default function ViewPortfolioPage({ params }: Props) {
             <DialogTrigger asChild>
               <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
                 <Share2 className="h-4 w-4 mr-1" />
-                Sdílet s...
+                {t('Sdílet s...', 'Share with...')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Sdílet stránku</DialogTitle>
+                <DialogTitle>{t('Sdílet stránku', 'Share page')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-2 pt-1">
                 {connections.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-6">
-                    Nemáte žádná propojení. Propojte se s učitelem nebo žáky nejprve na stránce Sdílení.
+                    {t(
+                      'Nemáte žádná propojení. Propojte se s učitelem nebo žáky nejprve na stránce Sdílení.',
+                      'You have no connections yet. First connect with a teacher or pupils on the Sharing page.',
+                    )}
                   </p>
                 ) : (
                   connections.map(c => {
@@ -174,7 +179,7 @@ export default function ViewPortfolioPage({ params }: Props) {
                         </span>
                         {already ? (
                           <Badge variant="secondary" className="flex items-center gap-1">
-                            <UserCheck className="h-3 w-3" /> Nasdíleno
+                            <UserCheck className="h-3 w-3" /> {t('Nasdíleno', 'Shared')}
                           </Badge>
                         ) : (
                           <Button
@@ -186,7 +191,7 @@ export default function ViewPortfolioPage({ params }: Props) {
                             {sharingId === c.other_person.id ? (
                               <span className="animate-spin h-3 w-3 border-b border-gray-600 rounded-full inline-block" />
                             ) : (
-                              <><Check className="h-3 w-3 mr-1" /> Sdílet</>
+                              <><Check className="h-3 w-3 mr-1" /> {t('Sdílet', 'Share')}</>
                             )}
                           </Button>
                         )}
@@ -201,7 +206,7 @@ export default function ViewPortfolioPage({ params }: Props) {
           <Link href={`/dashboard/portfolio/${page.id}`}>
             <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-0">
               <Pencil className="h-4 w-4 mr-1" />
-              Upravit
+              {t('Upravit', 'Edit')}
             </Button>
           </Link>
         </div>
@@ -224,7 +229,9 @@ export default function ViewPortfolioPage({ params }: Props) {
                 </Badge>
               )}
               <span className="text-white/70 text-xs">
-                {safeFormatDate(page.updated_at) ? `Upraveno ${safeFormatDate(page.updated_at)}` : ''}
+                {safeFormatDate(page.updated_at, undefined, locale)
+                  ? t(`Upraveno ${safeFormatDate(page.updated_at, undefined, locale)}`, `Edited ${safeFormatDate(page.updated_at, undefined, locale)}`)
+                  : ''}
               </span>
             </div>
           </div>
@@ -239,7 +246,7 @@ export default function ViewPortfolioPage({ params }: Props) {
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }}
           />
         ) : (
-          <p className="text-gray-400 italic text-center py-8">Tato stránka nemá žádný obsah.</p>
+          <p className="text-gray-400 italic text-center py-8">{t('Tato stránka nemá žádný obsah.', 'This page has no content.')}</p>
         )}
 
         {/* Přílohy */}
@@ -247,7 +254,7 @@ export default function ViewPortfolioPage({ params }: Props) {
           <div className="mt-8 pt-6 border-t">
             <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
               <Paperclip className="h-4 w-4" />
-              Přílohy ({attachments.length})
+              {t('Přílohy', 'Attachments')} ({attachments.length})
             </h3>
             <div className="space-y-3">
               {attachments.map(att => {

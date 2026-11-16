@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -29,8 +30,9 @@ async function getStudentFromToken(request: NextRequest) {
 
 // GET /api/connections — vrátí propojení přihlášeného uživatele
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const isTeacher = student.is_teacher;
   const filterField = isTeacher ? 'teacher_id' : 'student_id';
@@ -67,12 +69,13 @@ export async function GET(request: NextRequest) {
 
 // POST /api/connections — učitel připojí žáka podle emailu
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
-  if (!student.is_teacher) return NextResponse.json({ message: 'Pouze učitelé mohou přidávat žáky' }, { status: 403 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
+  if (!student.is_teacher) return NextResponse.json({ message: t('Pouze učitelé mohou přidávat žáky', 'Only teachers can add pupils') }, { status: 403 });
 
   const { targetEmail } = await request.json() as { targetEmail: string };
-  if (!targetEmail) return NextResponse.json({ message: 'Chybí email žáka' }, { status: 400 });
+  if (!targetEmail) return NextResponse.json({ message: t('Chybí email žáka', 'Missing the pupil\'s email') }, { status: 400 });
 
   // Najdi uživatele podle emailu
   const userRes = await fetch(
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
     { headers: adminHeaders() }
   );
   const { data: users } = await userRes.json() as { data: { id: string }[] };
-  if (!users?.length) return NextResponse.json({ message: 'Žák s tímto emailem nebyl nalezen' }, { status: 404 });
+  if (!users?.length) return NextResponse.json({ message: t('Žák s tímto emailem nebyl nalezen', 'No pupil with this email was found') }, { status: 404 });
 
   // Najdi student záznam
   const targetSRes = await fetch(
@@ -90,8 +93,8 @@ export async function POST(request: NextRequest) {
   const { data: targetStudents } = await targetSRes.json() as {
     data: { id: number; is_teacher: boolean }[]
   };
-  if (!targetStudents?.length) return NextResponse.json({ message: 'Žák nenalezen' }, { status: 404 });
-  if (targetStudents[0].is_teacher) return NextResponse.json({ message: 'Tento účet je učitelský, nelze přidat jako žáka' }, { status: 400 });
+  if (!targetStudents?.length) return NextResponse.json({ message: t('Žák nenalezen', 'Pupil not found') }, { status: 404 });
+  if (targetStudents[0].is_teacher) return NextResponse.json({ message: t('Tento účet je učitelský, nelze přidat jako žáka', 'This is a teacher account, it cannot be added as a pupil') }, { status: 400 });
 
   const targetId = targetStudents[0].id;
 
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
     { headers: adminHeaders() }
   );
   const { data: dup } = await dupRes.json() as { data: unknown[] };
-  if (dup?.length) return NextResponse.json({ message: 'Toto propojení již existuje' }, { status: 409 });
+  if (dup?.length) return NextResponse.json({ message: t('Toto propojení již existuje', 'This connection already exists') }, { status: 409 });
 
   // Vytvoř propojení
   const createRes = await fetch(`${directusUrl}/items/student_connections`, {
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
     }),
   });
-  if (!createRes.ok) return NextResponse.json({ message: 'Chyba při vytváření propojení' }, { status: 500 });
+  if (!createRes.ok) return NextResponse.json({ message: t('Chyba při vytváření propojení', 'Error while creating the connection') }, { status: 500 });
 
   const { data: created } = await createRes.json() as { data: unknown };
   return NextResponse.json({ connection: created });

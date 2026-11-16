@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { safeFormatDate } from '@/lib/date';
+import { getRequestLocale } from '@/lib/i18n-server';
+import { tr, intlLocale, type Locale, type L10n } from '@/lib/i18n';
 import type { PortfolioPage, Category, PersonalGoal, Dream, DreamBoardItem, ReadingDiaryEntry } from '@/types';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -36,15 +38,20 @@ function esc(value: unknown): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function safeFilename(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'soubor';
+function safeFilename(name: string, locale: Locale = 'cs'): string {
+  return name.replace(/[\\/:*?"<>|]/g, '_').trim() || tr(locale, 'soubor', 'file');
 }
 
-const GOAL_TYPE_LABELS: Record<string, string> = {
-  short_term: 'Krátkodobý',
-  long_term: 'Dlouhodobý',
-  lifelong: 'Celoživotní přání',
+const GOAL_TYPE_LABELS: Record<string, L10n> = {
+  short_term: { cs: 'Krátkodobý', en: 'Short-term' },
+  long_term: { cs: 'Dlouhodobý', en: 'Long-term' },
+  lifelong: { cs: 'Celoživotní přání', en: 'Lifelong wish' },
 };
+
+function goalTypeLabel(goalType: string, locale: Locale): string {
+  const label = GOAL_TYPE_LABELS[goalType];
+  return label ? tr(locale, label) : goalType;
+}
 
 // ---------------------------------------------------------------------------
 // HTML export
@@ -61,13 +68,17 @@ function generateHtml(opts: {
   fileBuffers: Map<string, { name: string; type: string }>;
   sections: string[];
   exportDate: string;
+  locale: Locale;
 }): string {
-  const { student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate } = opts;
+  const { student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate, locale } = opts;
+  const t = (cs: string, en: string) => tr(locale, cs, en);
+  const fmt = (value: string | null | undefined) => safeFormatDate(value, undefined, locale);
   const catMap = new Map(categories.map(c => [c.id, c.name]));
 
+  const other = t('Ostatní', 'Other');
   const grouped = new Map<string, PortfolioPage[]>();
   for (const page of pages) {
-    const key = page.category_id ? (catMap.get(page.category_id) ?? 'Ostatní') : 'Ostatní';
+    const key = page.category_id ? (catMap.get(page.category_id) ?? other) : other;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(page);
   }
@@ -81,18 +92,18 @@ function generateHtml(opts: {
       const attachmentsHtml = arr.map(att => {
         const file = fileBuffers.get(att.id);
         const src = file ? `assets/${encodeURIComponent(file.name)}` : '#';
-        const t = att.type ?? '';
-        if (t.startsWith('image/')) return `<img src="${src}" alt="${esc(att.name)}" class="att-img">`;
-        if (t.startsWith('video/')) return `<video controls class="att-video"><source src="${src}" type="${esc(t)}"></video>`;
-        if (t.startsWith('audio/')) return `<audio controls class="att-audio"><source src="${src}" type="${esc(t)}"></audio>`;
+        const mime = att.type ?? '';
+        if (mime.startsWith('image/')) return `<img src="${src}" alt="${esc(att.name)}" class="att-img">`;
+        if (mime.startsWith('video/')) return `<video controls class="att-video"><source src="${src}" type="${esc(mime)}"></video>`;
+        if (mime.startsWith('audio/')) return `<audio controls class="att-audio"><source src="${src}" type="${esc(mime)}"></audio>`;
         return `<a href="${src}" class="att-file">📎 ${esc(att.name)}</a>`;
       }).join('\n');
 
       return `
       <article class="page">
         <h3>${esc(page.title)}</h3>
-        <p class="meta">${page.visibility === 'shared' ? '🌐 Sdílená' : '🔒 Soukromá'}${safeFormatDate(page.updated_at) ? ` · Upraveno ${safeFormatDate(page.updated_at)}` : ''}</p>
-        <div class="content">${page.content || '<em>Bez obsahu</em>'}</div>
+        <p class="meta">${page.visibility === 'shared' ? t('🌐 Sdílená', '🌐 Shared') : t('🔒 Soukromá', '🔒 Private')}${fmt(page.updated_at) ? ` · ${t('Upraveno', 'Edited')} ${fmt(page.updated_at)}` : ''}</p>
+        <div class="content">${page.content || `<em>${t('Bez obsahu', 'No content')}</em>`}</div>
         ${arr.length ? `<div class="attachments">${attachmentsHtml}</div>` : ''}
       </article>`;
     }).join('');
@@ -106,15 +117,15 @@ function generateHtml(opts: {
 
   const goalsHtml = sections.includes('goals') && goals.length ? `
   <section class="category">
-    <h2>Cíle a přání</h2>
+    <h2>${t('Cíle a přání', 'Goals and wishes')}</h2>
     <div class="goals-list">
       ${goals.map(g => `
       <div class="goal ${g.completed ? 'completed' : ''}">
-        <span class="goal-type">${esc(GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type)}</span>
+        <span class="goal-type">${esc(goalTypeLabel(g.goal_type, locale))}</span>
         <strong>${esc(g.title)}</strong>
         ${g.description ? `<p>${esc(g.description)}</p>` : ''}
-        ${g.target_date ? `<p class="meta">Termín: ${new Date(g.target_date).toLocaleDateString('cs-CZ')}</p>` : ''}
-        ${g.completed ? '<span class="badge">✓ Splněno</span>' : ''}
+        ${g.target_date ? `<p class="meta">${t('Termín', 'Target date')}: ${new Date(g.target_date).toLocaleDateString(intlLocale(locale))}</p>` : ''}
+        ${g.completed ? `<span class="badge">✓ ${t('Splněno', 'Achieved')}</span>` : ''}
       </div>`).join('')}
     </div>
   </section>` : '';
@@ -137,19 +148,19 @@ function generateHtml(opts: {
 
   const diaryHtml = sections.includes('reading_diary') && readingDiary.length ? `
   <section class="category">
-    <h2>Čtenářský deník</h2>
+    <h2>${t('Čtenářský deník', 'Reading diary')}</h2>
     ${readingDiary.map(b => `
     <article class="page book">
       <h3>${esc(b.title)}</h3>
-      <p class="meta">${esc(b.author)}${safeFormatDate(b.date_created) ? ` · Zapsáno ${safeFormatDate(b.date_created)}` : ''}</p>
-      ${b.summary ? `<h4>O čem kniha je</h4><p class="text">${esc(b.summary)}</p>` : ''}
-      ${b.opinion ? `<h4>Můj názor</h4><p class="text">${esc(b.opinion)}</p>` : ''}
-      ${b.notes ? `<h4>Poznámky</h4><p class="text">${esc(b.notes)}</p>` : ''}
+      <p class="meta">${esc(b.author)}${fmt(b.date_created) ? ` · ${t('Zapsáno', 'Written')} ${fmt(b.date_created)}` : ''}</p>
+      ${b.summary ? `<h4>${t('O čem kniha je', 'What the book is about')}</h4><p class="text">${esc(b.summary)}</p>` : ''}
+      ${b.opinion ? `<h4>${t('Můj názor', 'My opinion')}</h4><p class="text">${esc(b.opinion)}</p>` : ''}
+      ${b.notes ? `<h4>${t('Poznámky', 'Notes')}</h4><p class="text">${esc(b.notes)}</p>` : ''}
     </article>`).join('')}
   </section>` : '';
 
   return `<!DOCTYPE html>
-<html lang="cs">
+<html lang="${locale}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -198,7 +209,7 @@ function generateHtml(opts: {
 <body>
 <header class="header">
   <h1>${esc(student.first_name)} ${esc(student.last_name)}</h1>
-  <p>Portfolio Paradise · Exportováno ${exportDate}</p>
+  <p>Portfolio Paradise · ${t('Exportováno', 'Exported on')} ${exportDate}</p>
 </header>
 <main class="main">
   ${pagesHtml}
@@ -216,15 +227,17 @@ function generateHtml(opts: {
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  const locale = getRequestLocale(request);
+  const t = (cs: string, en: string) => tr(locale, cs, en);
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const body = await request.json() as ExportBody;
   const { format, sections, privacy } = body;
 
   // Verify user
   const meRes = await fetch(`${directusUrl}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!meRes.ok) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!meRes.ok) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const { data: user } = await meRes.json() as { data: { id: string } };
 
   // Get student record
@@ -234,7 +247,7 @@ export async function POST(request: NextRequest) {
   );
   const { data: students } = await studentRes.json() as { data: { id: string; first_name: string; last_name: string }[] };
   const student = students?.[0];
-  if (!student) return NextResponse.json({ message: 'Student nenalezen' }, { status: 404 });
+  if (!student) return NextResponse.json({ message: t('Student nenalezen', 'Pupil not found') }, { status: 404 });
 
   // Load selected data
   let pages: PortfolioPage[] = [];
@@ -307,14 +320,14 @@ export async function POST(request: NextRequest) {
 
       const buffer = await assetRes.arrayBuffer();
       const type = meta?.type ?? assetRes.headers.get('content-type') ?? 'application/octet-stream';
-      const name = safeFilename(meta?.filename_download ?? fileId);
+      const name = safeFilename(meta?.filename_download ?? fileId, locale);
       fileBuffers.set(fileId, { buffer, name, type });
     } catch { /* skip */ }
   }));
 
   // Build ZIP
   const zip = new JSZip();
-  const exportDate = new Date().toLocaleDateString('cs-CZ');
+  const exportDate = new Date().toLocaleDateString(intlLocale(locale));
 
   if (format === 'html') {
     // Add assets folder
@@ -322,7 +335,7 @@ export async function POST(request: NextRequest) {
     for (const { buffer, name } of fileBuffers.values()) {
       assetsFolder.file(name, buffer);
     }
-    zip.file('index.html', generateHtml({ student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate }));
+    zip.file('index.html', generateHtml({ student, pages, categories, goals, dreams, dreamItems, readingDiary, fileBuffers, sections, exportDate, locale }));
 
   } else {
     // Raw format
@@ -331,56 +344,58 @@ export async function POST(request: NextRequest) {
       const pFolder = zip.folder('portfolio')!;
 
       for (const page of pages) {
-        const catName = page.category_id ? (catMap.get(page.category_id) ?? 'Ostatni') : 'Ostatni';
-        const safeTitle = safeFilename(page.title);
+        const otherCat = t('Ostatni', 'Other');
+        const catName = page.category_id ? (catMap.get(page.category_id) ?? otherCat) : otherCat;
+        const safeTitle = safeFilename(page.title, locale);
         const raw = page.attachments;
         const arr: { id: string; name: string }[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? JSON.parse(raw) : [];
+        const updated = safeFormatDate(page.updated_at, undefined, locale);
 
         const lines = [
-          `Název: ${page.title}`,
-          ...(safeFormatDate(page.updated_at) ? [`Datum: ${safeFormatDate(page.updated_at)}`] : []),
-          `Kategorie: ${catName}`,
-          `Viditelnost: ${page.visibility === 'shared' ? 'Sdílená' : 'Soukromá'}`,
+          `${t('Název', 'Title')}: ${page.title}`,
+          ...(updated ? [`${t('Datum', 'Date')}: ${updated}`] : []),
+          `${t('Kategorie', 'Category')}: ${catName}`,
+          `${t('Viditelnost', 'Visibility')}: ${page.visibility === 'shared' ? t('Sdílená', 'Shared') : t('Soukromá', 'Private')}`,
           '',
-          page.content ? stripHtml(page.content) : '(Bez obsahu)',
+          page.content ? stripHtml(page.content) : t('(Bez obsahu)', '(No content)'),
         ];
-        if (arr.length) lines.push('', `Přílohy: ${arr.map(a => a.name).join(', ')}`);
+        if (arr.length) lines.push('', `${t('Přílohy', 'Attachments')}: ${arr.map(a => a.name).join(', ')}`);
 
-        pFolder.file(`${safeFilename(catName)}/${safeTitle}.txt`, lines.join('\n'));
+        pFolder.file(`${safeFilename(catName, locale)}/${safeTitle}.txt`, lines.join('\n'));
         for (const att of arr) {
           const file = fileBuffers.get(att.id);
-          if (file) pFolder.file(`prilohy/${file.name}`, file.buffer);
+          if (file) pFolder.file(`${t('prilohy', 'attachments')}/${file.name}`, file.buffer);
         }
       }
     }
 
     if (sections.includes('goals') && goals.length) {
       const lines = [
-        `CÍLE A PŘÁNÍ — ${student.first_name} ${student.last_name}`,
-        `Exportováno: ${exportDate}`,
+        `${t('CÍLE A PŘÁNÍ', 'GOALS AND WISHES')} — ${student.first_name} ${student.last_name}`,
+        `${t('Exportováno', 'Exported on')}: ${exportDate}`,
         '',
       ];
       for (const g of goals) {
         lines.push(
-          `[${GOAL_TYPE_LABELS[g.goal_type] ?? g.goal_type}] ${g.title}${g.completed ? ' ✓' : ''}`,
+          `[${goalTypeLabel(g.goal_type, locale)}] ${g.title}${g.completed ? ' ✓' : ''}`,
           ...(g.description ? [`  ${g.description}`] : []),
-          ...(g.target_date ? [`  Termín: ${new Date(g.target_date).toLocaleDateString('cs-CZ')}`] : []),
+          ...(g.target_date ? [`  ${t('Termín', 'Target date')}: ${new Date(g.target_date).toLocaleDateString(intlLocale(locale))}`] : []),
           '',
         );
       }
-      zip.file('cile/cile.txt', lines.join('\n'));
+      zip.file(t('cile/cile.txt', 'goals/goals.txt'), lines.join('\n'));
     }
 
     if (sections.includes('dreamboard')) {
       const dbFolder = zip.folder('dreamboard')!;
       if (dreams.length) {
-        const dreamLines = [`PŘÁNÍ\n`];
+        const dreamLines = [`${t('PŘÁNÍ', 'WISHES')}\n`];
         for (const d of dreams) {
           dreamLines.push(`• ${d.title}`);
           if (d.description) dreamLines.push(`  ${d.description}`);
           dreamLines.push('');
         }
-        dbFolder.file('prani.txt', dreamLines.join('\n'));
+        dbFolder.file(t('prani.txt', 'wishes.txt'), dreamLines.join('\n'));
       }
       for (const item of dreamItems) {
         const file = fileBuffers.get(item.file_id);
@@ -391,22 +406,23 @@ export async function POST(request: NextRequest) {
 
   if (format !== 'html' && sections.includes('reading_diary') && readingDiary.length) {
     const lines = [
-      `ČTENÁŘSKÝ DENÍK — ${student.first_name} ${student.last_name}`,
-      `Exportováno: ${exportDate}`,
+      `${t('ČTENÁŘSKÝ DENÍK', 'READING DIARY')} — ${student.first_name} ${student.last_name}`,
+      `${t('Exportováno', 'Exported on')}: ${exportDate}`,
       '',
     ];
     for (const b of readingDiary) {
+      const written = safeFormatDate(b.date_created, undefined, locale);
       lines.push(
         '────────────────────────────────────────',
         `${b.title} — ${b.author}`,
-        ...(safeFormatDate(b.date_created) ? [`Zapsáno: ${safeFormatDate(b.date_created)}`] : []),
-        ...(b.summary ? ['', 'O čem kniha je:', b.summary] : []),
-        ...(b.opinion ? ['', 'Můj názor:', b.opinion] : []),
-        ...(b.notes ? ['', 'Poznámky:', b.notes] : []),
+        ...(written ? [`${t('Zapsáno', 'Written')}: ${written}`] : []),
+        ...(b.summary ? ['', t('O čem kniha je:', 'What the book is about:'), b.summary] : []),
+        ...(b.opinion ? ['', t('Můj názor:', 'My opinion:'), b.opinion] : []),
+        ...(b.notes ? ['', t('Poznámky:', 'Notes:'), b.notes] : []),
         '',
       );
     }
-    zip.file('ctenarsky-denik/ctenarsky-denik.txt', lines.join('\n'));
+    zip.file(t('ctenarsky-denik/ctenarsky-denik.txt', 'reading-diary/reading-diary.txt'), lines.join('\n'));
   }
 
   const zipBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });

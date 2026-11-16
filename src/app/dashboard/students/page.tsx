@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, UserPlus, Check, X, Trash2, ExternalLink } from 'lucide-react';
 import { getCurrentStudent } from '@/lib/directus';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface Connection {
   id: number;
@@ -19,6 +20,7 @@ interface Connection {
 }
 
 export default function StudentsPage() {
+  const { t, intl } = useLocale();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTeacher, setIsTeacher] = useState(false);
@@ -55,14 +57,14 @@ export default function StudentsPage() {
       body: JSON.stringify({ targetEmail: email }),
     });
     const data = await res.json() as { message?: string };
-    if (!res.ok) { setAddError(data.message ?? 'Chyba'); setAdding(false); return; }
+    if (!res.ok) { setAddError(data.message ?? t('Chyba', 'Error')); setAdding(false); return; }
     setEmail('');
     await fetchConnections();
     setAdding(false);
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('Odebrat toto propojení?')) return;
+    if (!confirm(t('Odebrat toto propojení?', 'Remove this connection?'))) return;
     await fetch(`/api/connections/${id}`, { method: 'DELETE' });
     setConnections(prev => prev.filter(c => c.id !== id));
   }
@@ -78,7 +80,7 @@ export default function StudentsPage() {
     return (
       <div className="text-center py-16 text-gray-500">
         <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p>Tato stránka je dostupná pouze pro učitelské účty.</p>
+        <p>{t('Tato stránka je dostupná pouze pro učitelské účty.', 'This page is only available for teacher accounts.')}</p>
       </div>
     );
   }
@@ -86,8 +88,8 @@ export default function StudentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Moji žáci</h1>
-        <p className="text-gray-500 text-sm mt-1">Spravujte propojení se žáky a prohlížejte jejich portfolia</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('Moji žáci', 'My pupils')}</h1>
+        <p className="text-gray-500 text-sm mt-1">{t('Spravujte propojení se žáky a prohlížejte jejich portfolia', 'Manage connections with pupils and view their portfolios')}</p>
       </div>
 
       {/* Přidat žáka */}
@@ -95,29 +97,29 @@ export default function StudentsPage() {
         <CardContent className="pt-5">
           <form onSubmit={handleAdd} className="flex gap-3 items-end">
             <div className="flex-1 space-y-1">
-              <label className="text-sm font-medium text-gray-700">Přidat žáka podle e-mailu</label>
+              <label className="text-sm font-medium text-gray-700">{t('Přidat žáka podle e-mailu', 'Add a pupil by email')}</label>
               <Input
                 type="email"
                 value={email}
                 onChange={e => { setEmail(e.target.value); setAddError(''); }}
-                placeholder="zak@email.cz"
+                placeholder={t('zak@email.cz', 'pupil@email.com')}
                 required
               />
               {addError && <p className="text-xs text-red-500">{addError}</p>}
             </div>
             <Button type="submit" disabled={adding} className="flex-shrink-0">
               <UserPlus className="h-4 w-4 mr-2" />
-              {adding ? 'Přidávám...' : 'Přidat žáka'}
+              {adding ? t('Přidávám...', 'Adding...') : t('Přidat žáka', 'Add pupil')}
             </Button>
           </form>
-          <p className="text-xs text-gray-400 mt-2">Žák dostane žádost o propojení a musí ji přijmout na stránce Sdílení.</p>
+          <p className="text-xs text-gray-400 mt-2">{t('Žák dostane žádost o propojení a musí ji přijmout na stránce Sdílení.', 'The pupil gets a connection request and has to accept it on the Sharing page.')}</p>
         </CardContent>
       </Card>
 
       {/* Čekající žádosti */}
       {pending.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Čekající žádosti</h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('Čekající žádosti', 'Pending requests')}</h2>
           <div className="space-y-2">
             {pending.map(c => (
               <Card key={c.id} className="border-yellow-200 bg-yellow-50/50">
@@ -126,7 +128,7 @@ export default function StudentsPage() {
                     <p className="font-medium text-gray-900">
                       {c.other_person ? `${c.other_person.first_name} ${c.other_person.last_name}` : '—'}
                     </p>
-                    <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-1">Čeká na přijetí žákem</Badge>
+                    <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-1">{t('Čeká na přijetí žákem', 'Waiting for the pupil to accept')}</Badge>
                   </div>
                   <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600" onClick={() => handleDelete(c.id)}>
                     <X className="h-4 w-4" />
@@ -141,13 +143,13 @@ export default function StudentsPage() {
       {/* Propojení žáci */}
       <div>
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Propojení žáci {accepted.length > 0 && <span className="text-gray-400 normal-case font-normal">({accepted.length})</span>}
+          {t('Propojení žáci', 'Connected pupils')} {accepted.length > 0 && <span className="text-gray-400 normal-case font-normal">({accepted.length})</span>}
         </h2>
         {accepted.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm">Zatím nemáte žádné propojené žáky.</p>
-            <p className="text-xs mt-1">Přidejte žáka pomocí jeho e-mailu výše.</p>
+            <p className="text-sm">{t('Zatím nemáte žádné propojené žáky.', 'You don’t have any connected pupils yet.')}</p>
+            <p className="text-xs mt-1">{t('Přidejte žáka pomocí jeho e-mailu výše.', 'Add a pupil using their email above.')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -159,7 +161,7 @@ export default function StudentsPage() {
                       {c.other_person ? `${c.other_person.first_name} ${c.other_person.last_name}` : '—'}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {c.created_at ? `Propojeno ${new Date(c.created_at).toLocaleDateString('cs-CZ')}` : 'Propojeno'}
+                      {c.created_at ? `${t('Propojeno', 'Connected')} ${new Date(c.created_at).toLocaleDateString(intl)}` : t('Propojeno', 'Connected')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

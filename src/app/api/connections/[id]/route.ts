@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -26,27 +27,28 @@ async function getStudentFromToken(request: NextRequest) {
 
 // PATCH /api/connections/[id] — žák přijme propojení
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const { status } = await request.json() as { status: unknown };
   if (status !== 'accepted' && status !== 'rejected') {
-    return NextResponse.json({ message: 'Neplatný stav' }, { status: 400 });
+    return NextResponse.json({ message: t('Neplatný stav', 'Invalid status') }, { status: 400 });
   }
 
   // Ověř, že student je součástí tohoto propojení
   const connRes = await fetch(`${directusUrl}/items/student_connections/${id}`, { headers: adminHeaders() });
-  if (!connRes.ok) return NextResponse.json({ message: 'Propojení nenalezeno' }, { status: 404 });
+  if (!connRes.ok) return NextResponse.json({ message: t('Propojení nenalezeno', 'Connection not found') }, { status: 404 });
   const { data: conn } = await connRes.json() as { data: { teacher_id: number; student_id: number } };
 
   const isStudent = conn.student_id === student.id;
   const isTeacher = conn.teacher_id === student.id;
-  if (!isStudent && !isTeacher) return NextResponse.json({ message: 'Nemáte oprávnění' }, { status: 403 });
+  if (!isStudent && !isTeacher) return NextResponse.json({ message: t('Nemáte oprávnění', 'You do not have permission') }, { status: 403 });
 
   if (status === 'accepted' && !isStudent) {
-    return NextResponse.json({ message: 'Pouze žák může přijmout propojení' }, { status: 403 });
+    return NextResponse.json({ message: t('Pouze žák může přijmout propojení', 'Only the pupil can accept the connection') }, { status: 403 });
   }
 
   const patchRes = await fetch(`${directusUrl}/items/student_connections/${id}`, {
@@ -54,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     headers: adminHeaders(),
     body: JSON.stringify({ status }),
   });
-  if (!patchRes.ok) return NextResponse.json({ message: 'Chyba při aktualizaci' }, { status: 500 });
+  if (!patchRes.ok) return NextResponse.json({ message: t('Chyba při aktualizaci', 'Error while updating') }, { status: 500 });
 
   const { data: updated } = await patchRes.json() as { data: unknown };
   return NextResponse.json({ connection: updated });
@@ -62,17 +64,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 // DELETE /api/connections/[id] — odstraní propojení (může obě strany)
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const connRes = await fetch(`${directusUrl}/items/student_connections/${id}`, { headers: adminHeaders() });
-  if (!connRes.ok) return NextResponse.json({ message: 'Propojení nenalezeno' }, { status: 404 });
+  if (!connRes.ok) return NextResponse.json({ message: t('Propojení nenalezeno', 'Connection not found') }, { status: 404 });
   const { data: conn } = await connRes.json() as { data: { teacher_id: number; student_id: number } };
 
   if (conn.teacher_id !== student.id && conn.student_id !== student.id) {
-    return NextResponse.json({ message: 'Nemáte oprávnění' }, { status: 403 });
+    return NextResponse.json({ message: t('Nemáte oprávnění', 'You do not have permission') }, { status: 403 });
   }
 
   await fetch(`${directusUrl}/items/student_connections/${id}`, {

@@ -12,8 +12,10 @@ import { safeFormatDate } from '@/lib/date';
 import { bgStyle, catTextStyle } from '@/components/portfolio/CategoryEditor';
 import CategoryEditor from '@/components/portfolio/CategoryEditor';
 import type { Student, PortfolioPage, Category } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 export default function PortfolioPage() {
+  const { t } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [pages, setPages] = useState<PortfolioPage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,7 +49,7 @@ export default function PortfolioPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm('Opravdu smazat tuto stránku?')) return;
+    if (!confirm(t('Opravdu smazat tuto stránku?', 'Really delete this page?'))) return;
     await directus.request(deleteItem('portfolio_pages', id));
     setPages(prev => prev.filter(p => p.id !== id));
   }
@@ -82,12 +84,12 @@ export default function PortfolioPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCatEditorOpen(true)}>
             <FolderOpen className="h-4 w-4 mr-2" />
-            Kategorie
+            {t('Kategorie', 'Categories')}
           </Button>
           <Link href="/dashboard/portfolio/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Nová stránka
+              {t('Nová stránka', 'New page')}
             </Button>
           </Link>
         </div>
@@ -97,7 +99,7 @@ export default function PortfolioPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="Hledat stránky..."
+          placeholder={t('Hledat stránky...', 'Search pages...')}
           className="pl-9"
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -105,19 +107,22 @@ export default function PortfolioPage() {
       </div>
 
       <div className="text-sm text-gray-500">
-        {pages.length} stránek celkem · {pages.filter(p => p.visibility === 'shared').length} sdílených
+        {t(
+          `${pages.length} stránek celkem · ${pages.filter(p => p.visibility === 'shared').length} sdílených`,
+          `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} in total · ${pages.filter(p => p.visibility === 'shared').length} shared`,
+        )}
       </div>
 
       {/* Prázdný stav */}
       {pages.length === 0 && (
         <div className="text-center py-16 text-gray-500">
           <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p className="text-lg font-medium">Zatím žádné stránky portfolia</p>
-          <p className="text-sm mt-1">Vytvořte první stránku a začněte dokumentovat své studium.</p>
+          <p className="text-lg font-medium">{t('Zatím žádné stránky portfolia', 'No portfolio pages yet')}</p>
+          <p className="text-sm mt-1">{t('Vytvořte první stránku a začněte dokumentovat své studium.', 'Create your first page and start recording your learning.')}</p>
           <Link href="/dashboard/portfolio/new">
             <Button className="mt-4">
               <Plus className="h-4 w-4 mr-2" />
-              Vytvořit první stránku
+              {t('Vytvořit první stránku', 'Create your first page')}
             </Button>
           </Link>
         </div>
@@ -139,7 +144,7 @@ export default function PortfolioPage() {
             <div className="space-y-3">
               <h2 className="text-base font-semibold text-gray-500 flex items-center gap-2">
                 <BookOpen className="h-4 w-4" />
-                Bez kategorie
+                {t('Bez kategorie', 'No category')}
               </h2>
               <PageGrid pages={uncategorized} categories={categories} onDelete={handleDelete} />
             </div>
@@ -172,6 +177,7 @@ function CategorySection({
   pages: PortfolioPage[];
   onDelete: (id: string) => void;
 }) {
+  const { t, plural } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const PREVIEW = 4;
   const shown = expanded ? pages : pages.slice(0, PREVIEW);
@@ -187,7 +193,7 @@ function CategorySection({
           {category.name}
         </h2>
         <span className="text-sm font-medium" style={{ ...catTextStyle(category.background), opacity: 0.8 }}>
-          {pages.length} {pages.length === 1 ? 'stránka' : pages.length < 5 ? 'stránky' : 'stránek'}
+          {pages.length} {plural(pages.length, ['stránka', 'stránky', 'stránek'], ['page', 'pages'])}
         </span>
       </div>
 
@@ -203,7 +209,9 @@ function CategorySection({
             onClick={() => setExpanded(!expanded)}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
-            {expanded ? 'Zobrazit méně' : `Zobrazit všechny (${pages.length - PREVIEW} dalších)`}
+            {expanded
+              ? t('Zobrazit méně', 'Show less')
+              : t(`Zobrazit všechny (${pages.length - PREVIEW} dalších)`, `Show all (${pages.length - PREVIEW} more)`)}
           </button>
         )}
       </div>
@@ -221,6 +229,7 @@ function PageGrid({
   categories: Category[];
   onDelete: (id: string) => void;
 }) {
+  const { locale } = useLocale();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {pages.map(page => {
@@ -239,7 +248,7 @@ function PageGrid({
                 <p className="font-medium truncate">{page.title}</p>
                 {cat && <p className="text-xs text-gray-400 mt-0.5">{cat.name}</p>}
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {safeFormatDate(page.updated_at)}
+                  {safeFormatDate(page.updated_at, undefined, locale)}
                 </p>
               </div>
             </div>
@@ -253,6 +262,7 @@ function PageGrid({
 
 // ── Řádek stránky (v sekci kategorie) ───────────────────────────────────────
 function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: string) => void }) {
+  const { locale } = useLocale();
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
       {page.visibility === 'shared'
@@ -260,7 +270,7 @@ function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: strin
         : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{page.title}</p>
-        <p className="text-xs text-gray-400">{safeFormatDate(page.updated_at)}</p>
+        <p className="text-xs text-gray-400">{safeFormatDate(page.updated_at, undefined, locale)}</p>
       </div>
       <PageActions page={page} onDelete={onDelete} compact />
     </div>
@@ -277,12 +287,13 @@ function PageActions({
   onDelete: (id: string) => void;
   compact?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div className={`flex gap-1.5 ${compact ? '' : 'mt-1'}`}>
       <Link href={`/dashboard/portfolio/${page.id}/view`} className="flex-1">
         <Button variant="outline" size="sm" className="w-full">
           <Eye className="h-3.5 w-3.5 mr-1" />
-          {!compact && 'Otevřít'}
+          {!compact && t('Otevřít', 'Open')}
         </Button>
       </Link>
       <Link href={`/dashboard/portfolio/${page.id}`}>

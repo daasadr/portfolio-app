@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -27,8 +28,9 @@ async function getStudentForRequest(request: NextRequest) {
 
 // GET /api/account — export všech dat uživatele (GDPR čl. 20)
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const ctx = await getStudentForRequest(request);
-  if (!ctx) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!ctx) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const { student, userId } = ctx;
 
   const [userRes, pagesRes, catsRes, diaryRes] = await Promise.all([
@@ -66,8 +68,9 @@ export async function GET(request: NextRequest) {
 
 // DELETE /api/account — smaže celý účet a všechna data (GDPR čl. 17)
 export async function DELETE(request: NextRequest) {
+  const t = requestT(request);
   const ctx = await getStudentForRequest(request);
-  if (!ctx) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!ctx) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const { student, userId } = ctx;
 
   const sid = student.id;

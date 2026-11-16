@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -23,15 +24,16 @@ async function getAdminUser(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const admin = await getAdminUser(request);
-  if (!admin) return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
+  if (!admin) return NextResponse.json({ message: t('Přístup odepřen', 'Access denied') }, { status: 403 });
 
   // Fetch all students
   const studentsRes = await fetch(
     `${directusUrl}/items/students?limit=500&sort[]=last_name&sort[]=first_name`,
     { headers: adminH() }
   );
-  if (!studentsRes.ok) return NextResponse.json({ message: 'Chyba při načítání' }, { status: 500 });
+  if (!studentsRes.ok) return NextResponse.json({ message: t('Chyba při načítání', 'Error while loading') }, { status: 500 });
   const { data: students } = await studentsRes.json() as {
     data: { id: string; user_id: string; first_name: string; last_name: string; is_teacher: boolean; email?: string }[]
   };

@@ -22,11 +22,15 @@ import { BgPicker, bgStyle } from '@/components/portfolio/CategoryEditor';
 import { CUSTOM_QUESTION, questionLabel } from '@/lib/security-questions';
 import { SecurityQuestionPicker } from '@/components/SecurityQuestionPicker';
 import type { Student, Category } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
 
 export default function SettingsPage() {
+  const { t, locale } = useLocale();
   const router = useRouter();
+  // Potvrzovací slovo pro smazání účtu (kontroluje se jen na klientovi)
+  const deleteWord = t('SMAZAT', 'DELETE');
   const [student, setStudent] = useState<Student | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +71,8 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState('');
 
   // Bezpečnostní otázka
-  const [sqCurrent, setSqCurrent] = useState<string | null>(null);
+  const [sqCurrentRaw, setSqCurrentRaw] = useState<{ question: number | null; text: string | null } | null>(null);
+  const sqCurrent = sqCurrentRaw ? questionLabel(sqCurrentRaw.question, sqCurrentRaw.text, locale) : null;
   const [sqForm, setSqForm] = useState({ question: -1, customText: '', answer: '' });
   const [sqSaving, setSqSaving] = useState(false);
   const [sqError, setSqError] = useState('');
@@ -107,7 +112,7 @@ export default function SettingsPage() {
         const sqRes = await fetch('/api/security-question');
         if (sqRes.ok) {
           const sqData = await sqRes.json() as { security_question: number | null; security_question_text: string | null };
-          setSqCurrent(questionLabel(sqData.security_question, sqData.security_question_text));
+          setSqCurrentRaw({ question: sqData.security_question, text: sqData.security_question_text });
         }
       } catch (e) {
         console.error(e);
@@ -183,8 +188,8 @@ export default function SettingsPage() {
     e.preventDefault();
     setPwError('');
     setPwSuccess(false);
-    if (pwForm.next.length < 8) { setPwError('Nové heslo musí mít alespoň 8 znaků.'); return; }
-    if (pwForm.next !== pwForm.confirm) { setPwError('Nová hesla se neshodují.'); return; }
+    if (pwForm.next.length < 8) { setPwError(t('Nové heslo musí mít alespoň 8 znaků.', 'Your new password must be at least 8 characters long.')); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('Nová hesla se neshodují.', 'The new passwords don\'t match.')); return; }
     setPwSaving(true);
     const res = await fetch('/api/change-password', {
       method: 'POST',
@@ -192,7 +197,7 @@ export default function SettingsPage() {
       body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
     });
     const data = await res.json() as { message?: string };
-    if (!res.ok) { setPwError(data.message ?? 'Chyba'); } else {
+    if (!res.ok) { setPwError(data.message ?? t('Chyba', 'Error')); } else {
       setPwSuccess(true);
       setPwForm({ current: '', next: '', confirm: '' });
     }
@@ -203,9 +208,9 @@ export default function SettingsPage() {
     e.preventDefault();
     setSqError('');
     setSqSuccess(false);
-    if (sqForm.question < 0) { setSqError('Vyberte otázku.'); return; }
-    if (sqForm.question === CUSTOM_QUESTION && sqForm.customText.trim().length < 5) { setSqError('Napište svou otázku (alespoň 5 znaků).'); return; }
-    if (!sqForm.answer.trim()) { setSqError('Vyplňte odpověď.'); return; }
+    if (sqForm.question < 0) { setSqError(t('Vyberte otázku.', 'Choose a question.')); return; }
+    if (sqForm.question === CUSTOM_QUESTION && sqForm.customText.trim().length < 5) { setSqError(t('Napište svou otázku (alespoň 5 znaků).', 'Write your own question (at least 5 characters).')); return; }
+    if (!sqForm.answer.trim()) { setSqError(t('Vyplňte odpověď.', 'Fill in the answer.')); return; }
     setSqSaving(true);
     const res = await fetch('/api/security-question', {
       method: 'PATCH',
@@ -213,9 +218,9 @@ export default function SettingsPage() {
       body: JSON.stringify({ security_question: sqForm.question, security_question_text: sqForm.customText, security_answer: sqForm.answer }),
     });
     const data = await res.json() as { message?: string };
-    if (!res.ok) { setSqError(data.message ?? 'Chyba'); } else {
+    if (!res.ok) { setSqError(data.message ?? t('Chyba', 'Error')); } else {
       setSqSuccess(true);
-      setSqCurrent(questionLabel(sqForm.question, sqForm.customText));
+      setSqCurrentRaw({ question: sqForm.question, text: sqForm.customText });
       setSqForm({ question: -1, customText: '', answer: '' });
     }
     setSqSaving(false);
@@ -250,27 +255,27 @@ export default function SettingsPage() {
   }
 
   async function handleDeleteAccount() {
-    if (deleteConfirm !== 'SMAZAT') return;
+    if (deleteConfirm !== deleteWord) return;
     setDeleting(true);
     setDeleteError('');
     try {
       const res = await fetch('/api/account', { method: 'DELETE' });
       if (!res.ok) {
         const d = await res.json() as { message?: string };
-        setDeleteError(d.message ?? 'Chyba při mazání účtu');
+        setDeleteError(d.message ?? t('Chyba při mazání účtu', 'Error deleting your account'));
         return;
       }
       logout();
       router.push('/');
     } catch {
-      setDeleteError('Chyba připojení');
+      setDeleteError(t('Chyba připojení', 'Connection error'));
     } finally {
       setDeleting(false);
     }
   }
 
   async function deleteCat(id: number) {
-    if (!confirm('Smazat tuto kategorii? Stránky v ní zůstanou, jen bez kategorie.')) return;
+    if (!confirm(t('Smazat tuto kategorii? Stránky v ní zůstanou, jen bez kategorie.', 'Delete this category? Its pages will stay, just without a category.'))) return;
     await directus.request(deleteItem('categories', id));
     setCategories((prev) => prev.filter((c) => c.id !== id));
   }
@@ -285,35 +290,35 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Nastavení</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{t('Nastavení', 'Settings')}</h1>
 
       {/* Profil */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Profil
+            {t('Profil', 'Profile')}
           </CardTitle>
-          <CardDescription>Vaše osobní informace</CardDescription>
+          <CardDescription>{t('Vaše osobní informace', 'Your personal details')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {email && (
             <div className="space-y-1">
-              <Label>E-mail (přihlašovací)</Label>
+              <Label>{t('E-mail (přihlašovací)', 'Email (for logging in)')}</Label>
               <Input value={email} readOnly className="bg-gray-50 text-gray-500 cursor-default" />
-              <p className="text-xs text-gray-400">E-mail nelze změnit přes tuto stránku.</p>
+              <p className="text-xs text-gray-400">{t('E-mail nelze změnit přes tuto stránku.', 'Your email can\'t be changed on this page.')}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label>Jméno</Label>
+              <Label>{t('Jméno', 'First name')}</Label>
               <Input
                 value={profileForm.first_name}
                 onChange={(e) => setProfileForm((f) => ({ ...f, first_name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <Label>Příjmení</Label>
+              <Label>{t('Příjmení', 'Surname')}</Label>
               <Input
                 value={profileForm.last_name}
                 onChange={(e) => setProfileForm((f) => ({ ...f, last_name: e.target.value }))}
@@ -321,7 +326,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="space-y-1">
-            <Label>Datum narození</Label>
+            <Label>{t('Datum narození', 'Date of birth')}</Label>
             <Input
               type="date"
               value={profileForm.date_of_birth}
@@ -331,7 +336,7 @@ export default function SettingsPage() {
           <div className="flex justify-end">
             <Button onClick={saveProfile} disabled={saveStatus === 'saving'}>
               <Save className="h-4 w-4 mr-2" />
-              {saveStatus === 'saving' ? 'Ukládám...' : saveStatus === 'saved' ? 'Uloženo ✓' : 'Uložit profil'}
+              {saveStatus === 'saving' ? t('Ukládám...', 'Saving...') : saveStatus === 'saved' ? t('Uloženo ✓', 'Saved ✓') : t('Uložit profil', 'Save profile')}
             </Button>
           </div>
         </CardContent>
@@ -342,13 +347,13 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
-            Pozadí aplikace
+            {t('Pozadí aplikace', 'App background')}
           </CardTitle>
-          <CardDescription>Vyberte pozadí, které se zobrazí na všech stránkách</CardDescription>
+          <CardDescription>{t('Vyberte pozadí, které se zobrazí na všech stránkách', 'Choose a background to show on every page')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Výchozí</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('Výchozí', 'Default')}</p>
             <button
               type="button"
               onClick={() => saveAppBg(DEFAULT_BG)}
@@ -373,36 +378,36 @@ export default function SettingsPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Tag className="h-5 w-5" />
-                Kategorie portfolia
+                {t('Kategorie portfolia', 'Portfolio categories')}
               </CardTitle>
               <CardDescription className="mt-1">
-                Organizujte stránky do kategorií
+                {t('Organizujte stránky do kategorií', 'Sort your pages into categories')}
               </CardDescription>
             </div>
             <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" onClick={openNewCat}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Přidat
+                  {t('Přidat', 'Add')}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{editingCat ? 'Upravit kategorii' : 'Nová kategorie'}</DialogTitle>
+                  <DialogTitle>{editingCat ? t('Upravit kategorii', 'Edit category') : t('Nová kategorie', 'New category')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-1">
-                    <Label>Název *</Label>
+                    <Label>{t('Název *', 'Name *')}</Label>
                     <Input
-                      placeholder="Např. Fyzika"
+                      placeholder={t('Např. Fyzika', 'E.g. Physics')}
                       value={catName}
                       onChange={(e) => setCatName(e.target.value)}
                     />
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setCatDialogOpen(false)}>Zrušit</Button>
+                    <Button variant="outline" onClick={() => setCatDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                     <Button onClick={saveCat} disabled={catSaving || !catName.trim()}>
-                      {catSaving ? 'Ukládám...' : 'Uložit'}
+                      {catSaving ? t('Ukládám...', 'Saving...') : t('Uložit', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -417,7 +422,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{cat.name}</span>
                   {cat.is_predefined && (
-                    <Badge variant="secondary" className="text-xs">Výchozí</Badge>
+                    <Badge variant="secondary" className="text-xs">{t('Výchozí', 'Default')}</Badge>
                   )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -438,7 +443,7 @@ export default function SettingsPage() {
               </div>
             ))}
             {categories.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-4">Žádné kategorie</p>
+              <p className="text-sm text-gray-400 text-center py-4">{t('Žádné kategorie', 'No categories')}</p>
             )}
           </div>
         </CardContent>
@@ -448,14 +453,14 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Změna hesla
+            {t('Změna hesla', 'Change password')}
           </CardTitle>
-          <CardDescription>Změňte své přihlašovací heslo</CardDescription>
+          <CardDescription>{t('Změňte své přihlašovací heslo', 'Change the password you log in with')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={changePassword} className="space-y-3">
             <div className="space-y-1">
-              <Label>Stávající heslo</Label>
+              <Label>{t('Stávající heslo', 'Current password')}</Label>
               <PasswordInput
                 value={pwForm.current}
                 onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
@@ -464,17 +469,17 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Nové heslo</Label>
+              <Label>{t('Nové heslo', 'New password')}</Label>
               <PasswordInput
 
                 value={pwForm.next}
                 onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))}
-                placeholder="Alespoň 8 znaků"
+                placeholder={t('Alespoň 8 znaků', 'At least 8 characters')}
                 required
               />
             </div>
             <div className="space-y-1">
-              <Label>Potvrdit nové heslo</Label>
+              <Label>{t('Potvrdit nové heslo', 'Confirm new password')}</Label>
               <PasswordInput
 
                 value={pwForm.confirm}
@@ -484,11 +489,11 @@ export default function SettingsPage() {
               />
             </div>
             {pwError && <p className="text-sm text-red-500">{pwError}</p>}
-            {pwSuccess && <p className="text-sm text-green-600">Heslo bylo úspěšně změněno.</p>}
+            {pwSuccess && <p className="text-sm text-green-600">{t('Heslo bylo úspěšně změněno.', 'Your password has been changed.')}</p>}
             <div className="flex justify-end">
               <Button type="submit" disabled={pwSaving}>
                 <Save className="h-4 w-4 mr-2" />
-                {pwSaving ? 'Ukládám...' : 'Změnit heslo'}
+                {pwSaving ? t('Ukládám...', 'Saving...') : t('Změnit heslo', 'Change password')}
               </Button>
             </div>
           </form>
@@ -500,18 +505,18 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldQuestion className="h-5 w-5" />
-            Bezpečnostní otázka
+            {t('Bezpečnostní otázka', 'Security question')}
           </CardTitle>
           <CardDescription>
             {sqCurrent != null
-              ? `Aktuální otázka: ${sqCurrent}`
-              : 'Bezpečnostní otázka není nastavena — slouží pro obnovu zapomenutého hesla.'}
+              ? `${t('Aktuální otázka:', 'Current question:')} ${sqCurrent}`
+              : t('Bezpečnostní otázka není nastavena — slouží pro obnovu zapomenutého hesla.', 'No security question set — it helps you reset a forgotten password.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={saveSecurityQuestion} className="space-y-3">
             <div className="space-y-1">
-              <Label>Nová otázka a odpověď</Label>
+              <Label>{t('Nová otázka a odpověď', 'New question and answer')}</Label>
               <SecurityQuestionPicker
                 question={sqForm.question}
                 onQuestion={question => setSqForm(f => ({ ...f, question }))}
@@ -522,11 +527,11 @@ export default function SettingsPage() {
               />
             </div>
             {sqError && <p className="text-sm text-red-500">{sqError}</p>}
-            {sqSuccess && <p className="text-sm text-green-600">Bezpečnostní otázka byla aktualizována.</p>}
+            {sqSuccess && <p className="text-sm text-green-600">{t('Bezpečnostní otázka byla aktualizována.', 'Your security question has been updated.')}</p>}
             <div className="flex justify-end">
               <Button type="submit" disabled={sqSaving || sqForm.question < 0}>
                 <Save className="h-4 w-4 mr-2" />
-                {sqSaving ? 'Ukládám...' : 'Uložit otázku'}
+                {sqSaving ? t('Ukládám...', 'Saving...') : t('Uložit otázku', 'Save question')}
               </Button>
             </div>
           </form>
@@ -537,11 +542,11 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Export mých dat
+            {t('Export mých dat', 'Export my data')}
           </CardTitle>
           <CardDescription>
-            Stáhněte si kopii svých dat jako ZIP soubor (GDPR čl. 20 — právo na přenositelnost).{' '}
-            <Link href="/privacy" className="underline underline-offset-2 text-blue-500 hover:text-blue-700">Zásady ochrany osobních údajů</Link>
+            {t('Stáhněte si kopii svých dat jako ZIP soubor (GDPR čl. 20 — právo na přenositelnost).', 'Download a copy of your data as a ZIP file (GDPR Art. 20 — right to data portability).')}{' '}
+            <Link href="/privacy" className="underline underline-offset-2 text-blue-500 hover:text-blue-700">{t('Zásady ochrany osobních údajů', 'Privacy policy')}</Link>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -549,45 +554,45 @@ export default function SettingsPage() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Download className="h-4 w-4 mr-2" />
-                Exportovat data...
+                {t('Exportovat data...', 'Export data...')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Exportovat portfolio</DialogTitle>
+                <DialogTitle>{t('Exportovat portfolio', 'Export portfolio')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-5 pt-1">
 
                 {/* Formát */}
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-gray-700">Formát</p>
+                  <p className="text-sm font-semibold text-gray-700">{t('Formát', 'Format')}</p>
                   <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-gray-50 transition-colors">
                     <input type="radio" name="format" value="html" checked={exportFormat === 'html'}
                       onChange={() => setExportFormat('html')} className="mt-0.5" />
                     <span>
-                      <span className="block font-medium text-sm">Prohlížitelný HTML archiv</span>
-                      <span className="block text-xs text-gray-500">Rozbal ZIP, otevři index.html v prohlížeči. Lze tisknout nebo uložit jako PDF.</span>
+                      <span className="block font-medium text-sm">{t('Prohlížitelný HTML archiv', 'Viewable HTML archive')}</span>
+                      <span className="block text-xs text-gray-500">{t('Rozbal ZIP, otevři index.html v prohlížeči. Lze tisknout nebo uložit jako PDF.', 'Unzip it and open index.html in your browser. You can print it or save it as a PDF.')}</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border hover:bg-gray-50 transition-colors">
                     <input type="radio" name="format" value="raw" checked={exportFormat === 'raw'}
                       onChange={() => setExportFormat('raw')} className="mt-0.5" />
                     <span>
-                      <span className="block font-medium text-sm">Záloha souborů</span>
-                      <span className="block text-xs text-gray-500">Složky s texty (.txt) + originální fotky a videa. Vhodné pro přenos na jiný systém.</span>
+                      <span className="block font-medium text-sm">{t('Záloha souborů', 'File backup')}</span>
+                      <span className="block text-xs text-gray-500">{t('Složky s texty (.txt) + originální fotky a videa. Vhodné pro přenos na jiný systém.', 'Folders with texts (.txt) plus the original photos and videos. Handy for moving to another system.')}</span>
                     </span>
                   </label>
                 </div>
 
                 {/* Co exportovat */}
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-gray-700">Co exportovat</p>
+                  <p className="text-sm font-semibold text-gray-700">{t('Co exportovat', 'What to export')}</p>
                   <div className="space-y-2">
                     {([
-                      ['portfolio', 'Portfolio stránky'] as const,
-                      ['goals', 'Cíle a přání'] as const,
-                      ['dreamboard', 'Dream board'] as const,
-                      ['reading_diary', 'Čtenářský deník'] as const,
+                      ['portfolio', t('Portfolio stránky', 'Portfolio pages')] as const,
+                      ['goals', t('Cíle a přání', 'Goals and wishes')] as const,
+                      ['dreamboard', t('Dream board', 'Dream board')] as const,
+                      ['reading_diary', t('Čtenářský deník', 'Reading diary')] as const,
                     ]).map(([key, label]) => (
                       <label key={key} className="flex items-center gap-3 cursor-pointer py-1">
                         <input type="checkbox" checked={exportSections[key]}
@@ -602,32 +607,32 @@ export default function SettingsPage() {
                 {/* Viditelnost (jen pro portfolio) */}
                 {exportSections.portfolio && (
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold text-gray-700">Portfolio stránky</p>
+                    <p className="text-sm font-semibold text-gray-700">{t('Portfolio stránky', 'Portfolio pages')}</p>
                     <div className="flex gap-4">
                       <label className="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="privacy" value="all" checked={exportPrivacy === 'all'}
                           onChange={() => setExportPrivacy('all')} />
-                        Vše (i soukromé)
+                        {t('Vše (i soukromé)', 'All (including private)')}
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="privacy" value="shared" checked={exportPrivacy === 'shared'}
                           onChange={() => setExportPrivacy('shared')} />
-                        Jen sdílené
+                        {t('Jen sdílené', 'Shared only')}
                       </label>
                     </div>
                   </div>
                 )}
 
-                <p className="text-xs text-gray-400">Export může trvat chvíli, pokud máš hodně příloh.</p>
+                <p className="text-xs text-gray-400">{t('Export může trvat chvíli, pokud máš hodně příloh.', 'The export may take a moment if you have lots of attachments.')}</p>
 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Zrušit</Button>
+                  <Button variant="outline" onClick={() => setExportDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                   <Button
                     onClick={handleExport}
                     disabled={exporting || !Object.values(exportSections).some(Boolean)}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    {exporting ? 'Připravuji...' : 'Stáhnout ZIP'}
+                    {exporting ? t('Připravuji...', 'Preparing...') : t('Stáhnout ZIP', 'Download ZIP')}
                   </Button>
                 </div>
               </div>
@@ -641,30 +646,30 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-700">
             <AlertTriangle className="h-5 w-5" />
-            Smazání účtu
+            {t('Smazání účtu', 'Delete account')}
           </CardTitle>
           <CardDescription>
-            Nevratně smaže váš účet a všechna data — portfolio, stránky, kategorie, propojení (GDPR čl. 17 — právo na výmaz).
+            {t('Nevratně smaže váš účet a všechna data — portfolio, stránky, kategorie, propojení (GDPR čl. 17 — právo na výmaz).', 'Permanently deletes your account and all your data — portfolio, pages, categories, connections (GDPR Art. 17 — right to erasure).')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-gray-600">
-            Pro potvrzení napište do pole <span className="font-mono font-semibold">SMAZAT</span>:
+            {t('Pro potvrzení napište do pole', 'To confirm, type')} <span className="font-mono font-semibold">{deleteWord}</span>{t(':', ' in the box:')}
           </p>
           <Input
             value={deleteConfirm}
             onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(''); }}
-            placeholder="SMAZAT"
+            placeholder={deleteWord}
             className="max-w-xs font-mono"
           />
           {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
           <Button
             variant="destructive"
             onClick={handleDeleteAccount}
-            disabled={deleteConfirm !== 'SMAZAT' || deleting}
+            disabled={deleteConfirm !== deleteWord || deleting}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            {deleting ? 'Mažu účet...' : 'Trvale smazat účet'}
+            {deleting ? t('Mažu účet...', 'Deleting account...') : t('Trvale smazat účet', 'Delete account permanently')}
           </Button>
         </CardContent>
       </Card>

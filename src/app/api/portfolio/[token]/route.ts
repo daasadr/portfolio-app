@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -7,19 +8,20 @@ function adminHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` };
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const t = requestT(request);
   const { token } = await params;
 
   // Basic token format validation
   if (!/^[a-zA-Z0-9_-]{10,}$/.test(token)) {
-    return NextResponse.json({ message: 'Odkaz nenalezen' }, { status: 404 });
+    return NextResponse.json({ message: t('Odkaz nenalezen', 'Link not found') }, { status: 404 });
   }
 
   const linkRes = await fetch(
     `${directusUrl}/items/shared_links?filter[share_token][_eq]=${encodeURIComponent(token)}&limit=1`,
     { headers: adminHeaders() }
   );
-  if (!linkRes.ok) return NextResponse.json({ message: 'Odkaz nenalezen' }, { status: 404 });
+  if (!linkRes.ok) return NextResponse.json({ message: t('Odkaz nenalezen', 'Link not found') }, { status: 404 });
   const { data: links } = await linkRes.json() as {
     data: {
       id: string;
@@ -33,10 +35,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }[]
   };
   const link = links?.[0];
-  if (!link) return NextResponse.json({ message: 'Odkaz nenalezen' }, { status: 404 });
-  if (!link.is_active) return NextResponse.json({ message: 'Odkaz je neaktivní' }, { status: 403 });
+  if (!link) return NextResponse.json({ message: t('Odkaz nenalezen', 'Link not found') }, { status: 404 });
+  if (!link.is_active) return NextResponse.json({ message: t('Odkaz je neaktivní', 'The link is inactive') }, { status: 403 });
   if (link.expires_at && new Date(link.expires_at) < new Date()) {
-    return NextResponse.json({ message: 'Platnost odkazu vypršela' }, { status: 403 });
+    return NextResponse.json({ message: t('Platnost odkazu vypršela', 'The link has expired') }, { status: 403 });
   }
 
   // Increment view counter asynchronously (don't await — non-critical)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { SECURITY_QUESTIONS, CUSTOM_QUESTION, questionLabel } from '@/lib/security-questions';
 import { isRateLimited, verifyAnswer, hashAnswer, getClientIp, customQuestionSupported } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -57,9 +58,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/reset-password { email, answer, newPassword }
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const ip = getClientIp(request);
   if (isRateLimited(`reset-post:${ip}`, 5, 900)) {
-    return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
+    return NextResponse.json({ message: t('Příliš mnoho pokusů. Zkuste to za 15 minut.', 'Too many attempts. Please try again in 15 minutes.') }, { status: 429 });
   }
 
   const { email, answer, newPassword } = await request.json() as {
@@ -67,14 +69,14 @@ export async function POST(request: NextRequest) {
   };
 
   if (!email || !answer || !newPassword) {
-    return NextResponse.json({ message: 'Neúplná data' }, { status: 400 });
+    return NextResponse.json({ message: t('Neúplná data', 'Incomplete data') }, { status: 400 });
   }
   if (newPassword.length < 8) {
-    return NextResponse.json({ message: 'Heslo musí mít alespoň 8 znaků' }, { status: 400 });
+    return NextResponse.json({ message: t('Heslo musí mít alespoň 8 znaků', 'The password must be at least 8 characters long') }, { status: 400 });
   }
   // Per-account limit — IP limit alone can be shared/rotated
   if (isRateLimited(`reset-post-email:${email.trim().toLowerCase()}`, 5, 900)) {
-    return NextResponse.json({ message: 'Příliš mnoho pokusů. Zkuste to za 15 minut.' }, { status: 429 });
+    return NextResponse.json({ message: t('Příliš mnoho pokusů. Zkuste to za 15 minut.', 'Too many attempts. Please try again in 15 minutes.') }, { status: 429 });
   }
 
   const userRes = await fetch(
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
   const { data: users } = await userRes.json() as { data: { id: string }[] };
 
   // Always return same error to prevent enumeration
-  const genericError = NextResponse.json({ message: 'Nesprávný email nebo odpověď' }, { status: 400 });
+  const genericError = NextResponse.json({ message: t('Nesprávný email nebo odpověď', 'Incorrect email or answer') }, { status: 400 });
 
   if (!users?.length) return genericError;
 
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!patchRes.ok) {
-    return NextResponse.json({ message: 'Chyba při změně hesla' }, { status: 500 });
+    return NextResponse.json({ message: t('Chyba při změně hesla', 'Error while changing the password') }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

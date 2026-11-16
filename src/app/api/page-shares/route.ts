@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -25,8 +26,9 @@ async function getStudentFromToken(request: NextRequest) {
 
 // GET /api/page-shares?type=incoming|outgoing
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const type = request.nextUrl.searchParams.get('type') ?? 'incoming';
   const filterField = type === 'outgoing' ? 'from_id' : 'to_id';
@@ -76,21 +78,22 @@ export async function GET(request: NextRequest) {
 
 // POST /api/page-shares — sdílí stránku s konkrétním uživatelem
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const { page_id, to_id } = await request.json() as { page_id: string; to_id: number };
-  if (!page_id || !to_id) return NextResponse.json({ message: 'Chybí page_id nebo to_id' }, { status: 400 });
+  if (!page_id || !to_id) return NextResponse.json({ message: t('Chybí page_id nebo to_id', 'Missing page_id or to_id') }, { status: 400 });
 
   // Ověř, že stránka patří aktuálnímu uživateli
   const pageRes = await fetch(
     `${directusUrl}/items/portfolio_pages/${page_id}?fields=id,student_id`,
     { headers: adminHeaders() }
   );
-  if (!pageRes.ok) return NextResponse.json({ message: 'Stránka nenalezena' }, { status: 404 });
+  if (!pageRes.ok) return NextResponse.json({ message: t('Stránka nenalezena', 'Page not found') }, { status: 404 });
   const { data: page } = await pageRes.json() as { data: { id: string; student_id: string } };
   if (String(page.student_id) !== String(student.id)) {
-    return NextResponse.json({ message: 'Nemáte oprávnění sdílet tuto stránku' }, { status: 403 });
+    return NextResponse.json({ message: t('Nemáte oprávnění sdílet tuto stránku', 'You do not have permission to share this page') }, { status: 403 });
   }
 
   // Zkontroluj duplicitu
@@ -99,14 +102,14 @@ export async function POST(request: NextRequest) {
     { headers: adminHeaders() }
   );
   const { data: dup } = await dupRes.json() as { data: unknown[] };
-  if (dup?.length) return NextResponse.json({ message: 'Stránka je již sdílena s tímto uživatelem' }, { status: 409 });
+  if (dup?.length) return NextResponse.json({ message: t('Stránka je již sdílena s tímto uživatelem', 'The page is already shared with this user') }, { status: 409 });
 
   const createRes = await fetch(`${directusUrl}/items/page_shares`, {
     method: 'POST',
     headers: adminHeaders(),
     body: JSON.stringify({ page_id, from_id: student.id, to_id }),
   });
-  if (!createRes.ok) return NextResponse.json({ message: 'Chyba při sdílení' }, { status: 500 });
+  if (!createRes.ok) return NextResponse.json({ message: t('Chyba při sdílení', 'Error while sharing') }, { status: 500 });
 
   const { data: created } = await createRes.json() as { data: unknown };
   return NextResponse.json({ share: created });

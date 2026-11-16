@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requestT } from '@/lib/i18n-server';
 
 // Internal Directus URL — not accessible from the browser, only from the server
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
@@ -77,6 +78,7 @@ async function proxyRequest(token: string | null, path: string, request: NextReq
 }
 
 async function handle(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const t = requestT(request);
   const { path: segments } = await params;
   const path = '/' + segments.join('/');
 
@@ -92,17 +94,17 @@ async function handle(request: NextRequest, { params }: { params: Promise<{ path
   // Item writes: check student_id ownership before forwarding
   let bodyText: string | undefined;
   if (WRITE_METHODS.has(request.method) && path.startsWith('/items/')) {
-    if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+    if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
     bodyText = await request.text();
-    if (bodyText.length > MAX_ITEM_BODY) return NextResponse.json({ message: 'Příliš velký požadavek' }, { status: 413 });
+    if (bodyText.length > MAX_ITEM_BODY) return NextResponse.json({ message: t('Příliš velký požadavek', 'Request too large') }, { status: 413 });
     let payload: unknown;
     try { payload = JSON.parse(bodyText); } catch {
-      return NextResponse.json({ message: 'Neplatná data' }, { status: 400 });
+      return NextResponse.json({ message: t('Neplatná data', 'Invalid data') }, { status: 400 });
     }
     const ownId = await getOwnStudentId(token);
-    if (!ownId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+    if (!ownId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
     if (!studentIdsAreOwn(payload, ownId)) {
-      return NextResponse.json({ message: 'Nemáte oprávnění' }, { status: 403 });
+      return NextResponse.json({ message: t('Nemáte oprávnění', 'You do not have permission') }, { status: 403 });
     }
   }
 

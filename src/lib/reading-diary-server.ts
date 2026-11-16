@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { tr, type Locale } from '@/lib/i18n';
 
 // Server-only helpers for /api/reading-diary — entries are read and written with the
 // admin token, and student_id always comes from the session, never from the request body.
@@ -37,19 +38,22 @@ export interface EntryInput {
   share_with_teacher: boolean;
 }
 
-/** Validates the form body; returns the cleaned entry or a Czech error message. */
-export function parseEntry(body: unknown): { entry: EntryInput } | { error: string } {
+/** Validates the form body; returns the cleaned entry or an error message in `locale`. */
+export function parseEntry(body: unknown, locale: Locale = 'cs'): { entry: EntryInput } | { error: string } {
+  const t = (cs: string, en: string) => tr(locale, cs, en);
   const src = (body ?? {}) as Record<string, unknown>;
   const out: Record<string, string | null> = {};
   for (const field of Object.keys(LIMITS) as Field[]) {
     const raw = src[field];
-    if (raw != null && typeof raw !== 'string') return { error: 'Neplatná data' };
+    if (raw != null && typeof raw !== 'string') return { error: t('Neplatná data', 'Invalid data') };
     const value = (raw ?? '').trim();
-    if (value.length > LIMITS[field]) return { error: `Text je moc dlouhý (max ${LIMITS[field]} znaků)` };
+    if (value.length > LIMITS[field]) {
+      return { error: t(`Text je moc dlouhý (max ${LIMITS[field]} znaků)`, `The text is too long (max ${LIMITS[field]} characters)`) };
+    }
     out[field] = value || null;
   }
-  if (!out.title) return { error: 'Vyplň název knihy' };
-  if (!out.author) return { error: 'Vyplň autora knihy' };
+  if (!out.title) return { error: t('Vyplň název knihy', 'Fill in the book title') };
+  if (!out.author) return { error: t('Vyplň autora knihy', "Fill in the book's author") };
   // Private unless the pupil explicitly ticks "Ukázat učiteli"
   return { entry: { ...(out as unknown as Omit<EntryInput, 'share_with_teacher'>), share_with_teacher: src.share_with_teacher === true } };
 }

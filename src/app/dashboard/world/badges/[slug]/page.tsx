@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle2, Flame, Trophy } from 'lucide-react';
 import { BADGES } from '@/lib/badges';
 import { pragueToday, toPragueDate } from '@/lib/prague-date';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface UserBadge {
   id: number;
@@ -31,6 +32,7 @@ function renderArticle(text: string) {
 
 export default function BadgeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { t, intl } = useLocale();
   const router = useRouter();
   const badge = BADGES.find(b => b.slug === slug);
 
@@ -56,8 +58,8 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
   if (!badge) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500">Bobřík nenalezen.</p>
-        <Link href="/dashboard/world"><Button variant="outline" className="mt-4">Zpět</Button></Link>
+        <p className="text-gray-500">{t('Bobřík nenalezen.', 'Beaver not found.')}</p>
+        <Link href="/dashboard/world"><Button variant="outline" className="mt-4">{t('Zpět', 'Back')}</Button></Link>
       </div>
     );
   }
@@ -72,7 +74,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     });
     const data = await res.json() as { message?: string };
     if (!res.ok) {
-      setMessage(data.message ?? 'Chyba');
+      setMessage(data.message ?? t('Chyba', 'Error'));
     } else {
       await loadMyBadge();
     }
@@ -88,13 +90,13 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
     });
     const data = await res.json().catch(() => ({})) as { message?: string; completed?: boolean; restarted?: boolean };
     if (!res.ok) {
-      setMessage(data.message ?? 'Uložení se nepovedlo, zkus to prosím znovu.');
+      setMessage(data.message ?? t('Uložení se nepovedlo, zkus to prosím znovu.', 'Saving didn’t work, please try again.'));
     } else {
       if (data.completed) {
         setJustCompleted(true);
         window.dispatchEvent(new Event('pp-badges-changed')); // top bar shows the new badge
       } else if (data.restarted) {
-        setMessage('Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪');
+        setMessage(t('Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪', 'You missed a day, so you’re starting again from day 1. You can do it! 💪'));
       }
       await loadMyBadge();
     }
@@ -109,7 +111,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
   return (
     <div className="max-w-2xl mx-auto pb-12">
       <Link href="/dashboard/world" className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800 text-sm mb-4">
-        <ArrowLeft className="h-4 w-4" /> Zpět na Světoběžník
+        <ArrowLeft className="h-4 w-4" /> {t('Zpět na Světoběžník', 'Back to Globetrotter')}
       </Link>
 
       {/* Obrázek bobříka — medailónový styl */}
@@ -117,15 +119,15 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
         <div className="relative w-52 h-52 drop-shadow-2xl">
           <Image
             src={`/images/bobrici/${badge.icon}`}
-            alt={badge.name}
+            alt={t(badge.name)}
             fill
             className="object-contain"
             priority
           />
         </div>
         <div className="text-center mt-5 px-6">
-          <h1 className="text-2xl font-bold text-gray-900">{badge.name}</h1>
-          <p className="text-gray-500 text-sm mt-1">{badge.tagline}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t(badge.name)}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t(badge.tagline)}</p>
         </div>
       </div>
 
@@ -133,9 +135,9 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
       {justCompleted && (
         <div className="mb-6 rounded-xl bg-amber-50 border-2 border-amber-300 p-5 text-center">
           <Trophy className="h-10 w-10 text-amber-500 mx-auto mb-2" />
-          <p className="text-xl font-bold text-amber-800">Gratulujeme! Bobřík je tvůj! 🏅</p>
-          <p className="text-gray-700 text-sm leading-relaxed mt-3 max-w-md mx-auto">{badge.praise}</p>
-          <p className="text-amber-700 text-xs mt-3">Odznáček ti bude platit celý rok.</p>
+          <p className="text-xl font-bold text-amber-800">{t('Gratulujeme! Bobřík je tvůj! 🏅', 'Congratulations! The beaver is yours! 🏅')}</p>
+          <p className="text-gray-700 text-sm leading-relaxed mt-3 max-w-md mx-auto">{t(badge.praise)}</p>
+          <p className="text-amber-700 text-xs mt-3">{t('Odznáček ti bude platit celý rok.', 'Your badge will be valid for a whole year.')}</p>
         </div>
       )}
 
@@ -149,7 +151,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
           {isCompleted && !justCompleted && (
             <div className="flex items-center gap-2 text-amber-600 font-semibold">
               <CheckCircle2 className="h-5 w-5" />
-              Bobříka máš splněného! Platí do {userBadge?.expires_at ? new Date(userBadge.expires_at).toLocaleDateString('cs-CZ') : '—'}
+              {t('Bobříka máš splněného! Platí do', 'You’ve earned this beaver! Valid until')} {userBadge?.expires_at ? new Date(userBadge.expires_at).toLocaleDateString(intl) : '—'}
             </div>
           )}
 
@@ -158,7 +160,7 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
                   <Flame className="h-4 w-4 text-orange-400" />
-                  Postup: {userBadge.steps_done} / {badge.total_steps} dní
+                  {t('Postup', 'Progress')}: {userBadge.steps_done} / {badge.total_steps} {t('dní', 'days')}
                 </p>
                 <div className="flex gap-1.5">
                   {Array.from({ length: badge.total_steps }).map((_, i) => (
@@ -177,14 +179,14 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
                 className="w-full"
                 size="lg"
               >
-                {checkingIn ? 'Ukládám...' : alreadyDoneToday ? '✓ Dnes splněno — zítra zase!' : '✓ Dnes splněno'}
+                {checkingIn ? t('Ukládám...', 'Saving...') : alreadyDoneToday ? t('✓ Dnes splněno — zítra zase!', '✓ Done today — again tomorrow!') : t('✓ Dnes splněno', '✓ Done today')}
               </Button>
             </>
           )}
 
           {!userBadge && (
             <Button onClick={handleStart} disabled={starting} className="w-full" size="lg">
-              {starting ? 'Spouštím...' : '🦫 Začít lovit'}
+              {starting ? t('Spouštím...', 'Starting...') : t('🦫 Začít lovit', '🦫 Start the challenge')}
             </Button>
           )}
 
@@ -196,8 +198,8 @@ export default function BadgeDetailPage({ params }: { params: Promise<{ slug: st
 
       {/* Článek */}
       <div className="prose-sm text-sm space-y-1 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">O tomto bobříkovi</h2>
-        {renderArticle(badge.article)}
+        <h2 className="text-lg font-bold text-gray-900 mb-3">{t('O tomto bobříkovi', 'About this beaver')}</h2>
+        {renderArticle(t(badge.article))}
       </div>
     </div>
   );

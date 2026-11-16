@@ -35,12 +35,14 @@ import {
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Student, CalendarEntry, EntryType } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import type { L10n } from '@/lib/i18n';
 
-const ENTRY_TYPE_LABELS: Record<EntryType, string> = {
-  plan: 'Plán',
-  event: 'Událost',
-  goal_deadline: 'Deadline cíle',
-  reflection: 'Reflexe',
+const ENTRY_TYPE_LABELS: Record<EntryType, L10n> = {
+  plan: { cs: 'Plán', en: 'Plan' },
+  event: { cs: 'Událost', en: 'Event' },
+  goal_deadline: { cs: 'Deadline cíle', en: 'Goal deadline' },
+  reflection: { cs: 'Reflexe', en: 'Reflection' },
 };
 
 const ENTRY_TYPE_COLORS: Record<EntryType, string> = {
@@ -60,14 +62,21 @@ function getFirstDayOfMonth(year: number, month: number) {
   return day === 0 ? 6 : day - 1;
 }
 
-const MONTH_NAMES = [
-  'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
-  'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
-];
+const capitalize = (s: string) => s.charAt(0).toLocaleUpperCase() + s.slice(1);
 
-const DAY_NAMES = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+/** Month name in the nominative ("Listopad" / "November"). */
+function monthName(month: number, intl: string) {
+  return capitalize(new Date(2024, month, 1).toLocaleDateString(intl, { month: 'long' }));
+}
+
+/** Short weekday names, always starting on Monday (1 Jan 2024 was a Monday). */
+function dayNames(intl: string) {
+  return Array.from({ length: 7 }, (_, i) =>
+    capitalize(new Date(2024, 0, 1 + i).toLocaleDateString(intl, { weekday: 'short' })).replace(/\.$/, ''));
+}
 
 export default function CalendarPage() {
+  const { t, intl } = useLocale();
   const today = new Date();
   const [student, setStudent] = useState<Student | null>(null);
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
@@ -165,7 +174,10 @@ export default function CalendarPage() {
       setDialogOpen(false);
     } catch (e) {
       console.error(e);
-      setSaveError('Záznam se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.');
+      setSaveError(t(
+        'Záznam se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.',
+        'The entry could not be saved. Please try again — your unfinished text is saved as a draft.',
+      ));
     } finally {
       setSaving(false);
     }
@@ -205,7 +217,7 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Kalendář</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('Kalendář', 'Calendar')}</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -214,10 +226,10 @@ export default function CalendarPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">
-                {MONTH_NAMES[currentMonth]} {currentYear}
+                {monthName(currentMonth, intl)} {currentYear}
               </CardTitle>
               <div className="flex gap-1">
-                <Button variant="ghost" size="sm" onClick={prevMonth}>
+                <Button variant="ghost" size="sm" onClick={prevMonth} aria-label={t('Předchozí měsíc', 'Previous month')}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
@@ -230,9 +242,9 @@ export default function CalendarPage() {
                   }}
                   className="text-xs px-2"
                 >
-                  Dnes
+                  {t('Dnes', 'Today')}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={nextMonth}>
+                <Button variant="ghost" size="sm" onClick={nextMonth} aria-label={t('Další měsíc', 'Next month')}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -241,7 +253,7 @@ export default function CalendarPage() {
           <CardContent>
             {/* Hlavička dnů */}
             <div className="grid grid-cols-7 mb-2">
-              {DAY_NAMES.map((d) => (
+              {dayNames(intl).map((d) => (
                 <div key={d} className="text-center text-xs font-medium text-gray-500 py-1">
                   {d}
                 </div>
@@ -292,7 +304,7 @@ export default function CalendarPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                {new Date(selectedDate + 'T12:00:00').toLocaleDateString('cs-CZ', {
+                {new Date(selectedDate + 'T12:00:00').toLocaleDateString(intl, {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
@@ -300,13 +312,13 @@ export default function CalendarPage() {
               </CardTitle>
               <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" aria-label={t('Nový záznam', 'New entry')} title={t('Nový záznam', 'New entry')}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Nový záznam</DialogTitle>
+                    <DialogTitle>{t('Nový záznam', 'New entry')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
                     {restoredAt && (
@@ -320,7 +332,7 @@ export default function CalendarPage() {
                       />
                     )}
                     <div className="space-y-1">
-                      <Label>Typ záznamu</Label>
+                      <Label>{t('Typ záznamu', 'Type of entry')}</Label>
                       <Select
                         value={form.entry_type}
                         onValueChange={(v) => setForm((f) => ({ ...f, entry_type: v as EntryType }))}
@@ -329,24 +341,24 @@ export default function CalendarPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {(Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((t) => (
-                            <SelectItem key={t} value={t}>{ENTRY_TYPE_LABELS[t]}</SelectItem>
+                          {(Object.keys(ENTRY_TYPE_LABELS) as EntryType[]).map((type) => (
+                            <SelectItem key={type} value={type}>{t(ENTRY_TYPE_LABELS[type])}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label>Název</Label>
+                      <Label>{t('Název', 'Title')}</Label>
                       <Input
-                        placeholder="Co plánujete?"
+                        placeholder={t('Co plánujete?', 'What are you planning?')}
                         value={form.title}
                         onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label>Poznámka / reflexe</Label>
+                      <Label>{t('Poznámka / reflexe', 'Note / reflection')}</Label>
                       <Textarea
-                        placeholder="Podrobnosti, poznámky..."
+                        placeholder={t('Podrobnosti, poznámky...', 'Details, notes...')}
                         value={form.description}
                         onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                         rows={3}
@@ -357,9 +369,9 @@ export default function CalendarPage() {
                     )}
                     <DraftHint />
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>Zrušit</Button>
+                      <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                       <Button onClick={handleSave} disabled={saving}>
-                        {saving ? 'Ukládám...' : 'Přidat'}
+                        {saving ? t('Ukládám...', 'Saving...') : t('Přidat', 'Add')}
                       </Button>
                     </div>
                   </div>
@@ -371,8 +383,8 @@ export default function CalendarPage() {
             {selectedEntries.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">Žádné záznamy</p>
-                <p className="text-xs mt-1">Klikněte na + pro přidání</p>
+                <p className="text-sm">{t('Žádné záznamy', 'No entries')}</p>
+                <p className="text-xs mt-1">{t('Klikněte na + pro přidání', 'Click + to add one')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -385,17 +397,19 @@ export default function CalendarPage() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium ${entry.completed ? 'line-through text-gray-400' : ''}`}>
-                        {entry.title || '(bez názvu)'}
+                        {entry.title || t('(bez názvu)', '(untitled)')}
                       </p>
                       {entry.description && (
                         <p className="text-xs text-gray-500 mt-0.5">{entry.description}</p>
                       )}
                       <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium mt-1 inline-block ${ENTRY_TYPE_COLORS[entry.entry_type]}`}>
-                        {ENTRY_TYPE_LABELS[entry.entry_type]}
+                        {t(ENTRY_TYPE_LABELS[entry.entry_type])}
                       </span>
                     </div>
                     <button
                       onClick={() => deleteEntry(entry.id)}
+                      title={t('Smazat', 'Delete')}
+                      aria-label={t('Smazat', 'Delete')}
                       className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

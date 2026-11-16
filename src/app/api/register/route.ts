@@ -3,6 +3,7 @@ import { PREDEFINED_CATEGORIES } from '@/types';
 import { hashAnswer, isRateLimited, getClientIp, customQuestionSupported } from '@/lib/security';
 import { CUSTOM_QUESTION, parseQuestionChoice } from '@/lib/security-questions';
 import { getRequestLocale } from '@/lib/i18n-server';
+import { tr } from '@/lib/i18n';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -17,8 +18,9 @@ function adminHeaders() {
 
 export async function POST(request: NextRequest) {
   const locale = getRequestLocale(request);
+  const t = (cs: string, en: string) => tr(locale, cs, en);
   if (isRateLimited(`register-ip:${getClientIp(request)}`, 60, 3600)) {
-    return NextResponse.json({ message: 'Příliš mnoho registrací. Zkuste to později.' }, { status: 429 });
+    return NextResponse.json({ message: t('Příliš mnoho registrací. Zkuste to později.', 'Too many registrations. Please try again later.') }, { status: 429 });
   }
   try {
     // isTeacher is intentionally excluded — teacher accounts are created by admins only (C1)
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (choice && !choice.ok) return NextResponse.json({ message: choice.message }, { status: 400 });
     const customReady = await customQuestionSupported(directusUrl, adminToken);
     if (choice?.ok && choice.security_question === CUSTOM_QUESTION && !customReady) {
-      return NextResponse.json({ message: 'Vlastní otázku zatím nejde uložit — vyberte prosím jednu z nabízených.' }, { status: 503 });
+      return NextResponse.json({ message: t('Vlastní otázku zatím nejde uložit — vyberte prosím jednu z nabízených.', 'Your own question cannot be saved yet — please choose one of the offered questions.') }, { status: 503 });
     }
 
     const userRes = await fetch(`${directusUrl}/users`, {
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
     if (!userRes.ok) {
       const err = await userRes.json() as { errors?: { message: string; extensions?: { code: string } }[] };
       const code = err?.errors?.[0]?.extensions?.code;
-      const message = err?.errors?.[0]?.message ?? 'Chyba při registraci';
+      const message = err?.errors?.[0]?.message ?? t('Chyba při registraci', 'Registration error');
       return NextResponse.json({ code, message }, { status: userRes.status });
     }
 
@@ -80,14 +82,14 @@ export async function POST(request: NextRequest) {
       const studentErr = await studentRes.json();
       console.error('Student creation failed:', JSON.stringify(studentErr));
       await fetch(`${directusUrl}/users/${user.id}`, { method: 'DELETE', headers: adminHeaders() });
-      return NextResponse.json({ message: 'Chyba při vytváření profilu studenta. Zkuste to znovu.' }, { status: 500 });
+      return NextResponse.json({ message: t('Chyba při vytváření profilu studenta. Zkuste to znovu.', 'Error while creating the pupil profile. Please try again.') }, { status: 500 });
     }
 
     const { data: student } = await studentRes.json() as { data: { id: string } };
     if (!student?.id) {
       console.error('Student creation returned no id');
       await fetch(`${directusUrl}/users/${user.id}`, { method: 'DELETE', headers: adminHeaders() });
-      return NextResponse.json({ message: 'Chyba při vytváření profilu.' }, { status: 500 });
+      return NextResponse.json({ message: t('Chyba při vytváření profilu.', 'Error while creating the profile.') }, { status: 500 });
     }
 
     for (const cat of PREDEFINED_CATEGORIES) {
@@ -101,6 +103,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('Registration error:', e);
-    return NextResponse.json({ message: 'Chyba serveru' }, { status: 500 });
+    return NextResponse.json({ message: t('Chyba serveru', 'Server error') }, { status: 500 });
   }
 }

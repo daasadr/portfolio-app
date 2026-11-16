@@ -31,6 +31,8 @@ import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import type { Student, Category, PortfolioPage } from '@/types';
 import RichEditor from './RichEditor';
+import { useLocale } from '@/components/LocaleProvider';
+import { tr, type Locale } from '@/lib/i18n';
 
 interface PageDraft {
   title: string;
@@ -49,20 +51,32 @@ function sameDraft(a: PageDraft, b: PageDraft) {
 }
 
 /** Turns a Directus error into a message a pupil understands. */
-function saveErrorMessage(e: unknown): string {
+function saveErrorMessage(e: unknown, locale: Locale): string {
   const errs = e && typeof e === 'object' && 'errors' in e
     ? (e as { errors: Array<{ message: string; extensions?: { code?: string } }> }).errors
     : null;
   const code = errs?.[0]?.extensions?.code;
   const detail = errs?.length ? errs.map(x => x.message).join('\n') : String(e);
-  const kept = '\n\nTvůj text zůstal uložený jako koncept v tomto prohlížeči, nic se neztratilo.';
+  const kept = tr(locale,
+    '\n\nTvůj text zůstal uložený jako koncept v tomto prohlížeči, nic se neztratilo.',
+    '\n\nYour text is still saved as a draft in this browser, so nothing is lost.');
+  const details = tr(locale, 'Podrobnosti', 'Details');
   if (code === 'FORBIDDEN') {
-    return `Stránku se nepodařilo uložit — tvůj účet k tomu nemá oprávnění. Dej prosím vědět správci aplikace.${kept}\n\n(Podrobnosti: ${detail})`;
+    return tr(locale,
+      `Stránku se nepodařilo uložit — tvůj účet k tomu nemá oprávnění. Dej prosím vědět správci aplikace.`,
+      `The page could not be saved — your account is not allowed to do this. Please tell the app administrator.`,
+    ) + `${kept}\n\n(${details}: ${detail})`;
   }
   if (code === 'TOKEN_EXPIRED' || code === 'INVALID_CREDENTIALS') {
-    return `Přihlášení vypršelo. Přihlas se prosím znovu v nové záložce a pak zkus uložit znovu.${kept}`;
+    return tr(locale,
+      `Přihlášení vypršelo. Přihlas se prosím znovu v nové záložce a pak zkus uložit znovu.`,
+      `You have been logged out. Please log in again in a new tab and then try saving again.`,
+    ) + kept;
   }
-  return `Stránku se nepodařilo uložit. Zkus to prosím za chvíli znovu.${kept}\n\n(Podrobnosti: ${detail})`;
+  return tr(locale,
+    `Stránku se nepodařilo uložit. Zkus to prosím za chvíli znovu.`,
+    `The page could not be saved. Please try again in a moment.`,
+  ) + `${kept}\n\n(${details}: ${detail})`;
 }
 
 interface Attachment {
@@ -86,6 +100,7 @@ function getFileIcon(type: string) {
 }
 
 export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
+  const { t, locale } = useLocale();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -204,7 +219,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
     if (files.length === 0) return;
     const oversized = files.filter(f => f.size > MAX_FILE_MB * 1024 * 1024);
     if (oversized.length > 0) {
-      alert(`Tyto soubory jsou příliš velké (max ${MAX_FILE_MB} MB):\n${oversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join('\n')}`);
+      alert(`${t(`Tyto soubory jsou příliš velké (max ${MAX_FILE_MB} MB):`, `These files are too big (max ${MAX_FILE_MB} MB):`)}\n${oversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join('\n')}`);
       return;
     }
     const newAttachments: Attachment[] = files.map((f) => ({
@@ -284,7 +299,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       router.push('/dashboard/portfolio');
     } catch (e: unknown) {
       console.error('Save error full:', JSON.stringify(e, null, 2));
-      alert(saveErrorMessage(e));
+      alert(saveErrorMessage(e, locale));
     } finally {
       setIsSaving(false);
     }
@@ -304,14 +319,14 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Zpět
+          {t('Zpět', 'Back')}
         </Button>
         <h1 className="text-2xl font-bold text-gray-900 flex-1">
-          {pageId ? 'Upravit stránku' : 'Nová stránka portfolia'}
+          {pageId ? t('Upravit stránku', 'Edit page') : t('Nová stránka portfolia', 'New portfolio page')}
         </h1>
         <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
           <Save className="h-4 w-4 mr-2" />
-          {isSaving ? 'Ukládám...' : 'Uložit'}
+          {isSaving ? t('Ukládám...', 'Saving...') : t('Uložit', 'Save')}
         </Button>
       </div>
 
@@ -319,29 +334,29 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         <DraftNotice
           savedAt={restoredAt}
           onDiscard={discardRestoredDraft}
-          discardLabel={pageId ? 'Vrátit uloženou verzi' : 'Zahodit koncept'}
+          discardLabel={pageId ? t('Vrátit uloženou verzi', 'Go back to the saved version') : t('Zahodit koncept', 'Discard draft')}
         />
       )}
 
       {/* Metadata */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
         <div className="space-y-1 md:col-span-1">
-          <Label>Název *</Label>
+          <Label>{t('Název *', 'Title *')}</Label>
           <Input
-            placeholder="Název stránky"
+            placeholder={t('Název stránky', 'Page title')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
         </div>
 
         <div className="space-y-1">
-          <Label>Kategorie</Label>
+          <Label>{t('Kategorie', 'Category')}</Label>
           <Select value={categoryId} onValueChange={setCategoryId}>
             <SelectTrigger>
-              <SelectValue placeholder="Bez kategorie" />
+              <SelectValue placeholder={t('Bez kategorie', 'No category')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Bez kategorie</SelectItem>
+              <SelectItem value="none">{t('Bez kategorie', 'No category')}</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}
@@ -350,7 +365,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         </div>
 
         <div className="space-y-1">
-          <Label>Viditelnost</Label>
+          <Label>{t('Viditelnost', 'Visibility')}</Label>
           <div className="flex gap-2">
             <button
               type="button"
@@ -362,7 +377,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
               }`}
             >
               <Lock className="h-4 w-4" />
-              Soukromé
+              {t('Soukromé', 'Private')}
             </button>
             <button
               type="button"
@@ -374,20 +389,20 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
               }`}
             >
               <Globe className="h-4 w-4" />
-              Sdílené
+              {t('Sdílené', 'Shared')}
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-1">
             {visibility === 'shared'
-              ? 'Stránka se zahrne do sdílecích odkazů a uvidí ji propojení učitelé.'
-              : 'Stránka je viditelná jen tobě. Propojení učitelé ji neuvidí.'}
+              ? t('Stránka se zahrne do sdílecích odkazů a uvidí ji propojení učitelé.', 'The page is included in sharing links and your connected teachers can see it.')
+              : t('Stránka je viditelná jen tobě. Propojení učitelé ji neuvidí.', 'Only you can see this page. Your connected teachers will not see it.')}
           </p>
         </div>
       </div>
 
       {/* Editor */}
       <div className="space-y-1">
-        <Label>Obsah</Label>
+        <Label>{t('Obsah', 'Content')}</Label>
         <RichEditor
           key={editorKey}
           content={content}
@@ -403,7 +418,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
         {...dropHandlers}
       >
         <div className="flex items-center justify-between">
-          <Label>Přílohy</Label>
+          <Label>{t('Přílohy', 'Attachments')}</Label>
           <Button
             type="button"
             variant="outline"
@@ -411,7 +426,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="h-4 w-4 mr-2" />
-            Přidat soubor
+            {t('Přidat soubor', 'Add file')}
           </Button>
           <input
             ref={fileInputRef}
@@ -429,8 +444,8 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
             onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip className="h-8 w-8 mx-auto mb-2 text-gray-500" />
-            <p className="text-sm">Přetáhněte soubory nebo klikněte pro výběr</p>
-            <p className="text-xs mt-1 text-gray-600">Obrázky, videa, zvuk, dokumenty (PDF, Word…)</p>
+            <p className="text-sm">{t('Přetáhněte soubory nebo klikněte pro výběr', 'Drag files here or click to choose')}</p>
+            <p className="text-xs mt-1 text-gray-600">{t('Obrázky, videa, zvuk, dokumenty (PDF, Word…)', 'Pictures, videos, audio, documents (PDF, Word…)')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -451,6 +466,8 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
                   type="button"
                   onClick={() => removeAttachment(i)}
                   className="text-gray-400 hover:text-red-500 transition-colors"
+                  aria-label={t('Odebrat přílohu', 'Remove attachment')}
+                  title={t('Odebrat přílohu', 'Remove attachment')}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -464,7 +481,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-1" />
-              Přidat další
+              {t('Přidat další', 'Add more')}
             </Button>
           </div>
         )}

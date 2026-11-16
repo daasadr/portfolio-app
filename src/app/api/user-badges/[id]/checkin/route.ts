@@ -3,6 +3,7 @@ import { BADGES } from '@/lib/badges';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
 import { pragueToday, toPragueDate, previousDay } from '@/lib/prague-date';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -26,20 +27,21 @@ async function getStudentId(token: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const studentId = await getStudentId(token);
-  if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!studentId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   if (inFlight.has(id)) {
-    return NextResponse.json({ message: 'Dnes jsi bobříka již splnil/a. Zítra zase!' }, { status: 409 });
+    return NextResponse.json({ message: t('Dnes jsi bobříka již splnil/a. Zítra zase!', 'You have already done this beaver today. See you tomorrow!') }, { status: 409 });
   }
   inFlight.add(id);
   try {
     const ubRes = await fetch(`${directusUrl}/items/user_badges/${id}`, { headers: h() });
-    if (!ubRes.ok) return NextResponse.json({ message: 'Bobřík nenalezen' }, { status: 404 });
+    if (!ubRes.ok) return NextResponse.json({ message: t('Bobřík nenalezen', 'Beaver not found') }, { status: 404 });
     const { data: ub } = await ubRes.json() as {
       data: {
         id: number; student_id: string; badge_slug: string;
@@ -47,17 +49,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     };
 
-    if (String(ub.student_id) !== String(studentId)) return NextResponse.json({ message: 'Neautorizováno' }, { status: 403 });
-    if (ub.status !== 'active') return NextResponse.json({ message: 'Bobřík není aktivní' }, { status: 400 });
+    if (String(ub.student_id) !== String(studentId)) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 403 });
+    if (ub.status !== 'active') return NextResponse.json({ message: t('Bobřík není aktivní', 'The beaver is not active') }, { status: 400 });
 
     const today = pragueToday();
     const lastDay = toPragueDate(ub.last_step_date);
     if (lastDay === today) {
-      return NextResponse.json({ message: 'Dnes jsi bobříka již splnil/a. Zítra zase!' }, { status: 409 });
+      return NextResponse.json({ message: t('Dnes jsi bobříka již splnil/a. Zítra zase!', 'You have already done this beaver today. See you tomorrow!') }, { status: 409 });
     }
 
     const badge = BADGES.find(b => b.slug === ub.badge_slug);
-    if (!badge) return NextResponse.json({ message: 'Bobřík nenalezen' }, { status: 404 });
+    if (!badge) return NextResponse.json({ message: t('Bobřík nenalezen', 'Beaver not found') }, { status: 404 });
 
     // Days must follow each other — a skipped day starts the streak again
     const restarted = ub.steps_done > 0 && lastDay !== previousDay(today);
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         if (!patchRes.ok) console.error('[badge checkin] minimal completion PATCH failed', patchRes.status, await patchRes.text());
       }
     }
-    if (!patchRes.ok) return NextResponse.json({ message: 'Uložení se nepovedlo, zkus to prosím znovu.' }, { status: 500 });
+    if (!patchRes.ok) return NextResponse.json({ message: t('Uložení se nepovedlo, zkus to prosím znovu.', 'Saving did not work, please try again.') }, { status: 500 });
     const { data: updated } = await patchRes.json() as { data: unknown };
     return NextResponse.json({ user_badge: updated, completed: isCompleted, restarted });
   } finally {

@@ -28,6 +28,8 @@ import { setDraftOwner, clearOwnDrafts } from '@/lib/drafts';
 import { AchievementShelf, AchievementModal, useAchievements } from '@/components/achievements/AchievementShelf';
 import type { Achievement } from '@/lib/achievements';
 import type { Student } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const DEFAULT_BG = '/images/paradise-bg.webp';
 
@@ -49,6 +51,7 @@ function fetchEarnedBadgeSlugs(): Promise<string[]> {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { t } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -125,7 +128,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen flex items-center justify-center" style={{ ...bgStyle(bg), backgroundAttachment: 'fixed' }}>
         <div className="text-center bg-white/80 backdrop-blur rounded-xl p-6 shadow">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Načítám...</p>
+          <p className="mt-2 text-gray-600">{t('Načítám...', 'Loading...')}</p>
         </div>
       </div>
     );
@@ -134,32 +137,32 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   if (!student && !isLoading) return null;
 
   const studentNavigation = [
-    { name: 'Přehled', href: '/dashboard', icon: BookOpen },
-    { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
-    { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
-    { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
-    { name: 'Čtenářský deník', href: '/dashboard/reading-diary', icon: BookMarked },
-    { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
-    { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
-    { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },
-    { name: 'Komunita', href: '/dashboard/community', icon: Building2 },
-    { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
-    { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
+    { name: t('Přehled', 'Overview'), href: '/dashboard', icon: BookOpen },
+    { name: t('Osobní cíle', 'Personal goals'), href: '/dashboard/goals', icon: Target },
+    { name: t('Nástěnka snů', 'Dream board'), href: '/dashboard/dreamboard', icon: LayoutDashboard },
+    { name: t('Portfolio', 'Portfolio'), href: '/dashboard/portfolio', icon: BookOpen },
+    { name: t('Čtenářský deník', 'Reading diary'), href: '/dashboard/reading-diary', icon: BookMarked },
+    { name: t('Kalendář', 'Calendar'), href: '/dashboard/calendar', icon: Calendar },
+    { name: t('Sdílení', 'Sharing'), href: '/dashboard/share', icon: Share2 },
+    { name: t('Světoběžník', 'Globetrotter'), href: '/dashboard/world', icon: Globe2 },
+    { name: t('Komunita', 'Community'), href: '/dashboard/community', icon: Building2 },
+    { name: t('Nastavení', 'Settings'), href: '/dashboard/settings', icon: Settings },
+    { name: t('Nápověda', 'Help'), href: '/dashboard/help', icon: HelpCircle },
   ];
 
   const teacherNavigation = [
-    { name: 'Přehled', href: '/dashboard', icon: BookOpen },
-    { name: 'Moji žáci', href: '/dashboard/students', icon: Users },
-    { name: 'Osobní cíle', href: '/dashboard/goals', icon: Target },
-    { name: 'Nástěnka snů', href: '/dashboard/dreamboard', icon: LayoutDashboard },
-    { name: 'Portfolio', href: '/dashboard/portfolio', icon: BookOpen },
-    { name: 'Čtenářský deník', href: '/dashboard/reading-diary', icon: BookMarked },
-    { name: 'Kalendář', href: '/dashboard/calendar', icon: Calendar },
-    { name: 'Sdílení', href: '/dashboard/share', icon: Share2 },
-    { name: 'Světoběžník', href: '/dashboard/world', icon: Globe2 },
-    { name: 'Komunita', href: '/dashboard/community', icon: Building2 },
-    { name: 'Nastavení', href: '/dashboard/settings', icon: Settings },
-    { name: 'Nápověda', href: '/dashboard/help', icon: HelpCircle },
+    { name: t('Přehled', 'Overview'), href: '/dashboard', icon: BookOpen },
+    { name: t('Moji žáci', 'My pupils'), href: '/dashboard/students', icon: Users },
+    { name: t('Osobní cíle', 'Personal goals'), href: '/dashboard/goals', icon: Target },
+    { name: t('Nástěnka snů', 'Dream board'), href: '/dashboard/dreamboard', icon: LayoutDashboard },
+    { name: t('Portfolio', 'Portfolio'), href: '/dashboard/portfolio', icon: BookOpen },
+    { name: t('Čtenářský deník', 'Reading diary'), href: '/dashboard/reading-diary', icon: BookMarked },
+    { name: t('Kalendář', 'Calendar'), href: '/dashboard/calendar', icon: Calendar },
+    { name: t('Sdílení', 'Sharing'), href: '/dashboard/share', icon: Share2 },
+    { name: t('Světoběžník', 'Globetrotter'), href: '/dashboard/world', icon: Globe2 },
+    { name: t('Komunita', 'Community'), href: '/dashboard/community', icon: Building2 },
+    { name: t('Nastavení', 'Settings'), href: '/dashboard/settings', icon: Settings },
+    { name: t('Nápověda', 'Help'), href: '/dashboard/help', icon: HelpCircle },
   ];
 
   const navigation = student?.is_teacher ? teacherNavigation : studentNavigation;
@@ -200,7 +203,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="border-t px-4 py-4">
             <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="mr-3 h-5 w-5" />
-              Odhlásit se
+              {t('Odhlásit se', 'Log out')}
             </Button>
           </div>
         </div>
@@ -235,7 +238,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="border-t px-4 py-4">
             <Button variant="ghost" onClick={handleLogout} className="w-full justify-start">
               <LogOut className="mr-3 h-5 w-5" />
-              Odhlásit se
+              {t('Odhlásit se', 'Log out')}
             </Button>
           </div>
         </div>
@@ -266,10 +269,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     return (
                       <span
                         key={slug}
-                        title={badge.name}
+                        title={t(badge.name)}
                         className="inline-flex items-center gap-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-full pl-1.5 pr-2 py-0.5 text-xs font-medium hover:bg-teal-100 transition-colors"
                       >
-                        🦫 <span className="hidden sm:inline truncate max-w-[100px]">{badge.name.replace('Bobřík ', '')}</span>
+                        🦫 <span className="hidden sm:inline truncate max-w-[100px]">{t(badge.name).replace(/^Bobřík /, '').replace(/ Beaver$/, '')}</span>
                       </span>
                     );
                   })}
@@ -281,9 +284,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </span>
                 {student?.is_teacher && (
                   <span className="inline-flex items-center gap-1 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
-                    <GraduationCap className="h-3 w-3" /> Učitel
+                    <GraduationCap className="h-3 w-3" /> {t('Učitel', 'Teacher')}
                   </span>
                 )}
+                <LanguageSwitcher />
               </div>
             </div>
           </div>

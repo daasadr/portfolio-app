@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -20,8 +21,9 @@ async function getStudent(request: NextRequest) {
 
 // GET /api/groups?search=&all=1&org=orgId
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudent(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const search = request.nextUrl.searchParams.get('search') ?? '';
   const all = request.nextUrl.searchParams.get('all') === '1';
@@ -72,13 +74,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/groups
 export async function POST(request: NextRequest) {
+  const t = requestT(request);
   const student = await getStudent(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const { name, description, organisation_id } = await request.json() as {
     name: string; description?: string; organisation_id?: number;
   };
-  if (!name?.trim()) return NextResponse.json({ message: 'Název je povinný' }, { status: 400 });
+  if (!name?.trim()) return NextResponse.json({ message: t('Název je povinný', 'Name is required') }, { status: 400 });
 
   const createRes = await fetch(`${directusUrl}/items/groups`, {
     method: 'POST',
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
       created_by: student.id,
     }),
   });
-  if (!createRes.ok) return NextResponse.json({ message: 'Chyba při vytváření' }, { status: 500 });
+  if (!createRes.ok) return NextResponse.json({ message: t('Chyba při vytváření', 'Error while creating') }, { status: 500 });
   const { data: group } = await createRes.json() as { data: { id: number } };
 
   await fetch(`${directusUrl}/items/group_members`, {

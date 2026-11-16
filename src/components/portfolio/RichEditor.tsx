@@ -26,17 +26,19 @@ import {
   Type,
 } from 'lucide-react';
 import { useCallback, useRef, useState, useEffect } from 'react';
+import { useLocale } from '@/components/LocaleProvider';
+import type { L10n } from '@/lib/i18n';
 
 const COLORS = [
   '#000000', '#374151', '#6B7280', '#EF4444', '#F97316',
   '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899',
 ];
 
-const HEADING_FONTS = [
-  { label: 'Výchozí', value: '' },
-  { label: 'Serif', value: 'Georgia, serif' },
-  { label: 'Monospace', value: 'Courier New, monospace' },
-  { label: 'Kulatý', value: '"Trebuchet MS", sans-serif' },
+const HEADING_FONTS: { label: L10n; value: string }[] = [
+  { label: { cs: 'Výchozí', en: 'Default' }, value: '' },
+  { label: { cs: 'Serif', en: 'Serif' }, value: 'Georgia, serif' },
+  { label: { cs: 'Monospace', en: 'Monospace' }, value: 'Courier New, monospace' },
+  { label: { cs: 'Kulatý', en: 'Rounded' }, value: '"Trebuchet MS", sans-serif' },
 ];
 
 interface RichEditorProps {
@@ -46,6 +48,7 @@ interface RichEditorProps {
 }
 
 export default function RichEditor({ content, onChange, onFileUpload }: RichEditorProps) {
+  const { t } = useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [, forceUpdate] = useState(0);
 
@@ -90,10 +93,10 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
 
   const setLink = useCallback(() => {
     if (!editor) return;
-    const url = prompt('URL odkazu:');
+    const url = prompt(t('URL odkazu:', 'Link URL:'));
     if (!url) return;
     editor.chain().focus().setLink({ href: url }).run();
-  }, [editor]);
+  }, [editor, t]);
 
   const insertImage = useCallback(async (file: File) => {
     if (!editor) return;
@@ -142,10 +145,10 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         {/* Typ bloku — onMouseDown+preventDefault zachová focus v editoru */}
         <div className="flex items-center mr-1 border rounded overflow-hidden text-xs font-medium">
           {([
-            { label: '¶', title: 'Odstavec', onMD: () => editor.chain().focus().setParagraph().run(), active: !editor.isActive('heading') },
-            { label: 'H1', title: 'Nadpis 1', onMD: () => editor.chain().focus().setHeading({ level: 1 }).run(), active: editor.isActive('heading', { level: 1 }) },
-            { label: 'H2', title: 'Nadpis 2', onMD: () => editor.chain().focus().setHeading({ level: 2 }).run(), active: editor.isActive('heading', { level: 2 }) },
-            { label: 'H3', title: 'Nadpis 3', onMD: () => editor.chain().focus().setHeading({ level: 3 }).run(), active: editor.isActive('heading', { level: 3 }) },
+            { label: '¶', title: t('Odstavec', 'Paragraph'), onMD: () => editor.chain().focus().setParagraph().run(), active: !editor.isActive('heading') },
+            { label: 'H1', title: t('Nadpis 1', 'Heading 1'), onMD: () => editor.chain().focus().setHeading({ level: 1 }).run(), active: editor.isActive('heading', { level: 1 }) },
+            { label: 'H2', title: t('Nadpis 2', 'Heading 2'), onMD: () => editor.chain().focus().setHeading({ level: 2 }).run(), active: editor.isActive('heading', { level: 2 }) },
+            { label: 'H3', title: t('Nadpis 3', 'Heading 3'), onMD: () => editor.chain().focus().setHeading({ level: 3 }).run(), active: editor.isActive('heading', { level: 3 }) },
           ] as const).map(({ label, title, onMD, active }) => (
             <button
               key={label}
@@ -162,7 +165,7 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         {/* Font */}
         <select
           className="text-sm border rounded px-1.5 py-1 mr-2 bg-white"
-          title="Písmo"
+          title={t('Písmo', 'Font')}
           onChange={(e) => {
             if (e.target.value) {
               editor.chain().focus().setFontFamily(e.target.value).run();
@@ -177,7 +180,7 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         >
           {HEADING_FONTS.map((f) => (
             <option key={f.value} value={f.value} style={{ fontFamily: f.value || undefined }}>
-              {f.label}
+              {t(f.label)}
             </option>
           ))}
         </select>
@@ -185,26 +188,26 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Formátování textu */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Tučně">
+        <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title={t('Tučně', 'Bold')}>
           <Bold className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Kurzíva">
+        <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title={t('Kurzíva', 'Italic')}>
           <Italic className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Podtržení">
+        <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title={t('Podtržení', 'Underline')}>
           <UnderlineIcon className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title="Přeškrtnutí">
+        <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title={t('Přeškrtnutí', 'Strikethrough')}>
           <Strikethrough className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Zvýraznit">
+        <ToolBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title={t('Zvýraznit', 'Highlight')}>
           <Highlighter className="h-4 w-4" />
         </ToolBtn>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Barva textu */}
-        <div className="relative flex items-center gap-0.5" title="Barva textu">
+        <div className="relative flex items-center gap-0.5" title={t('Barva textu', 'Text colour')}>
           <Type className="h-4 w-4 text-gray-600" />
           <div className="flex gap-0.5">
             {COLORS.map((color) => (
@@ -220,7 +223,7 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
           </div>
           <button
             type="button"
-            title="Výchozí barva"
+            title={t('Výchozí barva', 'Default colour')}
             onClick={() => editor.chain().focus().unsetColor().run()}
             className="text-xs text-gray-500 hover:text-gray-700 px-1"
           >
@@ -231,37 +234,37 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Zarovnání */}
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Vlevo">
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title={t('Vlevo', 'Align left')}>
           <AlignLeft className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Na střed">
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title={t('Na střed', 'Centre')}>
           <AlignCenter className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Vpravo">
+        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title={t('Vpravo', 'Align right')}>
           <AlignRight className="h-4 w-4" />
         </ToolBtn>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Seznamy */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Odrážkový seznam">
+        <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title={t('Odrážkový seznam', 'Bullet list')}>
           <List className="h-4 w-4" />
         </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Číslovaný seznam">
+        <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title={t('Číslovaný seznam', 'Numbered list')}>
           <ListOrdered className="h-4 w-4" />
         </ToolBtn>
 
         <div className="w-px h-5 bg-gray-300 mx-1" />
 
         {/* Odkaz */}
-        <ToolBtn onClick={setLink} active={editor.isActive('link')} title="Vložit odkaz">
+        <ToolBtn onClick={setLink} active={editor.isActive('link')} title={t('Vložit odkaz', 'Insert link')}>
           <Link2 className="h-4 w-4" />
         </ToolBtn>
 
         {/* Obrázek */}
         <ToolBtn
           onClick={() => fileInputRef.current?.click()}
-          title="Vložit obrázek"
+          title={t('Vložit obrázek', 'Insert picture')}
         >
           <ImageIcon className="h-4 w-4" />
         </ToolBtn>

@@ -12,24 +12,27 @@ import { Check, X, ShieldQuestion } from 'lucide-react';
 import { register } from '@/lib/directus';
 import { CUSTOM_QUESTION } from '@/lib/security-questions';
 import { SecurityQuestionPicker } from '@/components/SecurityQuestionPicker';
+import { useLocale } from '@/components/LocaleProvider';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import type { L10n } from '@/lib/i18n';
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
-interface StrengthResult { score: number; label: string; color: string }
+interface StrengthResult { score: number; label: L10n; color: string }
 
 function getStrength(pwd: string): StrengthResult {
-  if (!pwd) return { score: 0, label: '', color: '' };
+  if (!pwd) return { score: 0, label: { cs: '', en: '' }, color: '' };
   let s = 0;
   if (pwd.length >= 8) s++;
   if (/[A-Z]/.test(pwd)) s++;
   if (/[0-9]/.test(pwd)) s++;
   if (/[^A-Za-z0-9]/.test(pwd)) s++;
-  if (s <= 1) return { score: 1, label: 'Slabé', color: 'bg-red-400' };
-  if (s === 2) return { score: 2, label: 'Slušné', color: 'bg-yellow-400' };
-  if (s === 3) return { score: 3, label: 'Dobré', color: 'bg-blue-400' };
-  return { score: 4, label: 'Silné', color: 'bg-green-500' };
+  if (s <= 1) return { score: 1, label: { cs: 'Slabé', en: 'Weak' }, color: 'bg-red-400' };
+  if (s === 2) return { score: 2, label: { cs: 'Slušné', en: 'Fair' }, color: 'bg-yellow-400' };
+  if (s === 3) return { score: 3, label: { cs: 'Dobré', en: 'Good' }, color: 'bg-blue-400' };
+  return { score: 4, label: { cs: 'Silné', en: 'Strong' }, color: 'bg-green-500' };
 }
 
 function Req({ ok, label }: { ok: boolean; label: string }) {
@@ -42,6 +45,7 @@ function Req({ ok, label }: { ok: boolean; label: string }) {
 }
 
 export default function RegisterPage() {
+  const { t } = useLocale();
   const [formData, setFormData] = useState({
     email: '', password: '', confirmPassword: '', firstName: '', lastName: '',
   });
@@ -75,27 +79,27 @@ export default function RegisterPage() {
     setEmailTouched(true);
 
     if (!isValidEmail(formData.email)) {
-      setError('Zadejte platnou e-mailovou adresu.');
+      setError(t('Zadejte platnou e-mailovou adresu.', 'Please enter a valid email address.'));
       return;
     }
     if (!req.length) {
-      setError('Heslo musí mít alespoň 8 znaků.');
+      setError(t('Heslo musí mít alespoň 8 znaků.', 'The password must be at least 8 characters long.'));
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('Hesla se neshodují.');
+      setError(t('Hesla se neshodují.', "The passwords don't match."));
       return;
     }
     if (securityQuestion < 0) {
-      setError('Vyberte bezpečnostní otázku pro obnovu hesla.');
+      setError(t('Vyberte bezpečnostní otázku pro obnovu hesla.', 'Please choose a security question for password recovery.'));
       return;
     }
     if (securityQuestion === CUSTOM_QUESTION && securityQuestionText.trim().length < 5) {
-      setError('Napište svou bezpečnostní otázku (alespoň 5 znaků).');
+      setError(t('Napište svou bezpečnostní otázku (alespoň 5 znaků).', 'Write your own security question (at least 5 characters).'));
       return;
     }
     if (!securityAnswer.trim()) {
-      setError('Vyplňte odpověď na bezpečnostní otázku.');
+      setError(t('Vyplňte odpověď na bezpečnostní otázku.', 'Please fill in the answer to the security question.'));
       return;
     }
 
@@ -105,7 +109,7 @@ export default function RegisterPage() {
       await register(formData.email, formData.password, formData.firstName, formData.lastName, securityQuestion, securityAnswer, securityQuestionText);
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chyba při registraci. Zkuste to znovu.');
+      setError(err instanceof Error ? err.message : t('Chyba při registraci. Zkuste to znovu.', 'Sign-up failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -117,27 +121,30 @@ export default function RegisterPage() {
         <Image src="/images/paradise-bg.webp" alt="" fill className="object-cover" priority quality={85} />
         <div className="absolute inset-0 bg-white/20" />
       </div>
+      <div className="fixed top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md relative z-10 bg-white/90 backdrop-blur-sm shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Registrace</CardTitle>
-          <CardDescription>Vytvořte si účet pro své portfolio</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t('Registrace', 'Sign up')}</CardTitle>
+          <CardDescription>{t('Vytvořte si účet pro své portfolio', 'Create an account for your portfolio')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="firstName">Jméno</Label>
-                <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required placeholder="Jan" />
+                <Label htmlFor="firstName">{t('Jméno', 'First name')}</Label>
+                <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} required placeholder={t('Jan', 'John')} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="lastName">Příjmení</Label>
-                <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required placeholder="Novák" />
+                <Label htmlFor="lastName">{t('Příjmení', 'Last name')}</Label>
+                <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} required placeholder={t('Novák', 'Smith')} />
               </div>
             </div>
 
             {/* Email */}
             <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">{t('E-mail', 'Email')}</Label>
               <Input
                 id="email"
                 name="email"
@@ -146,19 +153,19 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 onBlur={() => setEmailTouched(true)}
                 required
-                placeholder="jan.novak@email.cz"
+                placeholder={t('jan.novak@email.cz', 'john.smith@example.com')}
                 className={emailError ? 'border-red-400 focus-visible:ring-red-300' : ''}
               />
               {emailError && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
-                  <X className="h-3 w-3" /> Neplatná e-mailová adresa
+                  <X className="h-3 w-3" /> {t('Neplatná e-mailová adresa', 'Invalid email address')}
                 </p>
               )}
             </div>
 
             {/* Heslo */}
             <div className="space-y-1.5">
-              <Label htmlFor="password">Heslo</Label>
+              <Label htmlFor="password">{t('Heslo', 'Password')}</Label>
               <PasswordInput
                 id="password"
                 name="password"
@@ -186,12 +193,12 @@ export default function RegisterPage() {
                     strength.score === 2 ? 'text-yellow-600' :
                     strength.score === 3 ? 'text-blue-600' : 'text-green-600'
                   }`}>
-                    {strength.label}
+                    {t(strength.label)}
                   </p>
                   <ul className="space-y-0.5">
-                    <Req ok={req.length} label="Alespoň 8 znaků" />
-                    <Req ok={req.upper} label="Alespoň jedno velké písmeno" />
-                    <Req ok={req.number} label="Alespoň jedna číslice" />
+                    <Req ok={req.length} label={t('Alespoň 8 znaků', 'At least 8 characters')} />
+                    <Req ok={req.upper} label={t('Alespoň jedno velké písmeno', 'At least one capital letter')} />
+                    <Req ok={req.number} label={t('Alespoň jedna číslice', 'At least one number')} />
                   </ul>
                 </div>
               )}
@@ -199,7 +206,7 @@ export default function RegisterPage() {
 
             {/* Potvrdit heslo */}
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">Potvrdit heslo</Label>
+              <Label htmlFor="confirmPassword">{t('Potvrdit heslo', 'Confirm password')}</Label>
               <PasswordInput
                 id="confirmPassword"
                 name="confirmPassword"
@@ -211,12 +218,12 @@ export default function RegisterPage() {
               />
               {passwordsMatch && (
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <Check className="h-3 w-3" /> Hesla se shodují
+                  <Check className="h-3 w-3" /> {t('Hesla se shodují', 'Passwords match')}
                 </p>
               )}
               {passwordsMismatch && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
-                  <X className="h-3 w-3" /> Hesla se neshodují
+                  <X className="h-3 w-3" /> {t('Hesla se neshodují', "Passwords don't match")}
                 </p>
               )}
             </div>
@@ -225,9 +232,9 @@ export default function RegisterPage() {
             <div className="space-y-2 pt-1">
               <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
                 <ShieldQuestion className="h-4 w-4 text-blue-500" />
-                Bezpečnostní otázka pro obnovu hesla
+                {t('Bezpečnostní otázka pro obnovu hesla', 'Security question for password recovery')}
               </div>
-              <p className="text-xs text-gray-400">Použijete ji, pokud zapomenete heslo.</p>
+              <p className="text-xs text-gray-400">{t('Použijete ji, pokud zapomenete heslo.', "You'll use it if you forget your password.")}</p>
               <SecurityQuestionPicker
                 question={securityQuestion}
                 onQuestion={setSecurityQuestion}
@@ -248,24 +255,27 @@ export default function RegisterPage() {
                 required
               />
               <span className="text-xs text-gray-600 leading-relaxed">
-                Souhlasím se{' '}
+                {t('Souhlasím se', 'I agree to the')}{' '}
                 <a href="/privacy" target="_blank" className="text-blue-600 hover:underline font-medium">
-                  zpracováním osobních údajů
+                  {t('zpracováním osobních údajů', 'processing of my personal data')}
                 </a>{' '}
-                za účelem provozování portfolia. Souhlas mohu kdykoli odvolat smazáním účtu.
+                {t(
+                  'za účelem provozování portfolia. Souhlas mohu kdykoli odvolat smazáním účtu.',
+                  'for the purpose of running the portfolio. I can withdraw my consent at any time by deleting my account.',
+                )}
               </span>
             </label>
 
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
             <Button type="submit" className="w-full" disabled={isLoading || !consentAccepted}>
-              {isLoading ? 'Registruji...' : 'Zaregistrovat se'}
+              {isLoading ? t('Registruji...', 'Signing up...') : t('Zaregistrovat se', 'Sign up')}
             </Button>
           </form>
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-600">
-              Už máte účet?{' '}
-              <a href="/login" className="text-blue-600 hover:underline">Přihlaste se</a>
+              {t('Už máte účet?', 'Already have an account?')}{' '}
+              <a href="/login" className="text-blue-600 hover:underline">{t('Přihlaste se', 'Log in')}</a>
             </p>
           </div>
         </CardContent>

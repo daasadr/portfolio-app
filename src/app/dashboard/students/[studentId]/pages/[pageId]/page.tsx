@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileText, Music, Video, Image as ImageIcon, Paperclip } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import type { PortfolioPage } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 interface Attachment { id: string; name: string; type: string; }
 
@@ -25,6 +26,7 @@ export default function TeacherPageView({
   params: Promise<{ studentId: string; pageId: string }>;
 }) {
   const { studentId, pageId } = use(params);
+  const { t, locale } = useLocale();
   const [page, setPage] = useState<PortfolioPage | null>(null);
   const [studentName, setStudentName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function TeacherPageView({
     const load = async () => {
       const res = await fetch(`/api/teacher/student/${studentId}`);
       if (!res.ok) {
-        setError('Stránka nenalezena nebo nemáte přístup.');
+        setError(t('Stránka nenalezena nebo nemáte přístup.', 'Page not found or you don’t have access.'));
         setIsLoading(false);
         return;
       }
@@ -44,7 +46,7 @@ export default function TeacherPageView({
       };
       setStudentName(`${data.student.first_name} ${data.student.last_name}`);
       const found = data.pages.find(p => String(p.id) === String(pageId)) ?? null;
-      if (!found) setError('Stránka nenalezena.');
+      if (!found) setError(t('Stránka nenalezena.', 'Page not found.'));
       setPage(found);
       setIsLoading(false);
     };
@@ -62,9 +64,9 @@ export default function TeacherPageView({
   if (error || !page) {
     return (
       <div className="text-center py-16 text-gray-500">
-        <p className="text-red-500 mb-4">{error || 'Stránka nenalezena.'}</p>
+        <p className="text-red-500 mb-4">{error || t('Stránka nenalezena.', 'Page not found.')}</p>
         <Link href={`/dashboard/students/${studentId}`}>
-          <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Zpět na portfolio</Button>
+          <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />{t('Zpět na portfolio', 'Back to portfolio')}</Button>
         </Link>
       </div>
     );
@@ -82,17 +84,17 @@ export default function TeacherPageView({
           <Link href={`/dashboard/students/${studentId}`}>
             <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Zpět
+              {t('Zpět', 'Back')}
             </Button>
           </Link>
           <div className="flex-1" />
-          <Badge className="bg-white/20 text-white border-0 text-xs">Jen pro čtení</Badge>
+          <Badge className="bg-white/20 text-white border-0 text-xs">{t('Jen pro čtení', 'Read-only')}</Badge>
         </div>
         <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
           {page.title}
         </h1>
         <p className="text-white/70 text-xs mt-1">
-          {studentName}{safeFormatDate(page.updated_at ?? page.created_at) ? ` · Upraveno ${safeFormatDate(page.updated_at ?? page.created_at)}` : ''}
+          {studentName}{safeFormatDate(page.updated_at ?? page.created_at, undefined, locale) ? ` · ${t('Upraveno', 'Edited')} ${safeFormatDate(page.updated_at ?? page.created_at, undefined, locale)}` : ''}
         </p>
       </div>
 
@@ -100,14 +102,14 @@ export default function TeacherPageView({
         {page.content ? (
           <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }} />
         ) : (
-          <p className="text-gray-400 italic text-center py-8">Tato stránka nemá žádný obsah.</p>
+          <p className="text-gray-400 italic text-center py-8">{t('Tato stránka nemá žádný obsah.', 'This page has no content.')}</p>
         )}
 
         {attachments.length > 0 && (
           <div className="mt-8 pt-6 border-t">
             <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
               <Paperclip className="h-4 w-4" />
-              Přílohy ({attachments.length})
+              {t('Přílohy', 'Attachments')} ({attachments.length})
             </h3>
             <div className="space-y-3">
               {attachments.map(att => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -27,11 +28,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = requestT(request);
   const admin = await getAdminUser(request);
-  if (!admin) return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
+  if (!admin) return NextResponse.json({ message: t('Přístup odepřen', 'Access denied') }, { status: 403 });
 
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const body = await request.json() as { is_teacher: boolean };
 
   const res = await fetch(`${directusUrl}/items/students/${id}`, {
@@ -40,7 +42,7 @@ export async function PATCH(
     body: JSON.stringify({ is_teacher: body.is_teacher }),
   });
 
-  if (!res.ok) return NextResponse.json({ message: 'Chyba při ukládání' }, { status: 500 });
+  if (!res.ok) return NextResponse.json({ message: t('Chyba při ukládání', 'Error while saving') }, { status: 500 });
   const { data } = await res.json() as { data: unknown };
   return NextResponse.json({ student: data });
 }

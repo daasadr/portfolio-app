@@ -13,18 +13,41 @@ import {
 import { Pencil, Trash2, Plus, Check } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Category } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import type { L10n } from '@/lib/i18n';
 
 // ── Předdefinované školní předměty ──────────────────────────────────────────
-const PREDEFINED_NAMES = [
-  'Matematika', 'Čeština', 'Angličtina', 'Němčina', 'Španělština',
-  'Přírodověda', 'Prvouka', 'Dějepis', 'Zeměpis',
-  'Fyzika', 'Chemie', 'Biologie', 'Informatika',
-  'Výtvarná výchova', 'Hudební výchova', 'Tělesná výchova',
-  'Pracovní výchova', 'Já a svět', 'Pokusy',
-  'Výlety a exkurze', 'Vlastní tvorba', 'Projekty',
-  'Sport a pohyb', 'Příroda a zahrada',
-  'Vaření a pečení', 'Umění a řemesla',
-  'Jazyky', 'Technologie', 'Ostatní',
+// The chosen name is saved as the category name in the pupil's language.
+const PREDEFINED_NAMES: L10n[] = [
+  { cs: 'Matematika', en: 'Maths' },
+  { cs: 'Čeština', en: 'Czech' },
+  { cs: 'Angličtina', en: 'English' },
+  { cs: 'Němčina', en: 'German' },
+  { cs: 'Španělština', en: 'Spanish' },
+  { cs: 'Přírodověda', en: 'Science' },
+  { cs: 'Prvouka', en: 'Primary science' },
+  { cs: 'Dějepis', en: 'History' },
+  { cs: 'Zeměpis', en: 'Geography' },
+  { cs: 'Fyzika', en: 'Physics' },
+  { cs: 'Chemie', en: 'Chemistry' },
+  { cs: 'Biologie', en: 'Biology' },
+  { cs: 'Informatika', en: 'Computing' },
+  { cs: 'Výtvarná výchova', en: 'Art' },
+  { cs: 'Hudební výchova', en: 'Music' },
+  { cs: 'Tělesná výchova', en: 'PE' },
+  { cs: 'Pracovní výchova', en: 'Design and technology' },
+  { cs: 'Já a svět', en: 'Me and the world' },
+  { cs: 'Pokusy', en: 'Experiments' },
+  { cs: 'Výlety a exkurze', en: 'Trips and visits' },
+  { cs: 'Vlastní tvorba', en: 'My own creations' },
+  { cs: 'Projekty', en: 'Projects' },
+  { cs: 'Sport a pohyb', en: 'Sport and movement' },
+  { cs: 'Příroda a zahrada', en: 'Nature and garden' },
+  { cs: 'Vaření a pečení', en: 'Cooking and baking' },
+  { cs: 'Umění a řemesla', en: 'Arts and crafts' },
+  { cs: 'Jazyky', en: 'Languages' },
+  { cs: 'Technologie', en: 'Technology' },
+  { cs: 'Ostatní', en: 'Other' },
 ];
 
 // ── Pozadí – barvy ───────────────────────────────────────────────────────────
@@ -85,6 +108,7 @@ export function catTextStyle(background?: string): React.CSSProperties {
 
 // ── Background picker ─────────────────────────────────────────────────────────
 export function BgPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useLocale();
   const [photoErrors, setPhotoErrors] = useState<Set<string>>(new Set());
 
   const Swatch = ({ bg, size = 'md' }: { bg: string; size?: 'sm' | 'md' }) => {
@@ -106,20 +130,23 @@ export function BgPicker({ value, onChange }: { value: string; onChange: (v: str
   return (
     <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Barvy</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('Barvy', 'Colours')}</p>
         <div className="flex flex-wrap gap-2">
           {BG_COLORS.map(c => <Swatch key={c} bg={c} />)}
         </div>
       </div>
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Přechody</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('Přechody', 'Gradients')}</p>
         <div className="flex flex-wrap gap-2">
           {BG_GRADIENTS.map(g => <Swatch key={g} bg={g} />)}
         </div>
       </div>
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Fotopozadí ({BG_PHOTOS.length - photoErrors.size} dostupných)
+          {t(
+            `Fotopozadí (${BG_PHOTOS.length - photoErrors.size} dostupných)`,
+            `Photo backgrounds (${BG_PHOTOS.length - photoErrors.size} available)`,
+          )}
         </p>
         <div className="grid grid-cols-8 gap-1.5">
           {BG_PHOTOS.map(p => photoErrors.has(p) ? null : (
@@ -160,8 +187,9 @@ function CategoryForm({
   onSave: (name: string, background: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useLocale();
   const [usePredefined, setUsePredefined] = useState(initial?.usePredefined ?? true);
-  const [predefined, setPredefined] = useState(initial?.predefined ?? PREDEFINED_NAMES[0]);
+  const [predefined, setPredefined] = useState(initial?.predefined ?? t(PREDEFINED_NAMES[0]));
   const [customName, setCustomName] = useState(initial?.name ?? '');
   const [background, setBackground] = useState(initial?.background ?? BG_GRADIENTS[0]);
   const [saving, setSaving] = useState(false);
@@ -182,26 +210,26 @@ function CategoryForm({
         className="w-full h-20 rounded-xl flex items-center justify-center text-xl font-bold shadow-inner transition-all"
         style={{ ...bgStyle(background), ...catTextStyle(background) }}
       >
-        {name || 'Nová kategorie'}
+        {name || t('Nová kategorie', 'New category')}
       </div>
 
       {/* Název */}
       <div className="space-y-2">
-        <Label>Název kategorie</Label>
+        <Label>{t('Název kategorie', 'Category name')}</Label>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setUsePredefined(true)}
             className={`flex-1 py-1.5 rounded-md border text-sm font-medium transition-colors ${usePredefined ? 'bg-blue-50 border-blue-400 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
           >
-            Ze seznamu
+            {t('Ze seznamu', 'From the list')}
           </button>
           <button
             type="button"
             onClick={() => setUsePredefined(false)}
             className={`flex-1 py-1.5 rounded-md border text-sm font-medium transition-colors ${!usePredefined ? 'bg-blue-50 border-blue-400 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
           >
-            Vlastní název
+            {t('Vlastní název', 'My own name')}
           </button>
         </div>
         {usePredefined ? (
@@ -210,11 +238,11 @@ function CategoryForm({
             value={predefined}
             onChange={e => setPredefined(e.target.value)}
           >
-            {PREDEFINED_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+            {PREDEFINED_NAMES.map(n => <option key={n.cs} value={t(n)}>{t(n)}</option>)}
           </select>
         ) : (
           <Input
-            placeholder="Název kategorie..."
+            placeholder={t('Název kategorie...', 'Category name...')}
             value={customName}
             onChange={e => setCustomName(e.target.value)}
             autoFocus
@@ -224,16 +252,16 @@ function CategoryForm({
 
       {/* Pozadí */}
       <div className="space-y-2">
-        <Label>Pozadí karty</Label>
+        <Label>{t('Pozadí karty', 'Card background')}</Label>
         <BgPicker value={background} onChange={setBackground} />
       </div>
 
       {/* Akce */}
       <div className="flex gap-2 pt-2">
         <Button onClick={submit} disabled={!valid || saving} className="flex-1">
-          {saving ? 'Ukládám...' : 'Uložit kategorii'}
+          {saving ? t('Ukládám...', 'Saving...') : t('Uložit kategorii', 'Save category')}
         </Button>
-        <Button variant="outline" onClick={onCancel}>Zrušit</Button>
+        <Button variant="outline" onClick={onCancel}>{t('Zrušit', 'Cancel')}</Button>
       </div>
     </div>
   );
@@ -247,6 +275,7 @@ interface Props {
 }
 
 export default function CategoryEditor({ open, onClose, onCategoriesChange }: Props) {
+  const { t } = useLocale();
   const [student, setStudent] = useState<{ id: string } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
@@ -301,7 +330,10 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
   }
 
   async function handleDelete(cat: Category) {
-    if (!confirm(`Smazat kategorii "${cat.name}"? Stránky v ní zůstanou bez kategorie.`)) return;
+    if (!confirm(t(
+      `Smazat kategorii "${cat.name}"? Stránky v ní zůstanou bez kategorie.`,
+      `Delete the category "${cat.name}"? Its pages will stay, just without a category.`,
+    ))) return;
     await directus.request(deleteItem('categories', cat.id));
     const list = categories.filter(c => c.id !== cat.id);
     setCategories(list);
@@ -313,9 +345,9 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {view === 'list' && 'Správa kategorií'}
-            {view === 'create' && 'Nová kategorie'}
-            {view === 'edit' && `Upravit: ${editing?.name}`}
+            {view === 'list' && t('Správa kategorií', 'Manage categories')}
+            {view === 'create' && t('Nová kategorie', 'New category')}
+            {view === 'edit' && `${t('Upravit', 'Edit')}: ${editing?.name}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -323,14 +355,14 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
           <div className="space-y-3">
             <Button onClick={() => setView('create')} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
-              Přidat kategorii
+              {t('Přidat kategorii', 'Add category')}
             </Button>
             {loading ? (
-              <div className="text-center py-6 text-gray-400">Načítám...</div>
+              <div className="text-center py-6 text-gray-400">{t('Načítám...', 'Loading...')}</div>
             ) : categories.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <p>Zatím žádné kategorie.</p>
-                <p className="text-sm mt-1">Přidejte první kategorii tlačítkem výše.</p>
+                <p>{t('Zatím žádné kategorie.', 'No categories yet.')}</p>
+                <p className="text-sm mt-1">{t('Přidejte první kategorii tlačítkem výše.', 'Add your first category with the button above.')}</p>
               </div>
             ) : (
               categories.map(cat => (
@@ -345,6 +377,8 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
                   <button
                     type="button"
                     onClick={() => { setEditing(cat); setView('edit'); }}
+                    title={t('Upravit', 'Edit')}
+                    aria-label={t('Upravit', 'Edit')}
                     className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
                   >
                     <Pencil className="h-3.5 w-3.5 text-white drop-shadow" />
@@ -352,6 +386,8 @@ export default function CategoryEditor({ open, onClose, onCategoriesChange }: Pr
                   <button
                     type="button"
                     onClick={() => handleDelete(cat)}
+                    title={t('Smazat', 'Delete')}
+                    aria-label={t('Smazat', 'Delete')}
                     className="p-1.5 rounded bg-white/20 hover:bg-red-500/60 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-white drop-shadow" />

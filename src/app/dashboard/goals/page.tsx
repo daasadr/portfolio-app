@@ -37,6 +37,8 @@ import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/t
 import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
 import { notifyAchievementsChanged } from '@/components/achievements/AchievementShelf';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
+import { useLocale } from '@/components/LocaleProvider';
+import type { L10n } from '@/lib/i18n';
 
 type GoalForm = { title: string; description: string; goal_type: GoalType; target_date: string };
 type DreamForm = { title: string; description: string };
@@ -54,10 +56,10 @@ function withDraft<T extends Record<string, string>>(key: string, base: T): { fo
   return { form: base, restoredAt: null };
 }
 
-const GOAL_TYPE_LABELS: Record<GoalType, string> = {
-  short_term: 'Krátkodobý',
-  long_term: 'Dlouhodobý',
-  lifelong: 'Celoživotní',
+const GOAL_TYPE_LABELS: Record<GoalType, L10n> = {
+  short_term: { cs: 'Krátkodobý', en: 'Short-term' },
+  long_term: { cs: 'Dlouhodobý', en: 'Long-term' },
+  lifelong: { cs: 'Celoživotní', en: 'Lifelong' },
 };
 
 const GOAL_TYPE_COLORS: Record<GoalType, string> = {
@@ -67,6 +69,7 @@ const GOAL_TYPE_COLORS: Record<GoalType, string> = {
 };
 
 export default function GoalsPage() {
+  const { t } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [goals, setGoals] = useState<PersonalGoal[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -210,7 +213,10 @@ export default function GoalsPage() {
       setGoalDialogOpen(false);
     } catch (e) {
       console.error(e);
-      setGoalError('Cíl se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.');
+      setGoalError(t(
+        'Cíl se nepodařilo uložit. Zkus to prosím znovu — rozepsaný text máš uložený jako koncept.',
+        'The goal could not be saved. Please try again — your unfinished text is saved as a draft.',
+      ));
     } finally {
       setGoalSaving(false);
     }
@@ -272,7 +278,10 @@ export default function GoalsPage() {
     const allowed = Math.max(0, 10 - dreamImages.length - pendingFiles.length);
     setPendingFiles(prev => [...prev, ...files.slice(0, allowed)]);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    if (total > 10) alert(`Maximálně 10 obrázků na sen. Přidáno pouze prvních ${allowed}.`);
+    if (total > 10) alert(t(
+      `Maximálně 10 obrázků na sen. Přidáno pouze prvních ${allowed}.`,
+      `A dream can have at most 10 pictures. Only the first ${allowed} were added.`,
+    ));
   }
 
   function removePendingFile(idx: number) {
@@ -363,7 +372,10 @@ export default function GoalsPage() {
       setDreamRestoredAt(null);
     } catch (e) {
       console.error('Dream save error:', e);
-      setDreamError('Uložení selhalo. Zkuste se odhlásit a přihlásit znovu — rozepsaný text máte uložený jako koncept.');
+      setDreamError(t(
+        'Uložení selhalo. Zkuste se odhlásit a přihlásit znovu — rozepsaný text máte uložený jako koncept.',
+        'Saving failed. Try logging out and back in — your unfinished text is saved as a draft.',
+      ));
       setDreamSaving(false);
       return;
     }
@@ -382,7 +394,9 @@ export default function GoalsPage() {
 
           const uploadRes = await fetch('/api/directus/files', { method: 'POST', body: formData });
           if (!uploadRes.ok) {
-            const msg = uploadRes.status === 413 ? 'příliš velký soubor' : `chyba ${uploadRes.status}`;
+            const msg = uploadRes.status === 413
+              ? t('příliš velký soubor', 'file too big')
+              : t(`chyba ${uploadRes.status}`, `error ${uploadRes.status}`);
             uploadErrors.push(`${pendingFiles[i].name}: ${msg}`);
             continue;
           }
@@ -419,7 +433,10 @@ export default function GoalsPage() {
       setUploadingImages(false);
 
       if (uploadErrors.length > 0) {
-        setUploadWarning(`Sen byl uložen, ale tyto obrázky se nepodařilo nahrát (zkuste menší soubory): ${uploadErrors.join(', ')}`);
+        setUploadWarning(t(
+          `Sen byl uložen, ale tyto obrázky se nepodařilo nahrát (zkuste menší soubory): ${uploadErrors.join(', ')}`,
+          `The dream was saved, but these pictures could not be uploaded (try smaller files): ${uploadErrors.join(', ')}`,
+        ));
       }
     }
 
@@ -489,7 +506,7 @@ export default function GoalsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Cíle a sny</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('Cíle a sny', 'Goals and dreams')}</h1>
       </div>
 
       {/* Tabs */}
@@ -501,7 +518,7 @@ export default function GoalsPage() {
           }`}
         >
           <Target className="h-4 w-4 inline mr-1" />
-          Cíle ({goals.length})
+          {t('Cíle', 'Goals')} ({goals.length})
         </button>
         <button
           onClick={() => setActiveTab('dreams')}
@@ -510,7 +527,7 @@ export default function GoalsPage() {
           }`}
         >
           <Star className="h-4 w-4 inline mr-1" />
-          Sny ({dreams.length})
+          {t('Sny', 'Dreams')} ({dreams.length})
         </button>
       </div>
 
@@ -522,13 +539,13 @@ export default function GoalsPage() {
               <DialogTrigger asChild>
                 <Button onClick={openNewGoal}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nový cíl
+                  {t('Nový cíl', 'New goal')}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{editingGoal ? 'Upravit cíl' : 'Nový cíl'}</DialogTitle>
-                  <DialogDescription>Vyplňte informace o cíli</DialogDescription>
+                  <DialogTitle>{editingGoal ? t('Upravit cíl', 'Edit goal') : t('Nový cíl', 'New goal')}</DialogTitle>
+                  <DialogDescription>{t('Vyplňte informace o cíli', 'Fill in the details of your goal')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   {goalRestoredAt && (
@@ -538,24 +555,24 @@ export default function GoalsPage() {
                     />
                   )}
                   <div className="space-y-1">
-                    <Label>Název cíle *</Label>
+                    <Label>{t('Název cíle *', 'Goal *')}</Label>
                     <Input
-                      placeholder="Např. Naučit se násobilku do 10"
+                      placeholder={t('Např. Naučit se násobilku do 10', 'E.g. Learn my times tables up to 10')}
                       value={goalForm.title}
                       onChange={(e) => setGoalForm((f) => ({ ...f, title: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>Popis</Label>
+                    <Label>{t('Popis', 'Description')}</Label>
                     <Textarea
-                      placeholder="Proč chcete tohoto cíle dosáhnout?"
+                      placeholder={t('Proč chcete tohoto cíle dosáhnout?', 'Why do you want to reach this goal?')}
                       value={goalForm.description}
                       onChange={(e) => setGoalForm((f) => ({ ...f, description: e.target.value }))}
                       rows={3}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>Typ cíle</Label>
+                    <Label>{t('Typ cíle', 'Type of goal')}</Label>
                     <Select
                       value={goalForm.goal_type}
                       onValueChange={(v) => setGoalForm((f) => ({ ...f, goal_type: v as GoalType }))}
@@ -564,14 +581,14 @@ export default function GoalsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="short_term">Krátkodobý (dny / týdny)</SelectItem>
-                        <SelectItem value="long_term">Dlouhodobý (měsíce / roky)</SelectItem>
-                        <SelectItem value="lifelong">Celoživotní</SelectItem>
+                        <SelectItem value="short_term">{t('Krátkodobý (dny / týdny)', 'Short-term (days / weeks)')}</SelectItem>
+                        <SelectItem value="long_term">{t('Dlouhodobý (měsíce / roky)', 'Long-term (months / years)')}</SelectItem>
+                        <SelectItem value="lifelong">{t('Celoživotní', 'Lifelong')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label>Termín splnění</Label>
+                    <Label>{t('Termín splnění', 'Target date')}</Label>
                     <Input
                       type="date"
                       value={goalForm.target_date}
@@ -583,9 +600,9 @@ export default function GoalsPage() {
                   )}
                   <DraftHint />
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setGoalDialogOpen(false)}>Zrušit</Button>
+                    <Button variant="outline" onClick={() => setGoalDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                     <Button onClick={saveGoal} disabled={goalSaving || !goalForm.title.trim()}>
-                      {goalSaving ? 'Ukládám...' : 'Uložit'}
+                      {goalSaving ? t('Ukládám...', 'Saving...') : t('Uložit', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -596,7 +613,7 @@ export default function GoalsPage() {
           {pendingGoals.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Aktivní cíle</CardTitle>
+                <CardTitle className="text-base">{t('Aktivní cíle', 'Active goals')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {pendingGoals.map((goal) => (
@@ -609,7 +626,7 @@ export default function GoalsPage() {
           {doneGoals.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base text-gray-500">Splněné cíle</CardTitle>
+                <CardTitle className="text-base text-gray-500">{t('Splněné cíle', 'Completed goals')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {doneGoals.map((goal) => (
@@ -622,8 +639,8 @@ export default function GoalsPage() {
           {goals.length === 0 && (
             <div className="bg-white/80 backdrop-blur-sm rounded-xl text-center py-14 text-gray-500">
               <Target className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Zatím nemáte žádné cíle</p>
-              <p className="text-sm mt-1">Klikněte na &quot;Nový cíl&quot; a začněte svou cestu.</p>
+              <p className="text-lg font-medium">{t('Zatím nemáte žádné cíle', 'You have no goals yet')}</p>
+              <p className="text-sm mt-1">{t('Klikněte na "Nový cíl" a začněte svou cestu.', 'Click "New goal" and start your journey.')}</p>
             </div>
           )}
         </div>
@@ -643,13 +660,13 @@ export default function GoalsPage() {
               <DialogTrigger asChild>
                 <Button onClick={openNewDream}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nový sen
+                  {t('Nový sen', 'New dream')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingDream ? 'Upravit sen' : 'Nový sen'}</DialogTitle>
-                  <DialogDescription>Vyplňte název, popis a přidejte obrázky</DialogDescription>
+                  <DialogTitle>{editingDream ? t('Upravit sen', 'Edit dream') : t('Nový sen', 'New dream')}</DialogTitle>
+                  <DialogDescription>{t('Vyplňte název, popis a přidejte obrázky', 'Fill in a title and description and add some pictures')}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   {dreamRestoredAt && (
@@ -659,17 +676,17 @@ export default function GoalsPage() {
                     />
                   )}
                   <div className="space-y-1">
-                    <Label>Název *</Label>
+                    <Label>{t('Název *', 'Title *')}</Label>
                     <Input
-                      placeholder="Např. Cestovat do Japonska"
+                      placeholder={t('Např. Cestovat do Japonska', 'E.g. Travel to Japan')}
                       value={dreamForm.title}
                       onChange={(e) => setDreamForm((f) => ({ ...f, title: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>Popis / proč to chci</Label>
+                    <Label>{t('Popis / proč to chci', 'Description / why I want it')}</Label>
                     <Textarea
-                      placeholder="Napište více o svém snu..."
+                      placeholder={t('Napište více o svém snu...', 'Write more about your dream...')}
                       value={dreamForm.description}
                       onChange={(e) => setDreamForm((f) => ({ ...f, description: e.target.value }))}
                       rows={3}
@@ -679,7 +696,7 @@ export default function GoalsPage() {
                   {/* Obrázky */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Obrázky ({totalImages}/10)</Label>
+                      <Label>{t('Obrázky', 'Pictures')} ({totalImages}/10)</Label>
                       <Button
                         variant="outline"
                         size="sm"
@@ -687,7 +704,7 @@ export default function GoalsPage() {
                         disabled={totalImages >= 10}
                       >
                         <ImagePlus className="h-4 w-4 mr-1" />
-                        Přidat obrázky
+                        {t('Přidat obrázky', 'Add pictures')}
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -718,21 +735,21 @@ export default function GoalsPage() {
                                     ? 'bg-blue-500 text-white'
                                     : 'bg-white/90 text-gray-700'
                                 }`}
-                                title={img.on_board ? 'Odebrat z nástěnky' : 'Umístit na nástěnku'}
+                                title={img.on_board ? t('Odebrat z nástěnky', 'Remove from the dream board') : t('Umístit na nástěnku', 'Put on the dream board')}
                               >
                                 <LayoutDashboard className="h-3 w-3" />
-                                {img.on_board ? 'Na nástěnce' : 'Na nástěnku'}
+                                {img.on_board ? t('Na nástěnce', 'On the board') : t('Na nástěnku', 'To the board')}
                               </button>
                               <button
                                 onClick={() => deleteImage(img.id)}
                                 className="p-1 bg-red-500/90 text-white rounded"
-                                title="Smazat obrázek"
+                                title={t('Smazat obrázek', 'Delete picture')}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </button>
                             </div>
                             {img.on_board && (
-                              <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-blue-400" title="Na nástěnce" />
+                              <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-blue-400" title={t('Na nástěnce', 'On the board')} />
                             )}
                           </div>
                         ))}
@@ -742,7 +759,7 @@ export default function GoalsPage() {
                     {/* Pending files (not yet uploaded) */}
                     {pendingFiles.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-xs text-gray-500">Čeká na nahrání:</p>
+                        <p className="text-xs text-gray-500">{t('Čeká na nahrání:', 'Waiting to upload:')}</p>
                         <div className="grid grid-cols-3 gap-2">
                           {pendingFiles.map((file, idx) => (
                             <div key={idx} className="relative group rounded overflow-hidden border border-dashed border-blue-300 bg-blue-50">
@@ -753,6 +770,7 @@ export default function GoalsPage() {
                               />
                               <button
                                 onClick={() => removePendingFile(idx)}
+                                title={t('Odebrat obrázek', 'Remove picture')}
                                 className="absolute top-1 right-1 p-1 bg-red-500/90 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <Trash2 className="h-3 w-3" />
@@ -772,8 +790,8 @@ export default function GoalsPage() {
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <ImagePlus className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">Klikněte pro přidání obrázků</p>
-                        <p className="text-xs mt-1">Max. 10 obrázků</p>
+                        <p className="text-sm">{t('Klikněte pro přidání obrázků', 'Click to add pictures')}</p>
+                        <p className="text-xs mt-1">{t('Max. 10 obrázků', 'Up to 10 pictures')}</p>
                       </div>
                     )}
                   </div>
@@ -783,9 +801,9 @@ export default function GoalsPage() {
                   )}
                   <DraftHint />
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setDreamDialogOpen(false)}>Zrušit</Button>
+                    <Button variant="outline" onClick={() => setDreamDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                     <Button onClick={saveDream} disabled={dreamSaving || uploadingImages || !dreamForm.title.trim()}>
-                      {uploadingImages ? 'Nahrávám obrázky...' : dreamSaving ? 'Ukládám...' : 'Uložit'}
+                      {uploadingImages ? t('Nahrávám obrázky...', 'Uploading pictures...') : dreamSaving ? t('Ukládám...', 'Saving...') : t('Uložit', 'Save')}
                     </Button>
                   </div>
                 </div>
@@ -796,8 +814,8 @@ export default function GoalsPage() {
           {dreams.length === 0 ? (
             <div className="bg-white/80 backdrop-blur-sm rounded-xl text-center py-14 text-gray-500">
               <Star className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Zatím nemáte žádné sny</p>
-              <p className="text-sm mt-1">Zapište si, čeho byste jednou chtěli dosáhnout nebo co mít.</p>
+              <p className="text-lg font-medium">{t('Zatím nemáte žádné sny', 'You have no dreams yet')}</p>
+              <p className="text-sm mt-1">{t('Zapište si, čeho byste jednou chtěli dosáhnout nebo co mít.', 'Write down what you would like to achieve or have one day.')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -826,7 +844,7 @@ export default function GoalsPage() {
                       {isExpanded && (
                         <div className="mt-3 border-t pt-3">
                           {images.length === 0 ? (
-                            <p className="text-sm text-gray-400 text-center py-2">Žádné obrázky — přidejte je přes tlačítko Upravit</p>
+                            <p className="text-sm text-gray-400 text-center py-2">{t('Žádné obrázky — přidejte je přes tlačítko Upravit', 'No pictures — add some with the Edit button')}</p>
                           ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-2">
                               {images.map(img => (
@@ -843,9 +861,9 @@ export default function GoalsPage() {
                                         ? 'bg-blue-500 text-white hover:bg-blue-600'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                       }`}
-                                    title={img.on_board ? 'Odebrat z nástěnky' : 'Umístit na nástěnku'}
+                                    title={img.on_board ? t('Odebrat z nástěnky', 'Remove from the dream board') : t('Umístit na nástěnku', 'Put on the dream board')}
                                   >
-                                    {img.on_board ? '✓ Na nástěnce' : '+ Nástěnka'}
+                                    {img.on_board ? t('✓ Na nástěnce', '✓ On the board') : t('+ Nástěnka', '+ Board')}
                                   </button>
                                 </div>
                               ))}
@@ -854,7 +872,7 @@ export default function GoalsPage() {
                           <div className="flex gap-2 justify-end">
                             <Button variant="outline" size="sm" onClick={() => openEditDream(dream)}>
                               <Pencil className="h-3 w-3 mr-1" />
-                              Upravit
+                              {t('Upravit', 'Edit')}
                             </Button>
                             <Button
                               variant="ghost"
@@ -863,7 +881,7 @@ export default function GoalsPage() {
                               onClick={() => deleteDream(dream.id)}
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
-                              Smazat
+                              {t('Smazat', 'Delete')}
                             </Button>
                           </div>
                         </div>
@@ -891,9 +909,14 @@ function GoalRow({
   onEdit: (g: PersonalGoal) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t, intl } = useLocale();
   return (
     <div className={`flex items-start gap-3 group ${goal.completed ? 'opacity-60' : ''}`}>
-      <button onClick={() => onToggle(goal)} className="mt-0.5 flex-shrink-0">
+      <button
+        onClick={() => onToggle(goal)}
+        className="mt-0.5 flex-shrink-0"
+        aria-label={goal.completed ? t('Označit jako nesplněný', 'Mark as not done') : t('Označit jako splněný', 'Mark as done')}
+      >
         {goal.completed
           ? <CheckCircle className="h-5 w-5 text-green-500" />
           : <Circle className="h-5 w-5 text-gray-400 hover:text-blue-500" />}
@@ -907,16 +930,16 @@ function GoalRow({
         )}
         <div className="flex items-center gap-2 mt-1">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${GOAL_TYPE_COLORS[goal.goal_type]}`}>
-            {GOAL_TYPE_LABELS[goal.goal_type]}
+            {t(GOAL_TYPE_LABELS[goal.goal_type])}
           </span>
           {goal.target_date && (
             <span className="text-xs text-gray-500">
-              do {new Date(goal.target_date).toLocaleDateString('cs-CZ')}
+              {t('do', 'by')} {new Date(goal.target_date).toLocaleDateString(intl)}
             </span>
           )}
           {goal.completed && goal.completed_date && (
             <span className="text-xs text-green-600">
-              Splněno {new Date(goal.completed_date).toLocaleDateString('cs-CZ')}
+              {t('Splněno', 'Completed')} {new Date(goal.completed_date).toLocaleDateString(intl)}
             </span>
           )}
         </div>

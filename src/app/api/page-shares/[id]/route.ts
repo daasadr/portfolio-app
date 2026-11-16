@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -26,17 +27,18 @@ async function getStudentFromToken(request: NextRequest) {
 
 // DELETE /api/page-shares/[id] — odesílatel nebo příjemce může zrušit sdílení
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const student = await getStudentFromToken(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const shareRes = await fetch(`${directusUrl}/items/page_shares/${id}`, { headers: adminHeaders() });
-  if (!shareRes.ok) return NextResponse.json({ message: 'Sdílení nenalezeno' }, { status: 404 });
+  if (!shareRes.ok) return NextResponse.json({ message: t('Sdílení nenalezeno', 'Share not found') }, { status: 404 });
   const { data: share } = await shareRes.json() as { data: { id: number; from_id: number; to_id: number } };
 
   if (share.from_id !== student.id && share.to_id !== student.id) {
-    return NextResponse.json({ message: 'Přístup odepřen' }, { status: 403 });
+    return NextResponse.json({ message: t('Přístup odepřen', 'Access denied') }, { status: 403 });
   }
 
   await fetch(`${directusUrl}/items/page_shares/${id}`, { method: 'DELETE', headers: adminHeaders() });

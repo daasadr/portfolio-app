@@ -14,12 +14,14 @@ import {
   Building2, Users, Plus, Search, LogOut, Trash2, Crown,
 } from 'lucide-react';
 import type { Organisation, Group } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
 
 function asGroup(item: Organisation | Group): Group { return item as Group; }
 
 type Tab = 'organisations' | 'groups';
 
 export default function CommunityPage() {
+  const { t, plural } = useLocale();
   const [tab, setTab] = useState<Tab>('organisations');
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -80,14 +82,14 @@ export default function CommunityPage() {
   }
 
   async function handleLeave(id: number) {
-    if (!confirm('Opravdu chcete odejít?')) return;
+    if (!confirm(t('Opravdu chcete odejít?', 'Do you really want to leave?'))) return;
     const endpoint = tab === 'organisations' ? `/api/organisations/${id}` : `/api/groups/${id}`;
     await fetch(endpoint, { method: 'DELETE' });
     await loadMine();
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('Smazat tuto organizaci/skupinu a všechny její členy?')) return;
+    if (!confirm(t('Smazat tuto organizaci/skupinu a všechny její členy?', 'Delete this organisation/group and all its members?'))) return;
     const endpoint = tab === 'organisations' ? `/api/organisations/${id}?action=delete` : `/api/groups/${id}?action=delete`;
     await fetch(endpoint, { method: 'DELETE' });
     await loadMine();
@@ -107,7 +109,7 @@ export default function CommunityPage() {
       body: JSON.stringify(body),
     });
     const data = await res.json() as { message?: string };
-    if (!res.ok) { setCreateError(data.message ?? 'Chyba'); setCreating(false); return; }
+    if (!res.ok) { setCreateError(data.message ?? t('Chyba', 'Error')); setCreating(false); return; }
     setCreateName(''); setCreateDesc(''); setCreateOrgId('');
     setCreateOpen(false);
     await loadMine();
@@ -122,37 +124,37 @@ export default function CommunityPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Komunita</h1>
-          <p className="text-gray-500 text-sm mt-1">Organizace a skupiny, jejichž jste členem</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('Komunita', 'Community')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('Organizace a skupiny, jejichž jste členem', 'Organisations and groups you are a member of')}</p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Vytvořit</Button>
+            <Button><Plus className="h-4 w-4 mr-2" />{t('Vytvořit', 'Create')}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {tab === 'organisations' ? 'Nová organizace' : 'Nová skupina'}
+                {tab === 'organisations' ? t('Nová organizace', 'New organisation') : t('Nová skupina', 'New group')}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 pt-2">
               <div className="space-y-1.5">
-                <Label>Název *</Label>
-                <Input value={createName} onChange={e => setCreateName(e.target.value)} required placeholder="Název..." />
+                <Label>{t('Název', 'Name')} *</Label>
+                <Input value={createName} onChange={e => setCreateName(e.target.value)} required placeholder={t('Název...', 'Name...')} />
               </div>
               <div className="space-y-1.5">
-                <Label>Popis (volitelné)</Label>
-                <Textarea value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Krátký popis..." rows={2} />
+                <Label>{t('Popis (volitelné)', 'Description (optional)')}</Label>
+                <Textarea value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder={t('Krátký popis...', 'Short description...')} rows={2} />
               </div>
               {tab === 'groups' && organisations.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label>Patří do organizace (volitelné)</Label>
+                  <Label>{t('Patří do organizace (volitelné)', 'Belongs to organisation (optional)')}</Label>
                   <select
                     value={createOrgId}
                     onChange={e => setCreateOrgId(e.target.value)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   >
-                    <option value="">— bez organizace —</option>
+                    <option value="">{t('— bez organizace —', '— no organisation —')}</option>
                     {organisations.map(o => (
                       <option key={o.id} value={o.id}>{o.name}</option>
                     ))}
@@ -161,8 +163,8 @@ export default function CommunityPage() {
               )}
               {createError && <p className="text-red-500 text-sm">{createError}</p>}
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Zrušit</Button>
-                <Button type="submit" disabled={creating}>{creating ? 'Vytvářím...' : 'Vytvořit'}</Button>
+                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
+                <Button type="submit" disabled={creating}>{creating ? t('Vytvářím...', 'Creating...') : t('Vytvořit', 'Create')}</Button>
               </div>
             </form>
           </DialogContent>
@@ -175,14 +177,14 @@ export default function CommunityPage() {
           onClick={() => { setTab('organisations'); setSearchQuery(''); setSearchResults([]); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'organisations' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <Building2 className="h-4 w-4" /> Organizace
+          <Building2 className="h-4 w-4" /> {t('Organizace', 'Organisations')}
           {organisations.length > 0 && <Badge variant="secondary" className="text-xs">{organisations.length}</Badge>}
         </button>
         <button
           onClick={() => { setTab('groups'); setSearchQuery(''); setSearchResults([]); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === 'groups' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <Users className="h-4 w-4" /> Skupiny
+          <Users className="h-4 w-4" /> {t('Skupiny', 'Groups')}
           {groups.length > 0 && <Badge variant="secondary" className="text-xs">{groups.length}</Badge>}
         </button>
       </div>
@@ -195,12 +197,12 @@ export default function CommunityPage() {
             <Input
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
-              placeholder={tab === 'organisations' ? 'Hledat organizaci podle názvu...' : 'Hledat skupinu podle názvu...'}
+              placeholder={tab === 'organisations' ? t('Hledat organizaci podle názvu...', 'Search organisations by name...') : t('Hledat skupinu podle názvu...', 'Search groups by name...')}
               className="pl-9"
             />
           </div>
 
-          {searching && <p className="text-xs text-gray-400 mt-2">Hledám...</p>}
+          {searching && <p className="text-xs text-gray-400 mt-2">{t('Hledám...', 'Searching...')}</p>}
 
           {searchResults.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -213,10 +215,10 @@ export default function CommunityPage() {
                       {item.description && <p className="text-xs text-gray-400">{item.description}</p>}
                     </div>
                     {isMember ? (
-                      <Badge variant="secondary" className="text-xs">Člen</Badge>
+                      <Badge variant="secondary" className="text-xs">{t('Člen', 'Member')}</Badge>
                     ) : (
                       <Button size="sm" variant="outline" onClick={() => handleJoin(item.id)} disabled={joiningId === item.id}>
-                        {joiningId === item.id ? 'Přidávám...' : 'Připojit se'}
+                        {joiningId === item.id ? t('Přidávám...', 'Joining...') : t('Připojit se', 'Join')}
                       </Button>
                     )}
                   </div>
@@ -225,7 +227,7 @@ export default function CommunityPage() {
             </div>
           )}
           {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
-            <p className="text-xs text-gray-400 mt-2">Nic nenalezeno.</p>
+            <p className="text-xs text-gray-400 mt-2">{t('Nic nenalezeno.', 'Nothing found.')}</p>
           )}
         </CardContent>
       </Card>
@@ -242,8 +244,8 @@ export default function CommunityPage() {
             : <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />}
           <p className="text-sm">
             {tab === 'organisations'
-              ? 'Nejste členem žádné organizace. Vytvořte novou nebo hledejte výše.'
-              : 'Nejste členem žádné skupiny. Vytvořte novou nebo hledejte výše.'}
+              ? t('Nejste členem žádné organizace. Vytvořte novou nebo hledejte výše.', 'You are not a member of any organisation. Create a new one or search above.')
+              : t('Nejste členem žádné skupiny. Vytvořte novou nebo hledejte výše.', 'You are not a member of any group. Create a new one or search above.')}
           </p>
         </div>
       ) : (
@@ -264,7 +266,7 @@ export default function CommunityPage() {
                   <div className="flex items-center gap-3 mt-1">
                     {item.member_count != null && (
                       <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Users className="h-3 w-3" /> {item.member_count} {item.member_count === 1 ? 'člen' : 'členů'}
+                        <Users className="h-3 w-3" /> {item.member_count} {plural(item.member_count, ['člen', 'členové', 'členů'], ['member', 'members'])}
                       </span>
                     )}
                     {asGroup(item).organisation_name && (

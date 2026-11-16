@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/components/LocaleProvider';
 
 const CONSENT_KEY = 'pp_consent';
 
 export default function CookieBanner() {
+  const { t } = useLocale();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -17,8 +19,8 @@ export default function CookieBanner() {
     const hasConsent = stored === 'accepted' || (stored ? (() => { try { return (JSON.parse(stored) as { accepted?: boolean }).accepted; } catch { return false; } })() : false);
     if (!hasConsent) {
       setMounted(true);
-      const t = setTimeout(() => setVisible(true), 1200);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setVisible(true), 1200);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -48,17 +50,17 @@ export default function CookieBanner() {
       <div className="bg-white/95 backdrop-blur-sm rounded-r-2xl shadow-lg border-r border-t border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <span className="text-xl flex-shrink-0" aria-hidden>🍪</span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-800 mb-0.5">Cookies & soukromí</p>
+          <p className="text-xs font-medium text-gray-800 mb-0.5">{t('Cookies & soukromí', 'Cookies & privacy')}</p>
           <p className="text-xs text-gray-500 leading-relaxed">
-            Pouze technické cookies pro přihlášení. Bez sledování.
+            {t('Pouze technické cookies pro přihlášení. Bez sledování.', 'Only technical cookies for logging in. No tracking.')}
           </p>
           <div className="flex items-center gap-2 mt-2">
             <Button size="sm" onClick={(e) => { e.stopPropagation(); dismiss(); }} className="h-6 text-xs px-2">
-              Rozumím
+              {t('Rozumím', 'Got it')}
             </Button>
             <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
               onClick={(e) => e.stopPropagation()}>
-              Více info
+              {t('Více info', 'More info')}
             </Link>
           </div>
         </div>

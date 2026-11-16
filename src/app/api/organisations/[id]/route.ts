@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { isValidId } from '@/lib/security';
+import { requestT } from '@/lib/i18n-server';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -20,10 +21,11 @@ async function getStudent(request: NextRequest) {
 
 // POST /api/organisations/[id] → připojit se
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const student = await getStudent(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   // Zkontroluj duplicitu
   const dup = await fetch(
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     { headers: h() }
   );
   const { data: existing } = await dup.json() as { data: unknown[] };
-  if (existing?.length) return NextResponse.json({ message: 'Již jste členem' }, { status: 409 });
+  if (existing?.length) return NextResponse.json({ message: t('Již jste členem', 'You are already a member') }, { status: 409 });
 
   await fetch(`${directusUrl}/items/organisation_members`, {
     method: 'POST',
@@ -43,10 +45,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 // DELETE /api/organisations/[id] → odejít nebo smazat (admin)
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = requestT(request);
   const { id } = await params;
-  if (!isValidId(id)) return NextResponse.json({ message: 'Neplatné ID' }, { status: 400 });
+  if (!isValidId(id)) return NextResponse.json({ message: t('Neplatné ID', 'Invalid ID') }, { status: 400 });
   const student = await getStudent(request);
-  if (!student) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!student) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const action = new URL(request.url).searchParams.get('action');
 
@@ -57,7 +60,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       { headers: h() }
     );
     const { data: mem } = await memRes.json() as { data: { role: string }[] };
-    if (mem?.[0]?.role !== 'admin') return NextResponse.json({ message: 'Jen admin může smazat organizaci' }, { status: 403 });
+    if (mem?.[0]?.role !== 'admin') return NextResponse.json({ message: t('Jen admin může smazat organizaci', 'Only an admin can delete the organisation') }, { status: 403 });
 
     // Smaž členy a organizaci
     await fetch(`${directusUrl}/items/organisation_members?filter[organisation_id][_eq]=${id}`, { method: 'DELETE', headers: h() });
@@ -69,7 +72,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       { headers: h() }
     );
     const { data: mem } = await memRes.json() as { data: { id: number; role: string }[] };
-    if (!mem?.length) return NextResponse.json({ message: 'Nejste členem' }, { status: 404 });
+    if (!mem?.length) return NextResponse.json({ message: t('Nejste členem', 'You are not a member') }, { status: 404 });
     await fetch(`${directusUrl}/items/organisation_members/${mem[0].id}`, { method: 'DELETE', headers: h() });
   }
 

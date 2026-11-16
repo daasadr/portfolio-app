@@ -20,6 +20,7 @@ import {
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { BADGES, type Badge as BadgeDef } from '@/lib/badges';
 import { pragueToday, toPragueDate } from '@/lib/prague-date';
+import { useLocale } from '@/components/LocaleProvider';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
 
 // Deterministic confetti — same positions every time, no Math.random() in render
@@ -41,6 +42,7 @@ interface UserBadge {
 }
 
 export default function DashboardPage() {
+  const { t, locale, intl } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [goals, setGoals] = useState<PersonalGoal[]>([]);
   const [boardItems, setBoardItems] = useState<DreamBoardItem[]>([]);
@@ -129,7 +131,7 @@ export default function DashboardPage() {
     const res = await fetch(`/api/user-badges/${ubId}/checkin`, { method: 'POST' }).catch(() => null);
     if (!res?.ok) {
       const err = res ? await res.json().catch(() => ({})) as { message?: string } : {};
-      setBadgeNotice(prev => ({ ...prev, [ubId]: err.message ?? 'Uložení se nepovedlo, zkus to prosím znovu.' }));
+      setBadgeNotice(prev => ({ ...prev, [ubId]: err.message ?? t('Uložení se nepovedlo, zkus to prosím znovu.', 'Saving didn’t work, please try again.') }));
     } else {
       const data = await res.json() as {
         completed?: boolean;
@@ -144,7 +146,7 @@ export default function DashboardPage() {
         window.dispatchEvent(new Event('pp-badges-changed')); // top bar shows the new badge
       } else {
         if (data.restarted) {
-          setBadgeNotice(prev => ({ ...prev, [ubId]: 'Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪' }));
+          setBadgeNotice(prev => ({ ...prev, [ubId]: t('Jeden den se vynechal, tak začínáš znovu od 1. dne. Ty to zvládneš! 💪', 'You missed a day, so you’re starting again from day 1. You can do it! 💪') }));
         }
         setActiveBadges(prev => prev.map(ub =>
           ub.id === ubId
@@ -162,7 +164,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
-          <p className="mt-2 text-gray-600">Načítám dashboard...</p>
+          <p className="mt-2 text-gray-600">{t('Načítám dashboard...', 'Loading dashboard...')}</p>
         </div>
       </div>
     );
@@ -181,8 +183,8 @@ export default function DashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-amber-900 text-sm">
               {pendingConnections.length === 1
-                ? 'Máš novou žádost o propojení od učitele'
-                : `Máš ${pendingConnections.length} nové žádosti o propojení`}
+                ? t('Máš novou žádost o propojení od učitele', 'You have a new connection request from a teacher')
+                : t(`Máš ${pendingConnections.length} nové žádosti o propojení`, `You have ${pendingConnections.length} new connection requests`)}
             </p>
             <p className="text-xs text-amber-700 mt-0.5 truncate">
               {pendingConnections
@@ -193,48 +195,48 @@ export default function DashboardPage() {
           </div>
           <Link href="/dashboard/share">
             <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white whitespace-nowrap flex-shrink-0">
-              Zobrazit žádosti →
+              {t('Zobrazit žádosti →', 'View requests →')}
             </Button>
           </Link>
         </div>
       )}
 
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Vítejte, {student?.first_name}! 👋</h1>
-        <p className="text-blue-100">Jaký je váš dnešní plán? Podívejte se na své cíle a portfolio.</p>
+        <h1 className="text-2xl font-bold mb-2">{t('Vítejte', 'Welcome')}, {student?.first_name}! 👋</h1>
+        <p className="text-blue-100">{t('Jaký je váš dnešní plán? Podívejte se na své cíle a portfolio.', 'What’s your plan for today? Take a look at your goals and portfolio.')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Osobní cíle</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('Osobní cíle', 'Personal goals')}</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedGoals}/{goals.length}</div>
-            <p className="text-xs text-muted-foreground">dokončených cílů</p>
+            <p className="text-xs text-muted-foreground">{t('dokončených cílů', 'goals completed')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nástěnka snů</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('Nástěnka snů', 'Dream board')}</CardTitle>
             <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{onBoardCount}</div>
-            <p className="text-xs text-muted-foreground">obrázků na nástěnce</p>
+            <p className="text-xs text-muted-foreground">{t('obrázků na nástěnce', 'pictures on the board')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dnešní plány</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('Dnešní plány', 'Today’s plans')}</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todayEntries.length}</div>
-            <p className="text-xs text-muted-foreground">záznamů na dnes</p>
+            <p className="text-xs text-muted-foreground">{t('záznamů na dnes', 'entries for today')}</p>
           </CardContent>
         </Card>
       </div>
@@ -245,10 +247,10 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
-                <span className="text-xl">🦫</span> Aktivní bobříci
+                <span className="text-xl">🦫</span> {t('Aktivní bobříci', 'Active beavers')}
               </CardTitle>
               <Link href="/dashboard/world">
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">Světoběžník →</Button>
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">{t('Světoběžník →', 'Globetrotter →')}</Button>
               </Link>
             </div>
           </CardHeader>
@@ -261,7 +263,7 @@ export default function DashboardPage() {
                 const doneTodayAlready = toPragueDate(ub.last_step_date) === today;
                 return (
                   <div key={ub.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
-                    <p className="font-medium text-sm text-gray-900 leading-tight">{badge.name}</p>
+                    <p className="font-medium text-sm text-gray-900 leading-tight">{t(badge.name)}</p>
                     <div className="flex gap-1">
                       {Array.from({ length: badge.total_steps }).map((_, i) => (
                         <div
@@ -270,7 +272,7 @@ export default function DashboardPage() {
                         />
                       ))}
                     </div>
-                    <p className="text-xs text-gray-400">{ub.steps_done}/{badge.total_steps} dní</p>
+                    <p className="text-xs text-gray-400">{ub.steps_done}/{badge.total_steps} {t('dní', 'days')}</p>
                     <button
                       onClick={() => handleCheckin(ub.id)}
                       disabled={doneTodayAlready || checkingIn === ub.id}
@@ -280,9 +282,9 @@ export default function DashboardPage() {
                           : 'bg-teal-500 hover:bg-teal-600 text-white'
                       }`}
                     >
-                      {checkingIn === ub.id ? 'Ukládám...' : doneTodayAlready
-                        ? <span className="flex items-center justify-center gap-1"><CheckCircle className="h-3 w-3" /> Dnes splněno</span>
-                        : <span className="flex items-center justify-center gap-1"><Flame className="h-3 w-3" /> Dnes splněno</span>}
+                      {checkingIn === ub.id ? t('Ukládám...', 'Saving...') : doneTodayAlready
+                        ? <span className="flex items-center justify-center gap-1"><CheckCircle className="h-3 w-3" /> {t('Dnes splněno', 'Done today')}</span>
+                        : <span className="flex items-center justify-center gap-1"><Flame className="h-3 w-3" /> {t('Dnes splněno', 'Done today')}</span>}
                     </button>
                     {badgeNotice[ub.id] && <p className="text-xs text-amber-700">{badgeNotice[ub.id]}</p>}
                   </div>
@@ -298,23 +300,23 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Nedávné cíle</CardTitle>
+              <CardTitle>{t('Nedávné cíle', 'Recent goals')}</CardTitle>
               <Link href="/dashboard/goals">
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" />
-                  Nový cíl
+                  {t('Nový cíl', 'New goal')}
                 </Button>
               </Link>
             </div>
-            <CardDescription>Vaše aktuální osobní cíle</CardDescription>
+            <CardDescription>{t('Vaše aktuální osobní cíle', 'Your current personal goals')}</CardDescription>
           </CardHeader>
           <CardContent>
             {goals.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
                 <Target className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Zatím nemáte žádné cíle</p>
+                <p>{t('Zatím nemáte žádné cíle', 'You don’t have any goals yet')}</p>
                 <Link href="/dashboard/goals">
-                  <Button variant="outline" size="sm" className="mt-2">Vytvořit první cíl</Button>
+                  <Button variant="outline" size="sm" className="mt-2">{t('Vytvořit první cíl', 'Create your first goal')}</Button>
                 </Link>
               </div>
             ) : (
@@ -328,13 +330,13 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium truncate">{goal.title}</p>
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary" className="text-xs">
-                          {goal.goal_type === 'short_term' && 'Krátkodobý'}
-                          {goal.goal_type === 'long_term' && 'Dlouhodobý'}
-                          {goal.goal_type === 'lifelong' && 'Celoživotní'}
+                          {goal.goal_type === 'short_term' && t('Krátkodobý', 'Short-term')}
+                          {goal.goal_type === 'long_term' && t('Dlouhodobý', 'Long-term')}
+                          {goal.goal_type === 'lifelong' && t('Celoživotní', 'Lifelong')}
                         </Badge>
                         {goal.target_date && (
                           <span className="text-xs text-gray-500">
-                            do {new Date(goal.target_date).toLocaleDateString('cs-CZ')}
+                            {t('do', 'by')} {new Date(goal.target_date).toLocaleDateString(intl)}
                           </span>
                         )}
                       </div>
@@ -350,23 +352,23 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Nástěnka snů</CardTitle>
+              <CardTitle>{t('Nástěnka snů', 'Dream board')}</CardTitle>
               <Link href="/dashboard/dreamboard">
                 <Button variant="outline" size="sm">
                   <LayoutDashboard className="h-4 w-4 mr-1" />
-                  Otevřít
+                  {t('Otevřít', 'Open')}
                 </Button>
               </Link>
             </div>
-            <CardDescription>Vaše vize a inspirace</CardDescription>
+            <CardDescription>{t('Vaše vize a inspirace', 'Your visions and inspiration')}</CardDescription>
           </CardHeader>
           <CardContent>
             {boardItems.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
                 <LayoutDashboard className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Nástěnka je zatím prázdná</p>
+                <p>{t('Nástěnka je zatím prázdná', 'The board is empty so far')}</p>
                 <Link href="/dashboard/goals?tab=dreams">
-                  <Button variant="outline" size="sm" className="mt-2">Přidat obrázky ke snům</Button>
+                  <Button variant="outline" size="sm" className="mt-2">{t('Přidat obrázky ke snům', 'Add pictures to your dreams')}</Button>
                 </Link>
               </div>
             ) : (
@@ -381,7 +383,7 @@ export default function DashboardPage() {
                     />
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 text-center mt-2">Klikněte pro otevření nástěnky</p>
+                <p className="text-xs text-gray-500 text-center mt-2">{t('Klikněte pro otevření nástěnky', 'Click to open the board')}</p>
               </Link>
             )}
           </CardContent>
@@ -391,23 +393,23 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Nedávné stránky</CardTitle>
+              <CardTitle>{t('Nedávné stránky', 'Recent pages')}</CardTitle>
               <Link href="/dashboard/portfolio/new">
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-1" />
-                  Nová stránka
+                  {t('Nová stránka', 'New page')}
                 </Button>
               </Link>
             </div>
-            <CardDescription>Vaše nejnovější práce v portfoliu</CardDescription>
+            <CardDescription>{t('Vaše nejnovější práce v portfoliu', 'Your latest work in the portfolio')}</CardDescription>
           </CardHeader>
           <CardContent>
             {recentPages.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
                 <BookOpen className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Zatím nemáte žádné stránky</p>
+                <p>{t('Zatím nemáte žádné stránky', 'You don’t have any pages yet')}</p>
                 <Link href="/dashboard/portfolio/new">
-                  <Button variant="outline" size="sm" className="mt-2">Vytvořit první stránku</Button>
+                  <Button variant="outline" size="sm" className="mt-2">{t('Vytvořit první stránku', 'Create your first page')}</Button>
                 </Link>
               </div>
             ) : (
@@ -419,11 +421,11 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{page.title}</p>
                         <p className="text-xs text-gray-500">
-                          {safeFormatDate(page.updated_at)}
+                          {safeFormatDate(page.updated_at, undefined, locale)}
                         </p>
                       </div>
                       <Badge variant={page.visibility === 'shared' ? 'default' : 'secondary'}>
-                        {page.visibility === 'shared' ? 'Sdílené' : 'Soukromé'}
+                        {page.visibility === 'shared' ? t('Sdílené', 'Shared') : t('Soukromé', 'Private')}
                       </Badge>
                     </div>
                   </Link>
@@ -437,23 +439,23 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Dnešní plány</CardTitle>
+              <CardTitle>{t('Dnešní plány', 'Today’s plans')}</CardTitle>
               <Link href="/dashboard/calendar">
                 <Button variant="outline" size="sm">
                   <Calendar className="h-4 w-4 mr-1" />
-                  Kalendář
+                  {t('Kalendář', 'Calendar')}
                 </Button>
               </Link>
             </div>
-            <CardDescription>Co máte naplánováno na dnes</CardDescription>
+            <CardDescription>{t('Co máte naplánováno na dnes', 'What you have planned for today')}</CardDescription>
           </CardHeader>
           <CardContent>
             {todayEntries.length === 0 ? (
               <div className="text-center py-6 text-gray-500">
                 <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Dnes nemáte žádné plány</p>
+                <p>{t('Dnes nemáte žádné plány', 'No plans for today')}</p>
                 <Link href="/dashboard/calendar">
-                  <Button variant="outline" size="sm" className="mt-2">Přidat plán</Button>
+                  <Button variant="outline" size="sm" className="mt-2">{t('Přidat plán', 'Add a plan')}</Button>
                 </Link>
               </div>
             ) : (
@@ -464,12 +466,12 @@ export default function DashboardPage() {
                       ? <CheckCircle className="h-5 w-5 text-green-500" />
                       : <Circle className="h-5 w-5 text-gray-400" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{entry.title || 'Bez názvu'}</p>
+                      <p className="text-sm font-medium">{entry.title || t('Bez názvu', 'Untitled')}</p>
                       <Badge variant="outline" className="text-xs">
-                        {entry.entry_type === 'plan' && 'Plán'}
-                        {entry.entry_type === 'event' && 'Událost'}
+                        {entry.entry_type === 'plan' && t('Plán', 'Plan')}
+                        {entry.entry_type === 'event' && t('Událost', 'Event')}
                         {entry.entry_type === 'goal_deadline' && 'Deadline'}
-                        {entry.entry_type === 'reflection' && 'Reflexe'}
+                        {entry.entry_type === 'reflection' && t('Reflexe', 'Reflection')}
                       </Badge>
                     </div>
                   </div>
@@ -520,17 +522,17 @@ export default function DashboardPage() {
           {/* Modal */}
           <div className="relative bg-white rounded-3xl px-8 py-10 text-center shadow-2xl max-w-xs w-full mx-4">
             <div className="text-7xl mb-4 select-none">🦫</div>
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Máš bobříka!</h2>
-            <p className="text-base font-semibold text-teal-600 mb-4">{celebratedBadge.name}</p>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{t('Máš bobříka!', 'You got a beaver!')}</h2>
+            <p className="text-base font-semibold text-teal-600 mb-4">{t(celebratedBadge.name)}</p>
             <p className="text-sm text-gray-700 leading-relaxed bg-amber-50 rounded-2xl px-4 py-3 mb-4">
-              {celebratedBadge.praise}
+              {t(celebratedBadge.praise)}
             </p>
-            <p className="text-xs text-gray-400 mb-7">Platnost 1 rok · zobrazí se v tvém profilu</p>
+            <p className="text-xs text-gray-400 mb-7">{t('Platnost 1 rok · zobrazí se v tvém profilu', 'Valid for 1 year · shown in your profile')}</p>
             <button
               onClick={() => setCelebratedBadge(null)}
               className="w-full bg-teal-500 hover:bg-teal-600 active:bg-teal-700 text-white rounded-2xl py-3 font-bold text-base transition-colors"
             >
-              Hurá! 🎉
+              {t('Hurá! 🎉', 'Hooray! 🎉')}
             </button>
           </div>
         </div>

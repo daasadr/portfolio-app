@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem, generateShareToken } from '@/lib/directus';
 import type { Student, SharedLink, PortfolioPage, Category, ShareType, PageShare } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import type { L10n } from '@/lib/i18n';
 
 interface TeacherConnection {
   id: number;
@@ -47,15 +49,16 @@ interface TeacherConnection {
   other_person: { id: number; first_name: string; last_name: string } | null;
 }
 
-const SHARE_TYPE_LABELS: Record<ShareType, string> = {
-  full_portfolio: 'Celé portfolio',
-  category: 'Kategorie',
-  single_page: 'Jedna stránka',
+const SHARE_TYPE_LABELS: Record<ShareType, L10n> = {
+  full_portfolio: { cs: 'Celé portfolio', en: 'Whole portfolio' },
+  category: { cs: 'Kategorie', en: 'Category' },
+  single_page: { cs: 'Jedna stránka', en: 'Single page' },
 };
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export default function SharePage() {
+  const { t, intl, plural } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [links, setLinks] = useState<SharedLink[]>([]);
   const [pages, setPages] = useState<PortfolioPage[]>([]);
@@ -188,7 +191,7 @@ export default function SharePage() {
   }
 
   async function deleteLink(id: string) {
-    if (!confirm('Opravdu chcete smazat tento odkaz?')) return;
+    if (!confirm(t('Opravdu chcete smazat tento odkaz?', 'Are you sure you want to delete this link?'))) return;
     await directus.request(deleteItem('shared_links', id));
     setLinks((prev) => prev.filter((l) => l.id !== id));
   }
@@ -234,22 +237,22 @@ export default function SharePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Sdílení</h1>
-        <p className="text-gray-500 text-sm mt-1">Stránky sdílené s vámi a vaše sdílení s ostatními</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('Sdílení', 'Sharing')}</h1>
+        <p className="text-gray-500 text-sm mt-1">{t('Stránky sdílené s vámi a vaše sdílení s ostatními', 'Pages shared with you and what you share with others')}</p>
       </div>
 
       <Tabs defaultValue="incoming">
         <TabsList className="mb-4">
           <TabsTrigger value="incoming" className="flex items-center gap-2">
             <Inbox className="h-4 w-4" />
-            Sdílí se mnou
+            {t('Sdílí se mnou', 'Shared with me')}
             {(incomingShares.length + pendingConnections.length) > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs px-1.5">{incomingShares.length + pendingConnections.length}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="outgoing" className="flex items-center gap-2">
             <Share2 className="h-4 w-4" />
-            Sdílím
+            {t('Sdílím', 'I share')}
           </TabsTrigger>
         </TabsList>
 
@@ -260,7 +263,7 @@ export default function SharePage() {
           {pendingConnections.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" /> Žádosti o propojení
+                <GraduationCap className="h-4 w-4" /> {t('Žádosti o propojení', 'Connection requests')}
               </h2>
               <div className="space-y-2">
                 {pendingConnections.map(tc => (
@@ -268,18 +271,19 @@ export default function SharePage() {
                     <CardContent className="pt-3 pb-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900 text-sm">
-                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Uživatel'}
+                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : t('Uživatel', 'User')}
                         </p>
                         <Badge variant="outline" className="text-yellow-700 border-yellow-300 text-xs mt-0.5">
-                          Čeká na vaše přijetí
+                          {t('Čeká na vaše přijetí', 'Waiting for you to accept')}
                         </Badge>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50"
                           onClick={() => handleTcAction(tc.id, 'accepted')} disabled={tcLoading}>
-                          <Check className="h-4 w-4 mr-1" /> Přijmout
+                          <Check className="h-4 w-4 mr-1" /> {t('Přijmout', 'Accept')}
                         </Button>
                         <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600"
+                          title={t('Odmítnout', 'Decline')} aria-label={t('Odmítnout', 'Decline')}
                           onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
                           <X className="h-4 w-4" />
                         </Button>
@@ -294,7 +298,7 @@ export default function SharePage() {
           {/* Stránky sdílené s tímto uživatelem */}
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Stránky sdílené se mnou
+              <FileText className="h-4 w-4" /> {t('Stránky sdílené se mnou', 'Pages shared with me')}
             </h2>
             {sharesLoading ? (
               <div className="flex justify-center py-8">
@@ -303,7 +307,7 @@ export default function SharePage() {
             ) : incomingShares.length === 0 ? (
               <Card className="bg-gray-50/50">
                 <CardContent className="pt-4 text-sm text-gray-400 text-center py-10">
-                  Nikdo s vámi zatím nesdílel žádnou stránku.
+                  {t('Nikdo s vámi zatím nesdílel žádnou stránku.', 'Nobody has shared a page with you yet.')}
                 </CardContent>
               </Card>
             ) : (
@@ -314,11 +318,11 @@ export default function SharePage() {
                       <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 text-sm truncate">
-                          {share.page?.title ?? 'Neznámá stránka'}
+                          {share.page?.title ?? t('Neznámá stránka', 'Unknown page')}
                         </p>
                         <p className="text-xs text-gray-400">
-                          Od: {share.from?.first_name} {share.from?.last_name}
-                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString('cs-CZ')}`}
+                          {t('Od:', 'From:')} {share.from?.first_name} {share.from?.last_name}
+                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString(intl)}`}
                         </p>
                       </div>
                       <Button
@@ -344,7 +348,7 @@ export default function SharePage() {
           {acceptedConnections.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" /> Propojení
+                <GraduationCap className="h-4 w-4" /> {t('Propojení', 'Connections')}
               </h2>
               <div className="space-y-2">
                 {acceptedConnections.map(tc => (
@@ -352,13 +356,13 @@ export default function SharePage() {
                     <CardContent className="pt-3 pb-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900 text-sm">
-                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : 'Uživatel'}
+                          {tc.other_person ? `${tc.other_person.first_name} ${tc.other_person.last_name}` : t('Uživatel', 'User')}
                         </p>
-                        <Badge variant="secondary" className="text-xs mt-0.5">Propojeno</Badge>
+                        <Badge variant="secondary" className="text-xs mt-0.5">{t('Propojeno', 'Connected')}</Badge>
                       </div>
                       <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-600"
                         onClick={() => handleTcAction(tc.id, 'rejected')} disabled={tcLoading}>
-                        <X className="h-4 w-4" /> Odebrat
+                        <X className="h-4 w-4" /> {t('Odebrat', 'Remove')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -370,7 +374,7 @@ export default function SharePage() {
           {/* Stránky, které sdílím */}
           <div>
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Sdílené stránky
+              <FileText className="h-4 w-4" /> {t('Sdílené stránky', 'Shared pages')}
             </h2>
             {sharesLoading ? (
               <div className="flex justify-center py-8">
@@ -379,7 +383,7 @@ export default function SharePage() {
             ) : outgoingShares.length === 0 ? (
               <Card className="bg-gray-50/50">
                 <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
-                  Zatím jste nesdíleli žádnou stránku. Otevřete stránku v portfoliu a klikněte na „Sdílet s...".
+                  {t('Zatím jste nesdíleli žádnou stránku. Otevřete stránku v portfoliu a klikněte na „Sdílet s...".', 'You haven\'t shared any pages yet. Open a page in your portfolio and click "Share with...".')}
                 </CardContent>
               </Card>
             ) : (
@@ -390,11 +394,11 @@ export default function SharePage() {
                       <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 text-sm truncate">
-                          {share.page?.title ?? 'Neznámá stránka'}
+                          {share.page?.title ?? t('Neznámá stránka', 'Unknown page')}
                         </p>
                         <p className="text-xs text-gray-400">
-                          Pro: {share.to?.first_name} {share.to?.last_name}
-                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString('cs-CZ')}`}
+                          {t('Pro:', 'To:')} {share.to?.first_name} {share.to?.last_name}
+                          {share.date_created && ` · ${new Date(share.date_created).toLocaleDateString(intl)}`}
                         </p>
                       </div>
                       <Button
@@ -416,41 +420,41 @@ export default function SharePage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-2">
-                <LinkIcon className="h-4 w-4" /> Veřejné sdílecí odkazy
+                <LinkIcon className="h-4 w-4" /> {t('Veřejné sdílecí odkazy', 'Public share links')}
               </h2>
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-1" />
-                    Nový odkaz
+                    {t('Nový odkaz', 'New link')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Vytvořit sdílecí odkaz</DialogTitle>
+                    <DialogTitle>{t('Vytvořit sdílecí odkaz', 'Create a share link')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1">
-                      <Label>Co sdílet</Label>
+                      <Label>{t('Co sdílet', 'What to share')}</Label>
                       <Select
                         value={form.share_type}
                         onValueChange={(v) => setForm((f) => ({ ...f, share_type: v as ShareType, category_id: '', page_id: '' }))}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="full_portfolio">Celé portfolio</SelectItem>
-                          <SelectItem value="category">Jen kategorii</SelectItem>
-                          <SelectItem value="single_page">Jednu stránku</SelectItem>
+                          <SelectItem value="full_portfolio">{t('Celé portfolio', 'Whole portfolio')}</SelectItem>
+                          <SelectItem value="category">{t('Jen kategorii', 'Just one category')}</SelectItem>
+                          <SelectItem value="single_page">{t('Jednu stránku', 'A single page')}</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">Zobrazí se jen stránky označené jako sdílené — soukromé zůstanou jen tvoje.</p>
+                      <p className="text-xs text-gray-500">{t('Zobrazí se jen stránky označené jako sdílené — soukromé zůstanou jen tvoje.', 'Only pages marked as shared will be shown — private ones stay just yours.')}</p>
                     </div>
 
                     {form.share_type === 'category' && (
                       <div className="space-y-1">
-                        <Label>Vyberte kategorii</Label>
+                        <Label>{t('Vyberte kategorii', 'Choose a category')}</Label>
                         <Select value={form.category_id} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('Vyberte kategorii', 'Choose a category')} /></SelectTrigger>
                           <SelectContent>
                             {categories.map((c) => (
                               <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
@@ -462,9 +466,9 @@ export default function SharePage() {
 
                     {form.share_type === 'single_page' && (
                       <div className="space-y-1">
-                        <Label>Vyberte stránku</Label>
+                        <Label>{t('Vyberte stránku', 'Choose a page')}</Label>
                         <Select value={form.page_id} onValueChange={(v) => setForm((f) => ({ ...f, page_id: v }))}>
-                          <SelectTrigger><SelectValue placeholder="Vyberte stránku" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('Vyberte stránku', 'Choose a page')} /></SelectTrigger>
                           <SelectContent>
                             {pages.map((p) => (
                               <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
@@ -475,19 +479,19 @@ export default function SharePage() {
                     )}
 
                     <div className="space-y-1">
-                      <Label>Platnost odkazu (volitelné)</Label>
+                      <Label>{t('Platnost odkazu (volitelné)', 'Link expiry (optional)')}</Label>
                       <Input
                         type="datetime-local"
                         value={form.expires_at}
                         onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
                       />
-                      <p className="text-xs text-gray-500">Pokud nevyplníte, odkaz nevyprší</p>
+                      <p className="text-xs text-gray-500">{t('Pokud nevyplníte, odkaz nevyprší', 'If you leave this empty, the link never expires')}</p>
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>Zrušit</Button>
+                      <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('Zrušit', 'Cancel')}</Button>
                       <Button onClick={handleSave} disabled={saving}>
-                        {saving ? 'Vytvářím...' : 'Vytvořit odkaz'}
+                        {saving ? t('Vytvářím...', 'Creating...') : t('Vytvořit odkaz', 'Create link')}
                       </Button>
                     </div>
                   </div>
@@ -498,7 +502,7 @@ export default function SharePage() {
             {links.length === 0 ? (
               <Card className="bg-gray-50/50">
                 <CardContent className="pt-4 text-sm text-gray-400 text-center py-8">
-                  Zatím nemáte žádné veřejné sdílecí odkazy.
+                  {t('Zatím nemáte žádné veřejné sdílecí odkazy.', 'You don\'t have any public share links yet.')}
                 </CardContent>
               </Card>
             ) : (
@@ -515,13 +519,13 @@ export default function SharePage() {
                         <div className="flex items-start gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Badge variant="secondary">{SHARE_TYPE_LABELS[link.share_type]}</Badge>
+                              <Badge variant="secondary">{t(SHARE_TYPE_LABELS[link.share_type])}</Badge>
                               {cat && <Badge variant="outline">{cat.name}</Badge>}
                               {pg && <Badge variant="outline">{pg.title}</Badge>}
-                              {!link.is_active && <Badge variant="destructive">Neaktivní</Badge>}
-                              {expired && <Badge variant="destructive">Vypršelo</Badge>}
+                              {!link.is_active && <Badge variant="destructive">{t('Neaktivní', 'Inactive')}</Badge>}
+                              {expired && <Badge variant="destructive">{t('Vypršelo', 'Expired')}</Badge>}
                               <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Eye className="h-3 w-3" /> {link.view_count} zobrazení
+                                <Eye className="h-3 w-3" /> {link.view_count} {plural(link.view_count, ['zobrazení', 'zobrazení', 'zobrazení'], ['view', 'views'])}
                               </span>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
@@ -534,12 +538,12 @@ export default function SharePage() {
                             </div>
                             {link.expires_at && (
                               <p className="text-xs text-gray-500 mt-1">
-                                Platí do: {new Date(link.expires_at).toLocaleString('cs-CZ')}
+                                {t('Platí do:', 'Valid until:')} {new Date(link.expires_at).toLocaleString(intl)}
                               </p>
                             )}
                           </div>
                           <div className="flex gap-2 flex-shrink-0">
-                            <Button variant="outline" size="sm" onClick={() => toggleActive(link)} title={link.is_active ? 'Deaktivovat' : 'Aktivovat'}>
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(link)} title={link.is_active ? t('Deaktivovat', 'Deactivate') : t('Aktivovat', 'Activate')}>
                               {link.is_active ? <Globe className="h-4 w-4 text-blue-500" /> : <Lock className="h-4 w-4 text-gray-400" />}
                             </Button>
                             <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700" onClick={() => deleteLink(link.id)}>

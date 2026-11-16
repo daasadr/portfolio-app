@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentId, directusUrl, adminHeaders } from '@/lib/reading-diary-server';
 import type { AchievementCounts } from '@/lib/achievements';
+import { requestT } from '@/lib/i18n-server';
 
 /** Number of items in a collection matching the filter query; 0 if the collection is missing. */
 async function count(collection: string, filter: string): Promise<number> {
@@ -16,8 +17,9 @@ async function count(collection: string, filter: string): Promise<number> {
 
 // GET /api/achievements — activity counts for the signed-in student
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const studentId = await getStudentId(request);
-  if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!studentId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const own = `filter[student_id][_eq]=${studentId}`;
   const [portfolio, reading, goals, beavers, calendar, dreams] = await Promise.all([

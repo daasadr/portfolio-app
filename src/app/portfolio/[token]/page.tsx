@@ -9,11 +9,20 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, FolderOpen, BookOpen, AlertCircle } from 'lucide-react';
 import type { PortfolioPage, Category } from '@/types';
+import { useLocale } from '@/components/LocaleProvider';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+
+const switcher = (
+  <div className="fixed top-4 right-4 z-20">
+    <LanguageSwitcher />
+  </div>
+);
 
 interface Student { id: string; first_name: string; last_name: string; avatar?: string }
 
 export default function PublicPortfolioPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const { t, locale } = useLocale();
   const [student, setStudent] = useState<Student | null>(null);
   const [pages, setPages] = useState<PortfolioPage[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -32,7 +41,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
           categories?: Category[];
           share_type?: string;
         };
-        if (!res.ok) { setError(data.message ?? 'Odkaz není platný'); setIsLoading(false); return; }
+        if (!res.ok) { setError(data.message ?? t('Odkaz není platný', 'This link is not valid')); setIsLoading(false); return; }
         setStudent(data.student ?? null);
         setPages(data.pages ?? []);
         setCategories(data.categories ?? []);
@@ -42,7 +51,8 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
         }
         setIsLoading(false);
       })
-      .catch(() => { setError('Chyba při načítání'); setIsLoading(false); });
+      .catch(() => { setError(t('Chyba při načítání', 'Error while loading')); setIsLoading(false); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once per token, not on language change
   }, [token]);
 
   if (isLoading) {
@@ -56,6 +66,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        {switcher}
         <div className="text-center space-y-3">
           <AlertCircle className="h-12 w-12 text-gray-300 mx-auto" />
           <p className="text-gray-600 font-medium">{error}</p>
@@ -74,13 +85,14 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
 
     return (
       <div className="min-h-screen bg-gray-50">
+        {switcher}
         <div className="max-w-3xl mx-auto px-4 py-8">
           {shareType !== 'single_page' && (
             <button
               onClick={() => setSelectedPage(null)}
               className="text-sm text-blue-500 hover:underline mb-6 flex items-center gap-1"
             >
-              ← Zpět na seznam
+              ← {t('Zpět na seznam', 'Back to the list')}
             </button>
           )}
           <div className="rounded-2xl overflow-hidden shadow-sm">
@@ -89,18 +101,18 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                 {selectedPage.title}
               </h1>
               <p className="text-white/70 text-xs mt-1">
-                {student?.first_name} {student?.last_name}{safeFormatDate(selectedPage.updated_at) ? ` · ${safeFormatDate(selectedPage.updated_at)}` : ''}
+                {student?.first_name} {student?.last_name}{safeFormatDate(selectedPage.updated_at, undefined, locale) ? ` · ${safeFormatDate(selectedPage.updated_at, undefined, locale)}` : ''}
               </p>
             </div>
             <div className="bg-white px-6 py-6">
               {selectedPage.content ? (
                 <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPage.content) }} />
               ) : (
-                <p className="text-gray-400 italic text-center py-8">Tato stránka nemá žádný obsah.</p>
+                <p className="text-gray-400 italic text-center py-8">{t('Tato stránka nemá žádný obsah.', 'This page has no content.')}</p>
               )}
               {attachments.length > 0 && (
                 <div className="mt-8 pt-6 border-t space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-600">Přílohy ({attachments.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-600">{t('Přílohy', 'Attachments')} ({attachments.length})</h3>
                   {attachments.map(att => {
                     const src = `/api/asset/${att.id}?share=${token}`;
                     return (
@@ -120,7 +132,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
             </div>
           </div>
           <p className="text-center text-xs text-gray-400 mt-6">
-            Sdíleno přes <Link href="/" className="text-blue-400 hover:underline">Portfolio Paradise</Link>
+            {t('Sdíleno přes', 'Shared via')} <Link href="/" className="text-blue-400 hover:underline">Portfolio Paradise</Link>
           </p>
         </div>
       </div>
@@ -136,6 +148,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {switcher}
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Hlavička */}
         <div className="mb-8 text-center">
@@ -149,7 +162,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
         {pages.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>Toto portfolio zatím neobsahuje žádné stránky.</p>
+            <p>{t('Toto portfolio zatím neobsahuje žádné stránky.', 'This portfolio has no pages yet.')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -172,7 +185,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {safeFormatDate(page.updated_at)}
+                              {safeFormatDate(page.updated_at, undefined, locale)}
                             </p>
                           </div>
                         </div>
@@ -187,7 +200,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                 {pagesByCategory.length > 0 && (
                   <div className="flex items-center gap-2 mb-3">
                     <FolderOpen className="h-4 w-4 text-gray-400" />
-                    <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Ostatní</h2>
+                    <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('Ostatní', 'Other')}</h2>
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -203,7 +216,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 truncate">{page.title}</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {safeFormatDate(page.updated_at)}
+                              {safeFormatDate(page.updated_at, undefined, locale)}
                             </p>
                           </div>
                         </div>
@@ -217,7 +230,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
         )}
 
         <p className="text-center text-xs text-gray-400 mt-10">
-          Sdíleno přes <Link href="/" className="text-blue-400 hover:underline">Portfolio Paradise</Link>
+          {t('Sdíleno přes', 'Shared via')} <Link href="/" className="text-blue-400 hover:underline">Portfolio Paradise</Link>
         </p>
       </div>
     </div>

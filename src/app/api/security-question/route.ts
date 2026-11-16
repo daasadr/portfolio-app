@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
 import { hashAnswer, customQuestionSupported } from '@/lib/security';
 import { CUSTOM_QUESTION, parseQuestionChoice } from '@/lib/security-questions';
-import { getRequestLocale } from '@/lib/i18n-server';
+import { getRequestLocale, requestT } from '@/lib/i18n-server';
+import { tr } from '@/lib/i18n';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -22,10 +23,11 @@ async function getStudentId(token: string): Promise<string | null> {
 }
 
 export async function GET(request: NextRequest) {
+  const t = requestT(request);
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const studentId = await getStudentId(token);
-  if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!studentId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const fields = (await customQuestionSupported(directusUrl, adminToken))
     ? 'security_question,security_question_text'
@@ -39,24 +41,26 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const locale = getRequestLocale(request);
+  const t = (cs: string, en: string) => tr(locale, cs, en);
   const token = getTokenFromRequest(request);
-  if (!token) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!token) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
   const studentId = await getStudentId(token);
-  if (!studentId) return NextResponse.json({ message: 'Neautorizováno' }, { status: 401 });
+  if (!studentId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const body = await request.json().catch(() => ({})) as {
     security_question?: unknown; security_question_text?: unknown; security_answer?: unknown;
   };
-  const choice = parseQuestionChoice(body.security_question, body.security_question_text, getRequestLocale(request));
+  const choice = parseQuestionChoice(body.security_question, body.security_question_text, locale);
   if (!choice.ok) return NextResponse.json({ message: choice.message }, { status: 400 });
   const answer = typeof body.security_answer === 'string' ? body.security_answer.trim() : '';
   if (!answer || answer.length > 200) {
-    return NextResponse.json({ message: 'Vyplňte odpověď (nejvýše 200 znaků).' }, { status: 400 });
+    return NextResponse.json({ message: t('Vyplňte odpověď (nejvýše 200 znaků).', 'Please fill in the answer (200 characters at most).') }, { status: 400 });
   }
 
   const customReady = await customQuestionSupported(directusUrl, adminToken);
   if (choice.security_question === CUSTOM_QUESTION && !customReady) {
-    return NextResponse.json({ message: 'Vlastní otázku zatím nejde uložit — vyberte prosím jednu z nabízených.' }, { status: 503 });
+    return NextResponse.json({ message: t('Vlastní otázku zatím nejde uložit — vyberte prosím jednu z nabízených.', 'Your own question cannot be saved yet — please choose one of the offered questions.') }, { status: 503 });
   }
 
   const res = await fetch(`${directusUrl}/items/students/${studentId}`, {
@@ -68,6 +72,6 @@ export async function PATCH(request: NextRequest) {
       security_answer: await hashAnswer(answer),
     }),
   });
-  if (!res.ok) return NextResponse.json({ message: 'Otázku se nepodařilo uložit.' }, { status: 502 });
+  if (!res.ok) return NextResponse.json({ message: t('Otázku se nepodařilo uložit.', 'The question could not be saved.') }, { status: 502 });
   return NextResponse.json({ success: true });
 }
