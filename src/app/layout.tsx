@@ -15,13 +15,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portfolioparadise.eu';
+
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
+  const title = "Portfolio Paradise - Online Portfolio";
+  const description = locale === 'en'
+    ? "An online portfolio for home-educated children: portfolio, reading diary, goals, dreams and weekly challenges. Free, in Czech and English."
+    : "Online portfolio pro děti na domácím vzdělávání: portfolio, čtenářský deník, cíle, sny a týdenní výzvy. Zdarma, česky i anglicky.";
+  // Link previews (WhatsApp, Facebook, Messenger, Signal, X…) read these tags
+  const image = {
+    url: `/og-image-${locale}.jpg`,
+    width: 1200,
+    height: 630,
+    alt: locale === 'en' ? 'Portfolio Paradise — an online portfolio for home-educated children' : 'Portfolio Paradise — online portfolio pro děti na domácím vzdělávání',
+  };
   return {
-    title: "Portfolio Paradise - Online Portfolio",
-    description: locale === 'en'
-      ? "An online portfolio for primary school pupils learning at home"
-      : "Online portfolio pro žáky základních škol s individuálním studiem",
+    metadataBase: new URL(SITE_URL),
+    title,
+    description,
+    openGraph: {
+      type: 'website',
+      siteName: 'Portfolio Paradise',
+      title,
+      description,
+      url: '/',
+      locale: locale === 'en' ? 'en_GB' : 'cs_CZ',
+      alternateLocale: locale === 'en' ? 'cs_CZ' : 'en_GB',
+      images: [image],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [image.url] },
   };
 }
 
