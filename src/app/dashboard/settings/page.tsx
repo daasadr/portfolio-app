@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [email, setEmail] = useState('');
 
@@ -126,19 +127,25 @@ export default function SettingsPage() {
   async function saveProfile() {
     if (!student) return;
     setSaveStatus('saving');
+    setProfileError(null);
     try {
-      const updated = await directus.request(
-        updateItem('students', student.id, {
+      const res = await fetch('/api/student', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           first_name: profileForm.first_name,
           last_name: profileForm.last_name,
-          date_of_birth: profileForm.date_of_birth || undefined,
-        })
-      ) as Student;
-      setStudent(updated);
+          date_of_birth: profileForm.date_of_birth || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({})) as { student?: Student; message?: string };
+      if (!res.ok || !data.student) throw new Error(data.message ?? t('Profil se nepodařilo uložit.', 'Could not save your profile.'));
+      setStudent(data.student);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e) {
       console.error(e);
+      setProfileError(e instanceof Error ? e.message : t('Profil se nepodařilo uložit.', 'Could not save your profile.'));
       setSaveStatus('idle');
     }
   }
@@ -333,6 +340,7 @@ export default function SettingsPage() {
               onChange={(e) => setProfileForm((f) => ({ ...f, date_of_birth: e.target.value }))}
             />
           </div>
+          {profileError && <p className="text-sm text-red-500">{profileError}</p>}
           <div className="flex justify-end">
             <Button onClick={saveProfile} disabled={saveStatus === 'saving'}>
               <Save className="h-4 w-4 mr-2" />

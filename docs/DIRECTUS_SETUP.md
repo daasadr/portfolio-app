@@ -1,10 +1,11 @@
 # Nastavení Directusu
 
 Portfolio Paradise používá **Directus 11** jako backend. Directus běží zvlášť (na serveru na portu 8058,
-zvenku nedostupný) a aplikace s ním mluví dvěma způsoby:
+zvenku přes `api.portfolioparadise.eu`, viz Bezpečnost serveru) a aplikace s ním mluví dvěma způsoby:
 
 1. **Přes proxy `/api/directus/...`**: prohlížeč žáka posílá požadavky s jeho přihlášením. Proxy pustí
-   jen kolekce ze seznamu níže a odmítne zápis pod cizí `student_id`. Tady platí **oprávnění role Student**.
+   jen kolekce označené „proxy“ a sama omezí čtení, úpravy i mazání na vlastní záznamy žáka. Navíc platí
+   **oprávnění role Student** v Directusu.
 2. **Přes vlastní API routy s admin tokenem** (`DIRECTUS_ADMIN_TOKEN`): server sám ověří, kdo je
    přihlášený, a `student_id` doplní z přihlášení. Tady se oprávnění role Student neuplatní.
 
@@ -85,8 +86,16 @@ se Directus někdy omylem dostal ven.
 
 ## Bezpečnost serveru
 
-- Port Directusu (8058) a aplikace (3004) jsou dostupné jen z `localhost`, ven vede jen nginx.
-  Ověření zvenku: `nc -zv portfolioparadise.eu 8058` musí selhat.
+- **Directus je veřejně dostupný přes `https://api.portfolioparadise.eu`** (nginx ho tam publikuje kvůli
+  administraci). Kdokoli s účtem se tam může přihlásit svým e-mailem a heslem a pak platí **jen
+  oprávnění policy Student**, ne kontroly aplikace. Proto musí mít policy Student u každé kolekce filtr
+  na vlastní záznamy (tabulka výše) a nesmí mít přístup k serverovým kolekcím. Bezpečnější varianta:
+  subdoménu `api` v nginx omezit (povolené IP adresy nebo heslo), nebo ji úplně vypnout a do administrace
+  chodit přes SSH tunel: `ssh -L 8058:localhost:8058 root@<server>`, pak `http://localhost:8058`.
+  Aplikace sama veřejnou adresu nepotřebuje, pokud má v `.env` `DIRECTUS_URL=http://localhost:8058`.
+- Proxy aplikace (`/api/directus`) vlastnictví hlídá sama (čtení, úpravy, mazání i soubory), takže uvnitř
+  aplikace žák cizí data nevidí ani při chybně nastavené policy. Na přímý přístup přes `api.` to ale nemá vliv.
+- Porty Directusu (8058) a aplikace (3004) jsou dostupné jen z `localhost`.
 - Doporučené proměnné Directusu: `FILES_MAX_UPLOAD_SIZE` (např. `30mb`, aplikace víc nedovolí),
   `FILES_MIME_TYPE_ALLOW_LIST` (obrázky, video, zvuk, PDF a kancelářské dokumenty) a `RATE_LIMITER_ENABLED=true`.
 - Pravidelné zálohy databáze i složky s nahranými soubory, uložené mimo server.

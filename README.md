@@ -40,7 +40,7 @@ Běží na **https://portfolioparadise.eu**. Aplikace je česky i anglicky (pře
 - **Přihlášení** přes Directus. Tokeny jsou v HttpOnly cookies (`pp_token`, `pp_refresh`) a middleware
   je včas obnovuje.
 - **Prohlížeč s Directusem nemluví přímo.** Jde přes proxy `/api/directus/...`, která pustí jen vyjmenované
-  kolekce a nedovolí zapsat data pod cizí `student_id`.
+  kolekce a každého žáka omezí na jeho vlastní záznamy a soubory.
 - **Citlivější části** (čtenářský deník, bobříci, propojení s učiteli, sdílení, export, odznaky) běží přes
   vlastní API routy s admin tokenem. `student_id` berou vždy z přihlášení, nikdy od klienta.
 - **Dva jazyky**: každý text je v kódu jako dvojice `t('česky', 'English')`. Viz [docs/I18N.md](docs/I18N.md).
@@ -74,7 +74,8 @@ Na serveru ve složce projektu:
 ```
 
 `deploy.sh` si před nasazením uloží předchozí image, takže jde vrátit (příkaz vypíše na konci).
-Port Directusu (8058) ani aplikace (3004) nesmí být zvenku dostupné, ven jde jen nginx.
+Porty Directusu (8058) a aplikace (3004) nejsou zvenku dostupné, ven jde jen nginx. Pozor: nginx
+publikuje Directus na `api.portfolioparadise.eu`, viz bezpečnost v [docs/DIRECTUS_SETUP.md](docs/DIRECTUS_SETUP.md).
 
 **Jednorázové skripty pro Directus** (spouštějí se jednou, opakované spuštění nevadí):
 
