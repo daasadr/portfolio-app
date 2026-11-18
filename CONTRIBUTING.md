@@ -1,43 +1,42 @@
 # Jak přispět do projektu
 
-Děkujeme za váš zájem o přispění do projektu Portfolio Žáků! 🎉
+Děkujeme za zájem o Portfolio Paradise! 🎉 Aplikaci používají děti, proto má přednost bezpečnost
+a srozumitelnost před novými funkcemi.
 
 ## Jak začít
 
-1. Forkněte tento repozitář
-2. Vytvořte novou větev (`git checkout -b feature/amazing-feature`)
-3. Proveďte své změny
-4. Commitněte změny (`git commit -m 'Add amazing feature'`)
-5. Pushněte do větve (`git push origin feature/amazing-feature`)
-6. Otevřete Pull Request
+1. Forkněte repozitář a vytvořte novou větev (`git checkout -b feature/nazev-zmeny`)
+2. Spusťte aplikaci podle [README](README.md)
+3. Proveďte změny a ověřte je (`npx tsc --noEmit` a `npm run build` musí projít)
+4. Otevřete Pull Request s popisem, co a proč se mění
 
-## Coding Standards
+## Pravidla
 
-- Používejte TypeScript
-- Dodržujte ESLint pravidla
-- Pište čisté a čitelné komentáře
-- Testujte své změny před commitem
+- **TypeScript** všude, kód ať odpovídá okolnímu stylu.
+- **Každý text pro uživatele ve dvou jazycích**: `t('česky', 'English')`. Podrobnosti v [docs/I18N.md](docs/I18N.md).
+- **Bezpečnost dat žáků:**
+  - nová data se čtou a zapisují přes serverové API routy (`src/app/api/...`) s admin tokenem;
+  - `student_id` se vždy bere z přihlášení, nikdy z požadavku;
+  - ID z URL ověřujte (`isValidId`);
+  - soukromé věci nesmí být vidět přes sdílení ani u učitele.
+- **Nová pole v Directusu** přidávejte skriptem (vzor: `directus-setup-reading-diary.mjs`) a popište
+  je v [docs/DIRECTUS_SETUP.md](docs/DIRECTUS_SETUP.md). Chybějící pole se projeví jen u žákovských účtů.
+- Když se mění, jaké údaje aplikace zpracovává, aktualizujte i zásady ochrany osobních údajů
+  (`src/app/privacy/page.tsx`).
 
-## Commit Messages
+## Commit zprávy
 
-Používejte jasné a popisné commit zprávy:
-- ✅ `Add user authentication`
+Jasně a popisně, co se změnilo:
 - ✅ `Fix calendar navigation bug`
+- ✅ `feat(reading-diary): share chosen books with teacher`
 - ❌ `Update stuff`
-- ❌ `Fix`
 
-## Hlášení chyb
+## Hlášení chyb a nápady
 
-Pokud najdete chybu, prosím vytvořte issue s:
-- Popisem problému
-- Kroky k reprodukci
-- Očekávané chování
-- Screenshoty (pokud je to relevantní)
+Vytvořte issue nebo napište na daasa.d@seznam.cz:
+- popis problému a kroky, jak ho vyvolat,
+- co jste čekali, že se stane,
+- snímek obrazovky, pokud pomůže,
+- jazyk aplikace a zda jde o účet žáka, nebo učitele.
 
-Děkujeme! 💙
-
-
-
-
-
-
+Plány projektu jsou v [docs/ROADMAP.md](docs/ROADMAP.md). Děkujeme! 💙

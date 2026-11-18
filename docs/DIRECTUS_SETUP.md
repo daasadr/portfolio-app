@@ -1,150 +1,101 @@
-# Directus Setup Guide
+# Nastavení Directusu
 
-Tento průvodce ti pomůže nastavit Directus backend pro Portfolio aplikaci.
+Portfolio Paradise používá **Directus 11** jako backend. Directus běží zvlášť (na serveru na portu 8058,
+zvenku nedostupný) a aplikace s ním mluví dvěma způsoby:
 
-## Předpoklady
+1. **Přes proxy `/api/directus/...`**: prohlížeč žáka posílá požadavky s jeho přihlášením. Proxy pustí
+   jen kolekce ze seznamu níže a odmítne zápis pod cizí `student_id`. Tady platí **oprávnění role Student**.
+2. **Přes vlastní API routy s admin tokenem** (`DIRECTUS_ADMIN_TOKEN`): server sám ověří, kdo je
+   přihlášený, a `student_id` doplní z přihlášení. Tady se oprávnění role Student neuplatní.
 
-- Běžící Directus instance (lokální nebo cloud)
-- Node.js 18+ nainstalovaný
-- Admin přístup do Directus
+## Admin token
 
-## Krok 1: Příprava environment proměnných
+Directus → **Settings → Users** → uživatel s rolí Administrator → pole **Token** → vygenerovat a uložit.
+Token patří do `.env` jako `DIRECTUS_ADMIN_TOKEN`. Nikdy ho nedávej do proměnné začínající `NEXT_PUBLIC_`.
 
-Vytvoř soubor `.env.local` v root složce projektu:
+## Kolekce
 
-```env
-DIRECTUS_URL=https://your-directus-instance.com
-DIRECTUS_ADMIN_TOKEN=your-admin-token
-NEXT_PUBLIC_DIRECTUS_URL=https://your-directus-instance.com
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
+| Kolekce | Co obsahuje | Přístup |
+|---|---|---|
+| `students` | Profil žáka/učitele (jméno, e-mail, role, bezpečnostní otázka) | server |
+| `portfolio_pages` | Stránky portfolia | proxy |
+| `categories` | Kategorie portfolia | proxy |
+| `personal_goals` | Osobní cíle | proxy |
+| `dreams`, `dreams_directus_files` | Sny a jejich obrázky | proxy |
+| `dream_board_items` | Rozmístění obrázků na nástěnce snů | proxy |
+| `calendar_entries` | Kalendář | proxy |
+| `shared_links` | Sdílecí odkazy | proxy |
+| `directus_files` | Nahrané obrázky a přílohy | proxy (nahrání), čtení přes `/api/asset/[id]` |
+| `page_templates` | Šablony stránek (zatím se nepoužívají) | — |
+| `reading_diary` | Čtenářský deník | server |
+| `user_badges` | Průběh bobříků | server |
+| `student_connections` | Propojení žák–učitel | server |
+| `page_shares` | Sdílení stránky jinému uživateli | server |
+| `organisations`, `organisation_members`, `groups`, `group_members` | Komunita | server |
 
-### Jak získat Admin Token
+Odznaky za aktivitu žádnou kolekci nemají, počítají se z ostatních dat.
 
-1. Přihlaš se do Directus Admin rozhraní
-2. Jdi na **Settings → Access Tokens**
-3. Klikni na **Create Token**
-4. Nastav:
-   - Name: `Portfolio Setup Token`
-   - Role: `Administrator`
-   - No Expiration: `checked`
-5. Zkopíruj vygenerovaný token do `.env.local`
+### Nová instalace
 
-## Krok 2: Vytvoření kolekcí
+Starší skripty `directus-setup.js`, `directus-setup-full.js` a `directus-seed.js` **nevytvoří všechny
+kolekce**, které aplikace dnes používá (chybí např. bobříci, propojení, komunita, nástěnka snů). Produkční
+schéma je proto jediný úplný zdroj. Pro novou instalaci doporučujeme z produkce udělat snapshot schématu
+(`npx directus schema snapshot ./schema.yaml`) a na novém serveru ho použít (`npx directus schema apply`).
 
-Spusť setup script pro vytvoření všech potřebných kolekcí:
-
-```bash
-node directus-setup.js
-```
-
-Tento script vytvoří:
-- ✅ 8 hlavních kolekcí
-- ✅ 1 junction tabulku
-- ✅ Všechny relace mezi kolekcemi
-- ✅ Validace a defaultní hodnoty
-
-## Krok 3: Seed data
-
-Přidej výchozí šablony a kategorie:
+Doplňující skripty pro novější části (opakované spuštění nevadí, co existuje, přeskočí):
 
 ```bash
-node directus-seed.js
+# Čtenářský deník (kolekce reading_diary)
+docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-reading-diary.mjs
+# Vlastní bezpečnostní otázka (pole students.security_question_text)
+docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-custom-question.mjs
 ```
 
-Tento script přidá:
-- ✅ 4 šablony stránek (Volná forma, Pracovní list, Projekt, Reflexe)
-- ✅ Informace o předdefinovaných kategoriích
+> **Pozor na chybějící pole.** Když aplikace pošle pole, které v kolekci neexistuje, Directus ho
+> **u administrátora tiše ignoruje**, ale **žákovi vrátí chybu** „kolekce neexistuje nebo k ní nemáte
+> přístup“. Učitelský účet s administrátorskou rolí pak funguje a žákovský ne. Při podobné chybě nejdřív
+> porovnej pole, která aplikace posílá, se seznamem polí kolekce:
+> `curl -s -H "Authorization: Bearer $DIRECTUS_ADMIN_TOKEN" "$DIRECTUS_URL/fields/<kolekce>" | grep -o '"field":"[^"]*"'`
 
-## Krok 4: Nastavení oprávnění
+## Role Student a její oprávnění
 
-V Directus admin rozhraní nastav oprávnění pro roli "Student":
+Directus 11 přiděluje oprávnění přes **Access Policies**. Nastavení: **Settings → Access Policies → Student**
+a v **Settings → User Roles → Student** musí být tato policy připojená. ID role patří do
+`DIRECTUS_STUDENT_ROLE_ID`, nové registrace ji dostanou automaticky. **App Access** (přístup do
+administrace Directusu) má být u role Student **vypnutý**.
 
-### Vytvoření role Student
+Policy potřebuje jen kolekce, ke kterým se jde přes proxy, a vždy jen vlastní záznamy:
 
-1. Jdi na **Settings → Roles & Permissions**
-2. Klikni **Create Role**
-3. Nastav:
-   - Name: `Student`
-   - Icon: `school`
-   - App Access: `enabled`
+| Kolekce | Create | Read | Update | Delete | Filtr „vlastní“ |
+|---|---|---|---|---|---|
+| `portfolio_pages` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `categories` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `personal_goals` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `dreams` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `dreams_directus_files` | ✅ | ✅ | ✅ | ✅ | vazební tabulka, zapisuje se spolu se snem |
+| `dream_board_items` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `calendar_entries` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `shared_links` | ✅ | vlastní | vlastní | vlastní | `student_id.user_id = $CURRENT_USER` |
+| `directus_files` | ✅ | vlastní | ❌ | ❌ | `uploaded_by = $CURRENT_USER` |
 
-### Nastavení oprávnění
+**Kolekce spravované serverem** (`students`, `reading_diary`, `user_badges`, `student_connections`,
+`page_shares`, komunita) **roli Student nepotřebují vůbec**. Proxy je do prohlížeče nepustí, takže
+oprávnění na ně nic nepřidávají. Doporučujeme je z policy odebrat, aby žák neměl přístup navíc, kdyby
+se Directus někdy omylem dostal ven.
 
-Pro každou kolekci nastav:
+## Bezpečnost serveru
 
-| Kolekce | Vytvoření | Čtení | Aktualizace | Mazání |
-|---------|-----------|-------|-------------|---------|
-| students | ❌ | Pouze vlastní¹ | Pouze vlastní¹ | ❌ |
-| personal_goals | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| dreams | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| categories | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| portfolio_pages | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| calendar_entries | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| shared_links | ✅ | Pouze vlastní² | Pouze vlastní² | Pouze vlastní² |
-| page_templates | ❌ | ✅ Všechny | ❌ | ❌ |
-| directus_files | ✅ | Pouze vlastní³ | Pouze vlastní³ | Pouze vlastní³ |
-
-**Poznámky:**
-1. Pouze vlastní = `user_id = $CURRENT_USER`
-2. Pouze vlastní = `student_id.user_id = $CURRENT_USER`
-3. Pouze vlastní = `uploaded_by = $CURRENT_USER`
-
-**Kolekce spravované jen serverem** (roli Student na ně nedávej žádná oprávnění — aplikace k nim přistupuje přes vlastní API s admin tokenem a `student_id` doplňuje sama):
-`user_badges`, `student_connections`, `page_shares`, `reading_diary`.
-
-Kolekci `reading_diary` (Čtenářský deník) vytvoří skript:
-```
-node directus-setup-reading-diary.mjs
-```
-
-### Jak nastavit filtry
-
-Pro každou kolekci:
-1. Klikni na ikonu filtru u oprávnění
-2. Přidej filtr podle poznámek výše
-
-**Příklad pro personal_goals:**
-```
-student_id.user_id._eq: $CURRENT_USER
-```
-
-## Krok 5: Testování
-
-1. Spusť Next.js aplikaci: `npm run dev`
-2. Otevři http://localhost:3000
-3. Zaregistruj testovacího uživatele
-4. Zkontroluj, že se vytvoří profil žáka a kategorie
+- Port Directusu (8058) a aplikace (3004) jsou dostupné jen z `localhost`, ven vede jen nginx.
+  Ověření zvenku: `nc -zv portfolioparadise.eu 8058` musí selhat.
+- Doporučené proměnné Directusu: `FILES_MAX_UPLOAD_SIZE` (např. `30mb`, aplikace víc nedovolí),
+  `FILES_MIME_TYPE_ALLOW_LIST` (obrázky, video, zvuk, PDF a kancelářské dokumenty) a `RATE_LIMITER_ENABLED=true`.
+- Pravidelné zálohy databáze i složky s nahranými soubory, uložené mimo server.
 
 ## Řešení problémů
 
-### Chyba: Connection refused
-- Zkontroluj, že Directus instance běží
-- Ověř, že URL v `.env.local` je správná
-
-### Chyba: Unauthorized
-- Zkontroluj Admin Token
-- Ověř, že token má správná oprávnění
-
-### Kolekce se nevytvořily
-- Zkontroluj konzoli pro error zprávy
-- Ověř, že admin token je platný
-- Zkus spustit script znovu
-
-## Další kroky
-
-Po úspěšném setup můžeš:
-- ✅ Začít používat aplikaci
-- ✅ Přidat vlastní šablony stránek
-- ✅ Upravit předdefinované kategorie
-- ✅ Nastavit notifikace a workflow
-
----
-
-**Potřebuješ pomoc?** Otevři issue na GitHubu!
-
-
-
-
-
-
+| Příznak | Příčina |
+|---|---|
+| Žákovi nejde uložit, učiteli ano | Chybí pole v kolekci (viz výše), nebo chybí oprávnění v policy Student |
+| Všechno selhává jen u jednoho účtu | Uživatel nemá roli Student (Settings → Users → Role) |
+| Server API vrací 401/500 | Neplatný nebo chybějící `DIRECTUS_ADMIN_TOKEN` |
+| Nahrání souboru selže | `directus_files` bez Create v policy, nebo limit `FILES_MAX_UPLOAD_SIZE` |

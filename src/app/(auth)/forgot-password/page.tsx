@@ -228,8 +228,9 @@ export default function ForgotPasswordPage() {
                   <p>{t('Napište e-mail správci aplikace:', 'Email the app administrator:')}</p>
                   <p className="font-mono font-semibold select-all">{process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? 'daasa.d@seznam.cz'}</p>
                   <p className="text-xs text-blue-700">{t('Do předmětu napište přesně:', 'Use exactly this subject line:')}</p>
-                  <p className="font-mono font-semibold select-all text-xs">{/* Exact subject the administrator filters on — intentionally not translated */}
-                    PORTFOLIO-PARADISE OBNOVENÍ HESLA</p>
+                  <p className="font-mono font-semibold select-all text-xs">
+                    {t('PORTFOLIO-PARADISE OBNOVENÍ HESLA', 'PORTFOLIO-PARADISE PASSWORD RESET')}
+                  </p>
                 </div>
               )}
             </div>
