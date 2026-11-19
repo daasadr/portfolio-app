@@ -85,8 +85,8 @@ export default async function PrivacyPage() {
               <Li>
                 <strong>{t('Obsah, který sami vytvoříte:', 'Content you create yourself:')}</strong>{' '}
                 {t(
-                  'stránky portfolia a jejich přílohy (texty, obrázky, videa, zvuk, dokumenty), kategorie, osobní cíle, sny a nástěnka snů, záznamy v kalendáři, čtenářský deník a průběh bobříků.',
-                  'portfolio pages and their attachments (text, images, video, audio, documents), categories, personal goals, dreams and the dream board, calendar entries, the reading diary and beaver progress.',
+                  'stránky portfolia a jejich přílohy (texty, obrázky, videa, zvuk, dokumenty), kategorie, osobní cíle, sny a nástěnka snů, záznamy v kalendáři, čtenářský deník, průběh bobříků a reakce (👍 ❤️ ⭐ 🏅), které dáte na stránky ostatních.',
+                  'portfolio pages and their attachments (text, images, video, audio, documents), categories, personal goals, dreams and the dream board, calendar entries, the reading diary, beaver progress and the reactions (👍 ❤️ ⭐ 🏅) you give to other people\'s pages.',
                 )}
               </Li>
               <Li>
@@ -132,6 +132,13 @@ export default async function PrivacyPage() {
                 {t(
                   'vidí vaše jméno, stránky portfolia označené jako sdílené a knihy ve čtenářském deníku, u kterých zaškrtnete „Ukázat učiteli“. Propojení vzniká jen s vaším souhlasem.',
                   'sees your name, the portfolio pages marked as shared and the reading-diary books for which you tick "Show my teacher". A connection only exists if you accept it.',
+                )}
+              </Li>
+              <Li>
+                <strong>{t('Reakce na stránky', 'Reactions to pages')}</strong>{' '}
+                {t(
+                  'může dát jen ten, kdo stránku smí vidět (propojený učitel u sdílené stránky). Autor stránky vidí, kdo mu reakci dal, ostatní vidí jen počty.',
+                  'can only be given by someone who may see the page (a connected teacher, on a shared page). The page\'s author sees who reacted; everyone else sees only the counts.',
                 )}
               </Li>
               <Li>
@@ -216,8 +223,8 @@ export default async function PrivacyPage() {
               <Li>
                 <strong>{t('Drobná nastavení', 'Small preferences')}</strong> (<Code>localStorage</Code>) —{' '}
                 {t(
-                  'zvolené pozadí, potvrzení informační lišty o cookies a které odznaky jste už viděli.',
-                  'your chosen background, that you have dismissed the cookie notice, and which badges you have already seen.',
+                  'zvolené pozadí, potvrzení informační lišty o cookies a které odznaky a reakce jste už viděli.',
+                  'your chosen background, that you have dismissed the cookie notice, and which badges and reactions you have already seen.',
                 )}
               </Li>
             </ul>

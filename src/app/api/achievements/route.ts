@@ -22,15 +22,16 @@ export async function GET(request: NextRequest) {
   if (!studentId) return NextResponse.json({ message: t('Neautorizováno', 'Unauthorised') }, { status: 401 });
 
   const own = `filter[student_id][_eq]=${studentId}`;
-  const [portfolio, reading, goals, beavers, calendar, dreams] = await Promise.all([
+  const [portfolio, reading, goals, beavers, calendar, dreams, appreciated] = await Promise.all([
     count('portfolio_pages', own),
     count('reading_diary', own),
     count('personal_goals', `${own}&filter[completed][_eq]=true`),
     count('user_badges', `${own}&filter[completed_at][_nnull]=true`), // stays earned even after the badge expires
     count('calendar_entries', own),
     count('dreams', own),
+    count('page_reactions', `filter[page_id][student_id][_eq]=${studentId}&filter[student_id][_neq]=${studentId}`),
   ]);
 
-  const counts: AchievementCounts = { portfolio, reading, goals, beavers, calendar, dreams };
+  const counts: AchievementCounts = { portfolio, reading, goals, beavers, calendar, dreams, appreciated };
   return NextResponse.json({ counts }, { headers: { 'Cache-Control': 'no-store' } });
 }

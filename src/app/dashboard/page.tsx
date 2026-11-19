@@ -21,6 +21,7 @@ import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { BADGES, type Badge as BadgeDef } from '@/lib/badges';
 import { pragueToday, toPragueDate } from '@/lib/prague-date';
 import { useLocale } from '@/components/LocaleProvider';
+import { NewReactionsCard } from '@/components/reactions/Reactions';
 import type { Student, PersonalGoal, DreamBoardItem, PortfolioPage, CalendarEntry } from '@/types';
 
 // Deterministic confetti — same positions every time, no Math.random() in render
@@ -175,6 +176,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {student && <NewReactionsCard studentId={student.id} />}
+
       {pendingConnections.length > 0 && (
         <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-center gap-4 shadow-sm">
           <div className="flex-shrink-0 bg-amber-100 rounded-full p-2">

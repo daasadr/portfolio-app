@@ -18,6 +18,7 @@ import DOMPurify from 'dompurify';
 import { getCurrentStudent, directus, readItems } from '@/lib/directus';
 import { bgStyle } from '@/components/portfolio/CategoryEditor';
 import type { PortfolioPage, Category } from '@/types';
+import { ReactionSummary } from '@/components/reactions/Reactions';
 import { useLocale } from '@/components/LocaleProvider';
 
 interface Attachment { id: string; name: string; type: string; }
@@ -293,6 +294,10 @@ export default function ViewPortfolioPage({ params }: Props) {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="pt-4">
+        <ReactionSummary pageId={page.id} />
       </div>
     </div>
   );

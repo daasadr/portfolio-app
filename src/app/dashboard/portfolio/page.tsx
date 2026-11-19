@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,10 @@ import { bgStyle, catTextStyle } from '@/components/portfolio/CategoryEditor';
 import CategoryEditor from '@/components/portfolio/CategoryEditor';
 import type { Student, PortfolioPage, Category } from '@/types';
 import { useLocale } from '@/components/LocaleProvider';
+import { usePageReactions, ReactionChips } from '@/components/reactions/Reactions';
+import type { PageReactionSummary } from '@/lib/reactions';
+
+const ReactionsContext = createContext<Record<string, PageReactionSummary>>({});
 
 export default function PortfolioPage() {
   const { t } = useLocale();
@@ -22,6 +26,7 @@ export default function PortfolioPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [catEditorOpen, setCatEditorOpen] = useState(false);
+  const { reactions } = usePageReactions(pages.map(p => p.id));
 
   useEffect(() => {
     const load = async () => {
@@ -77,6 +82,7 @@ export default function PortfolioPage() {
   const uncategorized = filtered.filter(p => !p.category_id || !categories.find(c => c.id == p.category_id));
 
   return (
+    <ReactionsContext.Provider value={reactions}>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -164,6 +170,7 @@ export default function PortfolioPage() {
         onCategoriesChange={setCategories}
       />
     </div>
+    </ReactionsContext.Provider>
   );
 }
 
@@ -230,6 +237,7 @@ function PageGrid({
   onDelete: (id: string) => void;
 }) {
   const { locale } = useLocale();
+  const reactions = useContext(ReactionsContext);
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {pages.map(page => {
@@ -250,6 +258,7 @@ function PageGrid({
                 <p className="text-xs text-gray-400 mt-0.5">
                   {safeFormatDate(page.updated_at, undefined, locale)}
                 </p>
+                <ReactionChips summary={reactions[String(page.id)]} className="mt-1.5" />
               </div>
             </div>
             <PageActions page={page} onDelete={onDelete} />
@@ -263,6 +272,7 @@ function PageGrid({
 // ── Řádek stránky (v sekci kategorie) ───────────────────────────────────────
 function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: string) => void }) {
   const { locale } = useLocale();
+  const reactions = useContext(ReactionsContext);
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
       {page.visibility === 'shared'
@@ -271,6 +281,7 @@ function PageRow({ page, onDelete }: { page: PortfolioPage; onDelete: (id: strin
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{page.title}</p>
         <p className="text-xs text-gray-400">{safeFormatDate(page.updated_at, undefined, locale)}</p>
+        <ReactionChips summary={reactions[String(page.id)]} className="mt-1" />
       </div>
       <PageActions page={page} onDelete={onDelete} compact />
     </div>

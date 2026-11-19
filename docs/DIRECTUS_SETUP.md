@@ -32,6 +32,7 @@ Token patří do `.env` jako `DIRECTUS_ADMIN_TOKEN`. Nikdy ho nedávej do promě
 | `user_badges` | Průběh bobříků | server |
 | `student_connections` | Propojení žák–učitel | server |
 | `page_shares` | Sdílení stránky jinému uživateli | server |
+| `page_reactions` | Reakce 👍 ❤️ ⭐ 🏅 na stránky portfolia | server |
 | `organisations`, `organisation_members`, `groups`, `group_members` | Komunita | server |
 
 Odznaky za aktivitu žádnou kolekci nemají, počítají se z ostatních dat.
@@ -50,6 +51,8 @@ Doplňující skripty pro novější části (opakované spuštění nevadí, co
 docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-reading-diary.mjs
 # Vlastní bezpečnostní otázka (pole students.security_question_text)
 docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-custom-question.mjs
+# Reakce na stránky (kolekce page_reactions)
+docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-reactions.mjs
 ```
 
 > **Pozor na chybějící pole.** Když aplikace pošle pole, které v kolekci neexistuje, Directus ho
@@ -80,7 +83,7 @@ Policy potřebuje jen kolekce, ke kterým se jde přes proxy, a vždy jen vlastn
 | `directus_files` | ✅ | vlastní | ❌ | ❌ | `uploaded_by = $CURRENT_USER` |
 
 **Kolekce spravované serverem** (`students`, `reading_diary`, `user_badges`, `student_connections`,
-`page_shares`, komunita) **roli Student nepotřebují vůbec**. Proxy je do prohlížeče nepustí, takže
+`page_shares`, `page_reactions`, komunita) **roli Student nepotřebují vůbec**. Proxy je do prohlížeče nepustí, takže
 oprávnění na ně nic nepřidávají. Doporučujeme je z policy odebrat, aby žák neměl přístup navíc, kdyby
 se Directus někdy omylem dostal ven.
 

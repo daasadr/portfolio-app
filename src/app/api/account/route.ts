@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const r = await fetch(`${directusUrl}/items/${collection}?${own}`, { headers: adminHeaders() });
     return r.ok ? (((await r.json()) as { data?: unknown[] }).data ?? []) : [];
   };
-  const [userRes, pages, categories, readingDiary, goals, dreams, dreamBoard, calendar, badges] = await Promise.all([
+  const [userRes, pages, categories, readingDiary, goals, dreams, dreamBoard, calendar, badges, reactionsGiven] = await Promise.all([
     fetch(`${directusUrl}/users/${userId}?fields=email,first_name,last_name`, { headers: adminHeaders() }),
     list('portfolio_pages'),
     list('categories'),
@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
     list('dream_board_items'),
     list('calendar_entries'),
     list('user_badges'),
+    list('page_reactions'),
   ]);
 
   const { data: user } = await userRes.json() as { data: { email: string; first_name: string; last_name: string } };
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
     dream_board_items: dreamBoard,
     calendar_entries: calendar,
     beavers: badges,
+    reactions_given: reactionsGiven,
   };
 
   return new NextResponse(JSON.stringify(exportData, null, 2), {
@@ -99,6 +101,10 @@ export async function DELETE(request: NextRequest) {
   const sid = student.id;
 
   // Smazat všechna data žáka — po vrstvách, aby závislé záznamy zmizely dřív než ty, na které odkazují
+  await Promise.allSettled([
+    deleteWhere('page_reactions', `filter[student_id][_eq]=${sid}`),           // reakce, které dal
+    deleteWhere('page_reactions', `filter[page_id][student_id][_eq]=${sid}`),  // reakce na jeho stránky
+  ]);
   await Promise.allSettled([
     deleteWhere('portfolio_pages', `filter[student_id][_eq]=${sid}`),
     deleteWhere('shared_links', `filter[student_id][_eq]=${sid}`),

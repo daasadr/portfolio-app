@@ -340,6 +340,27 @@ const guides: Guide[] = [
     ],
   },
   {
+    id: 'reactions',
+    icon: <Star className="h-6 w-6" />,
+    title: { cs: 'Ocenění stránek 👍 ❤️ ⭐ 🏅', en: 'Appreciating pages 👍 ❤️ ⭐ 🏅' },
+    subtitle: { cs: 'Jak učitel dává najevo, že stránku viděl a líbí se mu', en: 'How a teacher shows they have seen a page and like it' },
+    color: 'from-amber-400 to-rose-500',
+    steps: [
+      {
+        heading: { cs: 'Pro učitele', en: 'For teachers' },
+        text: { cs: 'V menu „Moji žáci“ otevřete žáka a jeho stránku. Pod stránkou jsou čtyři tlačítka: palec nahoru, srdíčko, hvězda a medaile. Kliknutím reakci dáte, dalším kliknutím ji zase odeberete.', en: 'Open a pupil in "My pupils" and then one of their pages. Under the page there are four buttons: thumbs up, heart, star and medal. Click to give a reaction, click again to take it back.' },
+      },
+      {
+        heading: { cs: 'Pro žáky', en: 'For pupils' },
+        text: { cs: 'Když ti někdo dá reakci, na Přehledu se objeví „Někdo ocenil tvé stránky!“. V portfoliu uvidíš u stránky malé ikonky a po otevření stránky i to, kdo ti reakci dal.', en: 'When someone reacts to your page, "Someone appreciated your pages!" appears on your Overview. In your portfolio you will see small icons next to the page, and when you open it you can see who reacted.' },
+      },
+      {
+        heading: { cs: 'Kdo může reagovat?', en: 'Who can react?' },
+        text: { cs: 'Jen propojený učitel (a později i propojení kamarádi), a jen na stránky, které jsou sdílené. Na soukromé stránky nikdo jiný nevidí, takže na ně ani reagovat nemůže.', en: 'Only a connected teacher (and later connected friends too), and only on shared pages. Nobody else can see private pages, so nobody can react to them either.' },
+      },
+    ],
+  },
+  {
     id: 'world',
     icon: <Globe2 className="h-6 w-6" />,
     title: { cs: 'Světoběžník a bobříci', en: 'Globetrotter and beavers' },
@@ -393,7 +414,7 @@ const guides: Guide[] = [
       },
       {
         heading: { cs: 'Za co se dávají?', en: 'What do I get them for?' },
-        text: { cs: 'Za stránky portfolia, knihy ve čtenářském deníku, splněné osobní cíle, ulovené bobříky, záznamy v kalendáři a sny na nástěnce. Každá oblast má několik úrovní.', en: 'For portfolio pages, books in your Reading diary, achieved personal goals, beavers you\'ve hunted, calendar entries and dreams on your board. Each area has several levels.' },
+        text: { cs: 'Za stránky portfolia, knihy ve čtenářském deníku, splněné osobní cíle, ulovené bobříky, záznamy v kalendáři, sny na nástěnce a ocenění, která dostaneš od ostatních. Každá oblast má několik úrovní.', en: 'For portfolio pages, books in your Reading diary, achieved personal goals, beavers you\'ve hunted, calendar entries, dreams on your board and the appreciation you get from others. Each area has several levels.' },
       },
       {
         heading: { cs: 'Nový odznak', en: 'A new badge' },

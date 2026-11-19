@@ -17,13 +17,15 @@ Běží na **https://portfolioparadise.eu**. Aplikace je česky i anglicky (pře
 - **Světoběžník a bobříci**: sedmidenní výzvy (pomáhání doma, dělání radosti, péče o přírodu)
   s oslavou a pochvalou při splnění.
 - **Odznaky za aktivitu**: přibývají pod menu za stránky portfolia, knihy, splněné cíle, bobříky,
-  záznamy v kalendáři a sny.
+  záznamy v kalendáři, sny a ocenění od ostatních.
 - **Průběžné ukládání**: rozepsaný text se ukládá v prohlížeči, takže nezmizí po obnovení stránky.
 - **Export dat** (HTML nebo soubory v ZIPu) a smazání účtu se všemi daty.
 
 **Sdílení a spolupráce**
 - **Sdílecí odkazy**: celé portfolio, kategorie nebo jedna stránka. Soukromé stránky přes odkaz vidět nejsou.
 - **Propojení s učitelem**: učitel vidí jen sdílené stránky a knihy, které mu žák ukáže.
+- **Ocenění stránek**: učitel může stránce dát 👍 ❤️ ⭐ 🏅. Žák to uvidí na Přehledu a u stránky
+  i s tím, kdo reakci dal.
 - **Komunita**: organizace a skupiny (např. komunitní škola, kroužek).
 
 **Pro správce**: stránka `/dasa` (přehled uživatelů, jen pro e-maily v `ADMIN_EMAILS`).
@@ -82,6 +84,7 @@ publikuje Directus na `api.portfolioparadise.eu`, viz bezpečnost v [docs/DIRECT
 ```bash
 docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-reading-diary.mjs
 docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-custom-question.mjs
+docker run --rm --network host -v "$PWD":/app -w /app node:22-alpine node directus-setup-reactions.mjs
 ```
 
 Nastavení Directusu (kolekce, oprávnění) popisuje [docs/DIRECTUS_SETUP.md](docs/DIRECTUS_SETUP.md).

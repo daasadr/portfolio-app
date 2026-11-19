@@ -10,6 +10,7 @@ import { ArrowLeft, FileText, Music, Video, Image as ImageIcon, Paperclip } from
 import DOMPurify from 'dompurify';
 import type { PortfolioPage } from '@/types';
 import { useLocale } from '@/components/LocaleProvider';
+import { ReactionPicker } from '@/components/reactions/Reactions';
 
 interface Attachment { id: string; name: string; type: string; }
 
@@ -143,6 +144,10 @@ export default function TeacherPageView({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="pt-4">
+        <ReactionPicker pageId={page.id} />
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import {
 } from '@/components/reading-diary/Bookshelf';
 import type { Student, Category, PortfolioPage, ReadingDiaryEntry } from '@/types';
 import { useLocale } from '@/components/LocaleProvider';
+import { usePageReactions, ReactionChips } from '@/components/reactions/Reactions';
 
 export default function StudentPortfolioPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
@@ -27,6 +28,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
   const [openBook, setOpenBook] = useState<ReadingDiaryEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const { reactions } = usePageReactions(pages.map(p => p.id));
 
   useEffect(() => {
     const load = async () => {
@@ -129,6 +131,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                             <p className="text-xs text-gray-400 mt-0.5">
                               {safeFormatDate(page.updated_at ?? page.created_at, undefined, locale)}
                             </p>
+                            <ReactionChips summary={reactions[String(page.id)]} className="mt-1.5" />
                           </div>
                           <Badge variant={page.visibility === 'shared' ? 'secondary' : 'outline'} className="text-xs flex-shrink-0">
                             {page.visibility === 'shared' ? t('Sdílená', 'Shared') : t('Soukromá', 'Private')}
@@ -160,6 +163,7 @@ export default function StudentPortfolioPage({ params }: { params: Promise<{ stu
                             <p className="text-xs text-gray-400 mt-0.5">
                               {safeFormatDate(page.updated_at ?? page.created_at, undefined, locale)}
                             </p>
+                            <ReactionChips summary={reactions[String(page.id)]} className="mt-1.5" />
                           </div>
                         </div>
                       </CardContent>

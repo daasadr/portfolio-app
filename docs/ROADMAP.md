@@ -25,7 +25,9 @@ pro zahraniční rodiny.
 2. **Soukromé zprávy** mezi propojenými dětmi.
 3. **Výměnné projekty.** Například „Moje město“, „Co jíme k snídani“, „Svátky u nás doma“: obě děti
    vytvoří stránku portfolia na stejné téma a vymění si je. Navazuje to na stávající sdílení stránek.
-4. Další nápady k rozvážení: společné výzvy pro děti z různých zemí (jako bobříci), skupinové
+4. **Reakce mezi dětmi.** Ocenění stránek 👍 ❤️ ⭐ 🏅 už funguje pro propojené učitele a je
+   připravené i pro propojení mezi žáky a pro komunity. Reagovat smí vždy jen ten, kdo stránku smí vidět.
+5. Další nápady k rozvážení: společné výzvy pro děti z různých zemí (jako bobříci), skupinové
    „třídy“ podle zájmů, pomoc s překladem zpráv.
 
 ### Zásady, bez kterých to nespustíme

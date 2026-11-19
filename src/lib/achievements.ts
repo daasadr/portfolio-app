@@ -6,7 +6,7 @@
 
 import { plural, type L10n, type Locale } from '@/lib/i18n';
 
-export type AchievementTrack = 'portfolio' | 'reading' | 'goals' | 'beavers' | 'calendar' | 'dreams';
+export type AchievementTrack = 'portfolio' | 'reading' | 'goals' | 'beavers' | 'calendar' | 'dreams' | 'appreciated';
 
 export interface Achievement {
   id: string;
@@ -44,6 +44,10 @@ export const TRACKS: Record<AchievementTrack, { label: L10n; unit: (n: number, l
   dreams: {
     label: { cs: 'Nástěnka snů', en: 'Dream board' },
     unit: (n, l) => plural(l, n, ['sen na nástěnce', 'sny na nástěnce', 'snů na nástěnce'], ['dream on the board', 'dreams on the board']),
+  },
+  appreciated: {
+    label: { cs: 'Ocenění stránek', en: 'Page appreciation' },
+    unit: (n, l) => plural(l, n, ['ocenění od ostatních', 'ocenění od ostatních', 'ocenění od ostatních'], ['appreciation from others', 'appreciations from others']),
   },
 };
 
@@ -131,6 +135,20 @@ export const ACHIEVEMENTS: Achievement[] = [
     name: { cs: 'Velký snílek', en: 'Big Dreamer' },
     praise: { cs: 'Deset snů! Tvoje nástěnka hraje všemi barvami duhy.',
               en: 'Ten dreams! Your board shines in all the colours of the rainbow.' } },
+
+  // Ocenění od učitele a kamarádů (reakce na stránky)
+  { id: 'appreciated-1', track: 'appreciated', threshold: 1, emoji: '💌', tone: 'from-pink-100 to-rose-200 border-rose-300',
+    name: { cs: 'První ocenění', en: 'First Appreciation' },
+    praise: { cs: 'Někdo si tvou stránku přečetl a udělala mu radost. To je krásný pocit, viď?',
+              en: 'Someone read your page and it made them happy. That\'s a lovely feeling, isn\'t it?' } },
+  { id: 'appreciated-10', track: 'appreciated', threshold: 10, emoji: '🎖️', tone: 'from-amber-100 to-yellow-200 border-yellow-300',
+    name: { cs: 'Oceňovaný autor', en: 'Appreciated Author' },
+    praise: { cs: 'Deset ocenění! Tvoje práce ostatní baví a inspiruje.',
+              en: 'Ten appreciations! Your work delights and inspires others.' } },
+  { id: 'appreciated-30', track: 'appreciated', threshold: 30, emoji: '👑', tone: 'from-yellow-100 to-amber-300 border-amber-400',
+    name: { cs: 'Inspirace pro ostatní', en: 'Inspiration to Others' },
+    praise: { cs: 'Třicet ocenění — tvoje stránky jsou pro ostatní opravdovou inspirací!',
+              en: 'Thirty appreciations — your pages are a real inspiration to others!' } },
 ];
 
 export type AchievementCounts = Record<AchievementTrack, number>;
