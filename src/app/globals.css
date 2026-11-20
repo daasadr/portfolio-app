@@ -197,3 +197,54 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
 }
+
+/* ── Photo galleries inside portfolio pages ─────────────────────────────────
+   Grid items are <img> in saved pages and <div><img></div> in the editor, so rules
+   target `> *`. The layout adapts to the number of photos ("smart grid"). */
+.pp-gallery {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.pp-gallery > * { min-width: 0; }
+.pp-gallery img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  margin: 0 !important;
+  background: #f3f4f6;
+  cursor: zoom-in;
+}
+.pp-gallery > div > img { cursor: default; }
+/* 1 photo: show it whole */
+.pp-gallery[data-count="1"] { grid-template-columns: 1fr; }
+.pp-gallery[data-count="1"] img { aspect-ratio: auto; height: auto; max-height: 34rem; object-fit: contain; }
+/* 2 and 4: two columns */
+.pp-gallery[data-count="2"], .pp-gallery[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* 3: one big photo, two small beside it */
+.pp-gallery[data-count="3"] { grid-template-columns: 2fr 1fr; }
+.pp-gallery[data-count="3"] > :first-child { grid-row: span 2; }
+.pp-gallery[data-count="3"] > :first-child img,
+.pp-gallery[data-count="3"] > img:first-child { aspect-ratio: auto; }
+/* 5: two wide on top, three below */
+.pp-gallery[data-count="5"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.pp-gallery[data-count="5"] > * { grid-column: span 2; }
+.pp-gallery[data-count="5"] > :nth-child(-n + 2) { grid-column: span 3; }
+/* 7 and 10: one wide photo on top, the rest in rows of three */
+.pp-gallery[data-count="7"] > :first-child,
+.pp-gallery[data-count="10"] > :first-child { grid-column: 1 / -1; }
+.pp-gallery[data-count="7"] > :first-child img, .pp-gallery[data-count="7"] > img:first-child,
+.pp-gallery[data-count="10"] > :first-child img, .pp-gallery[data-count="10"] > img:first-child { aspect-ratio: 16 / 9; }
+/* 8: four columns */
+.pp-gallery[data-count="8"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* "Pod sebou" — photos one under another, whole */
+.pp-gallery[data-layout="stack"] { grid-template-columns: 1fr !important; }
+.pp-gallery[data-layout="stack"] > * { grid-column: auto !important; grid-row: auto !important; }
+.pp-gallery[data-layout="stack"] img { aspect-ratio: auto !important; height: auto; object-fit: contain; }
+@media (max-width: 640px) {
+  .pp-gallery[data-count="8"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

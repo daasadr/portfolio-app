@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { safeFormatDate } from '@/lib/date';
 import { use } from 'react';
-import DOMPurify from 'dompurify';
+import { PageContent } from '@/components/portfolio/PageContent';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -106,7 +106,7 @@ export default function PublicPortfolioPage({ params }: { params: Promise<{ toke
             </div>
             <div className="bg-white px-6 py-6">
               {selectedPage.content ? (
-                <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedPage.content) }} />
+                <PageContent html={selectedPage.content} shareToken={token} />
               ) : (
                 <p className="text-gray-400 italic text-center py-8">{t('Tato stránka nemá žádný obsah.', 'This page has no content.')}</p>
               )}

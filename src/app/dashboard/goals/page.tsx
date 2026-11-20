@@ -35,6 +35,7 @@ import {
 import { getCurrentStudent, directus, readItems, createItem, updateItem, deleteItem } from '@/lib/directus';
 import type { Student, PersonalGoal, Dream, GoalType, DreamBoardItem } from '@/types';
 import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
+import { optimizeImage } from '@/lib/image-optimize';
 import { notifyAchievementsChanged } from '@/components/achievements/AchievementShelf';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import { useLocale } from '@/components/LocaleProvider';
@@ -310,36 +311,8 @@ export default function GoalsPage() {
     setDreamImages(prev => prev.map(i => i.id === item.id ? { ...i, ...body } as DreamBoardItem : i));
   }
 
-  async function compressImage(file: File, maxPx = 1200, maxBytes = 900_000): Promise<File> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(file); return; }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const tryQuality = (q: number) => {
-          canvas.toBlob((blob) => {
-            if (!blob) { resolve(file); return; }
-            if (blob.size <= maxBytes || q <= 0.45) {
-              resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-            } else {
-              tryQuality(Math.round((q - 0.1) * 10) / 10);
-            }
-          }, 'image/jpeg', q);
-        };
-        tryQuality(0.82);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
-      img.src = url;
-    });
-  }
+  // Dream pictures are small on the board — 1200 px is plenty
+  const compressImage = (file: File) => optimizeImage(file, { maxPx: 1200, maxBytes: 900_000 });
 
   async function saveDream() {
     if (!student || !dreamForm.title.trim()) return;

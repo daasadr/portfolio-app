@@ -211,10 +211,18 @@ const guides: Guide[] = [
       },
       {
         heading: { cs: 'Vytvořit novou stránku', en: 'Create a new page' },
-        text: { cs: 'V menu klikněte na „Portfolio Paradise" a pak na „+ Nová stránka".', en: 'In the menu, click "Portfolio Paradise" and then "+ New page".' },
+        text: { cs: 'V menu klikněte na „Portfolio" a pak na „+ Nová stránka".', en: 'In the menu, click "Portfolio" and then "+ New page".' },
       },
       {
         text: { cs: 'Zadejte název stránky, vyberte kategorii (Matematika, Umění, Projekty...) a napište nebo vložte obsah.', en: 'Enter a name for the page, choose a category (Maths, Art, Projects...) and write or paste in your content.' },
+      },
+      {
+        heading: { cs: 'Fotky ve stránce', en: 'Photos on a page' },
+        text: { cs: 'Klikněte do textu tam, kde má fotka být, a v liště editoru na ikonu obrázku. Můžete vybrat víc fotek najednou — vloží se jako galerie. Fotky jde také vložit ze schránky (Ctrl+V) nebo přetáhnout myší rovnou do textu. Na jednu stránku se vejde až 10 fotek.', en: 'Click in the text where the photo should go, then click the picture icon in the editor toolbar. You can pick several photos at once — they are added as a gallery. You can also paste photos (Ctrl+V) or drag them straight into the text. A page can hold up to 10 photos.' },
+      },
+      {
+        heading: { cs: 'Galerie: mřížka, nebo pod sebou', en: 'Gallery: grid or stacked' },
+        text: { cs: 'Nad galerií vyberete „Mřížka" (fotky se chytře poskládají podle počtu) nebo „Pod sebou" (každá fotka celá, jedna pod druhou). Najetím myší na fotku ji můžete posunout nebo odebrat. Při prohlížení stránky se fotka po kliknutí zvětší přes celou obrazovku.', en: 'Above a gallery, choose "Grid" (photos are arranged neatly depending on how many there are) or "Stacked" (each photo in full, one under another). Hover over a photo to move or remove it. When viewing the page, click a photo to see it full screen.' },
       },
       {
         text: { cs: 'Klikněte na „Uložit". Stránka se zobrazí v přehledu portfolia.', en: 'Click "Save". The page will appear in your portfolio.' },
@@ -231,6 +239,7 @@ const guides: Guide[] = [
     tips: [
       { cs: 'Stránky portfolia skvěle poslouží jako záznam projektů nebo jako příprava na prezentaci.', en: 'Portfolio pages are great for keeping a record of your projects or for preparing a presentation.' },
       { cs: 'Zkuste přidávat fotografie svých výkresů, modelů nebo domácích úkolů.', en: 'Try adding photos of your drawings, models or homework.' },
+      { cs: 'Fotky z mobilu se před nahráním samy zmenší, takže se stránka načítá rychle a nemusíte nic upravovat.', en: 'Photos from your phone are shrunk automatically before uploading, so the page loads quickly and you don\'t need to resize anything.' },
     ],
   },
   {

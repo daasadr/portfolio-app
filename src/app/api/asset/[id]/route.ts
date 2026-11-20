@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest } from '@/lib/auth-server';
+import { contentImageIds } from '@/lib/content-images';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -94,11 +95,11 @@ async function isAllowedByShareToken(shareToken: string, fileId: string): Promis
   }
 
   const pagesRes = await fetch(
-    `${directusUrl}/items/portfolio_pages?${pagesFilter}&fields[]=attachments`,
+    `${directusUrl}/items/portfolio_pages?${pagesFilter}&fields[]=attachments&fields[]=content`,
     { headers: adminHeaders() }
   );
   if (!pagesRes.ok) return false;
-  const { data: pages } = await pagesRes.json() as { data: { attachments?: unknown }[] };
+  const { data: pages } = await pagesRes.json() as { data: { attachments?: unknown; content?: string | null }[] };
 
   for (const page of pages ?? []) {
     const raw = page.attachments;
@@ -107,7 +108,10 @@ async function isAllowedByShareToken(shareToken: string, fileId: string): Promis
       : typeof raw === 'string'
         ? (JSON.parse(raw) as { id: string }[])
         : [];
-    if (arr.some(a => a.id === fileId)) return isFileOwnedByStudent(fileId, link.student_id);
+    // Attachments and photos inside the page text — the file must still be the author's own upload
+    if (arr.some(a => a.id === fileId) || contentImageIds(page.content).includes(fileId.toLowerCase())) {
+      return isFileOwnedByStudent(fileId, link.student_id);
+    }
   }
   return false;
 }

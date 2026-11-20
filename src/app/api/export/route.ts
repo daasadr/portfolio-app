@@ -5,6 +5,7 @@ import { safeFormatDate } from '@/lib/date';
 import { getRequestLocale } from '@/lib/i18n-server';
 import { tr, intlLocale, type Locale, type L10n } from '@/lib/i18n';
 import type { PortfolioPage, Category, PersonalGoal, Dream, DreamBoardItem, ReadingDiaryEntry } from '@/types';
+import { contentImageIds, replaceContentImages } from '@/lib/content-images';
 
 const directusUrl = process.env.DIRECTUS_URL ?? process.env.NEXT_PUBLIC_DIRECTUS_URL!;
 const adminToken = process.env.DIRECTUS_ADMIN_TOKEN!;
@@ -103,7 +104,10 @@ function generateHtml(opts: {
       <article class="page">
         <h3>${esc(page.title)}</h3>
         <p class="meta">${page.visibility === 'shared' ? t('🌐 Sdílená', '🌐 Shared') : t('🔒 Soukromá', '🔒 Private')}${fmt(page.updated_at) ? ` · ${t('Upraveno', 'Edited')} ${fmt(page.updated_at)}` : ''}</p>
-        <div class="content">${page.content || `<em>${t('Bez obsahu', 'No content')}</em>`}</div>
+        <div class="content">${page.content
+          // photos inside the text point to the server — use the copies in assets/ instead
+          ? replaceContentImages(page.content, id => { const f = fileBuffers.get(id); return f ? `assets/${encodeURIComponent(f.name)}` : undefined; })
+          : `<em>${t('Bez obsahu', 'No content')}</em>`}</div>
         ${arr.length ? `<div class="attachments">${attachmentsHtml}</div>` : ''}
       </article>`;
     }).join('');
@@ -184,6 +188,15 @@ function generateHtml(opts: {
   .content ul, .content ol { margin: 0.5rem 0 0.5rem 1.5rem; }
   .attachments { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f3f4f6; display: flex; flex-wrap: wrap; gap: 0.75rem; }
   .att-img { max-width: 100%; max-height: 320px; border-radius: 8px; object-fit: contain; }
+  .content img { max-width: 100%; height: auto; border-radius: 8px; }
+  .pp-gallery { display: grid; gap: 0.5rem; margin: 1rem 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pp-gallery img { width: 100%; height: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+  .pp-gallery[data-count="1"] { grid-template-columns: 1fr; }
+  .pp-gallery[data-count="1"] img { aspect-ratio: auto; object-fit: contain; }
+  .pp-gallery[data-count="2"], .pp-gallery[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pp-gallery[data-count="8"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pp-gallery[data-layout="stack"] { grid-template-columns: 1fr; }
+  .pp-gallery[data-layout="stack"] img { aspect-ratio: auto; object-fit: contain; }
   .att-video, .att-audio { max-width: 100%; border-radius: 8px; }
   .att-file { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.375rem 0.75rem;
     background: #f3f4f6; border-radius: 6px; text-decoration: none; color: #374151; font-size: 0.875rem; }
@@ -300,6 +313,7 @@ export async function POST(request: NextRequest) {
     const raw = page.attachments;
     const arr: { id: string }[] = Array.isArray(raw) ? raw : typeof raw === 'string' ? JSON.parse(raw) : [];
     arr.forEach(a => fileIds.add(a.id));
+    contentImageIds(page.content).forEach(id => fileIds.add(id)); // photos inside the text
   }
   dreamItems.forEach(item => fileIds.add(item.file_id));
 
@@ -320,7 +334,8 @@ export async function POST(request: NextRequest) {
 
       const buffer = await assetRes.arrayBuffer();
       const type = meta?.type ?? assetRes.headers.get('content-type') ?? 'application/octet-stream';
-      const name = safeFilename(meta?.filename_download ?? fileId, locale);
+      // id prefix keeps names unique — pasted photos are often all called "image.jpg"
+      const name = `${fileId.slice(0, 8)}-${safeFilename(meta?.filename_download ?? fileId, locale)}`;
       fileBuffers.set(fileId, { buffer, name, type });
     } catch { /* skip */ }
   }));
@@ -362,8 +377,8 @@ export async function POST(request: NextRequest) {
         if (arr.length) lines.push('', `${t('Přílohy', 'Attachments')}: ${arr.map(a => a.name).join(', ')}`);
 
         pFolder.file(`${safeFilename(catName, locale)}/${safeTitle}.txt`, lines.join('\n'));
-        for (const att of arr) {
-          const file = fileBuffers.get(att.id);
+        for (const id of [...arr.map(a => a.id), ...contentImageIds(page.content)]) {
+          const file = fileBuffers.get(id);
           if (file) pFolder.file(`${t('prilohy', 'attachments')}/${file.name}`, file.buffer);
         }
       }

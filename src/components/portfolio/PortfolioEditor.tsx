@@ -31,6 +31,7 @@ import { loadDraft, discardDraft, useDraftAutosave } from '@/lib/drafts';
 import { DraftNotice, DraftHint } from '@/components/DraftNotice';
 import type { Student, Category, PortfolioPage } from '@/types';
 import RichEditor from './RichEditor';
+import { optimizeIfImage } from '@/lib/image-optimize';
 import { useLocale } from '@/components/LocaleProvider';
 import { tr, type Locale } from '@/lib/i18n';
 
@@ -270,7 +271,7 @@ export default function PortfolioEditor({ pageId }: PortfolioEditorProps) {
       // Nahrát nové přílohy
       const newUploads: { id: string; name: string; type: string }[] = [];
       for (const a of attachments.filter(a => a.isNew && a.file)) {
-        const uploaded = await uploadFile(a.file!) as { id: string };
+        const uploaded = await uploadFile(await optimizeIfImage(a.file!)) as { id: string };
         newUploads.push({ id: uploaded.id, name: a.name, type: a.type });
       }
 

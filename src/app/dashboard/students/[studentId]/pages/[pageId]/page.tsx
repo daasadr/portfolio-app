@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileText, Music, Video, Image as ImageIcon, Paperclip } from 'lucide-react';
-import DOMPurify from 'dompurify';
+import { PageContent } from '@/components/portfolio/PageContent';
 import type { PortfolioPage } from '@/types';
 import { useLocale } from '@/components/LocaleProvider';
 import { ReactionPicker } from '@/components/reactions/Reactions';
@@ -101,7 +101,7 @@ export default function TeacherPageView({
 
       <div className="bg-white rounded-b-2xl border border-t-0 shadow-sm px-6 py-6">
         {page.content ? (
-          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(page.content) }} />
+          <PageContent html={page.content} />
         ) : (
           <p className="text-gray-400 italic text-center py-8">{t('Tato stránka nemá žádný obsah.', 'This page has no content.')}</p>
         )}

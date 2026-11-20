@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
+import { TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -28,6 +29,11 @@ import {
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useLocale } from '@/components/LocaleProvider';
 import type { L10n } from '@/lib/i18n';
+import { Gallery, countImages, type GalleryImage } from './GalleryNode';
+import { optimizeImage } from '@/lib/image-optimize';
+
+/** Photos per page (single pictures + gallery photos) — keeps pages fast to load. */
+export const MAX_PAGE_IMAGES = 10;
 
 const COLORS = [
   '#000000', '#374151', '#6B7280', '#EF4444', '#F97316',
@@ -48,9 +54,13 @@ interface RichEditorProps {
 }
 
 export default function RichEditor({ content, onChange, onFileUpload }: RichEditorProps) {
-  const { t } = useLocale();
+  const { t, plural } = useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [, forceUpdate] = useState(0);
+  const [uploading, setUploading] = useState(0);
+  const [imageError, setImageError] = useState<string | null>(null);
+  // editorProps are fixed when the editor is created — paste/drop handlers call the latest insertImages through this ref
+  const insertImagesRef = useRef<(files: File[]) => void>(() => {});
 
   const editor = useEditor({
     extensions: [
@@ -61,6 +71,7 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image.configure({ inline: false, allowBase64: true }),
+      Gallery,
       Link.configure({ openOnClick: false }),
       Highlight.configure({ multicolor: true }),
       FontFamily,
@@ -80,6 +91,23 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
         'data-gramm_editor': 'false',
         'data-enable-grammarly': 'false',
       },
+      // Photos pasted or dropped straight into the text
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []).filter(f => f.type.startsWith('image/'));
+        if (files.length === 0) return false;
+        insertImagesRef.current(files);
+        return true;
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved) return false;
+        const files = Array.from(event.dataTransfer?.files ?? []).filter(f => f.type.startsWith('image/'));
+        if (files.length === 0) return false;
+        event.preventDefault();
+        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        if (pos) view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos.pos))));
+        insertImagesRef.current(files);
+        return true;
+      },
     },
   });
 
@@ -98,21 +126,55 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
     editor.chain().focus().setLink({ href: url }).run();
   }, [editor, t]);
 
-  const insertImage = useCallback(async (file: File) => {
+  /**
+   * Optimizes and uploads photos, then inserts them where the cursor is: one photo as a picture,
+   * several as a gallery (smart grid). At most MAX_PAGE_IMAGES photos per page.
+   */
+  const insertImages = useCallback(async (picked: File[]) => {
     if (!editor) return;
-    if (onFileUpload) {
-      const url = await onFileUpload(file);
-      editor.chain().focus().setImage({ src: url }).run();
-    } else {
-      // fallback: base64
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const src = e.target?.result as string;
-        editor.chain().focus().setImage({ src }).run();
-      };
-      reader.readAsDataURL(file);
+    setImageError(null);
+    let files = picked.filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) return;
+    const room = MAX_PAGE_IMAGES - countImages(editor.state.doc);
+    if (room <= 0) {
+      setImageError(t(`Stránka už má ${MAX_PAGE_IMAGES} fotek, víc se na ni nevejde.`, `This page already has ${MAX_PAGE_IMAGES} photos — no more can be added.`));
+      return;
     }
-  }, [editor, onFileUpload]);
+    if (files.length > room) {
+      const photos = plural(room, ['fotka', 'fotky', 'fotek'], ['photo', 'photos']);
+      setImageError(t(`Na stránku se vejde už jen ${room} ${photos}, vložili jsme prvních ${room}.`, `Only ${room} more ${photos} fit on this page, so the first ${room} were added.`));
+      files = files.slice(0, room);
+    }
+
+    setUploading(files.length);
+    const images: GalleryImage[] = [];
+    try {
+      for (const original of files) {
+        const file = await optimizeImage(original);
+        const src = onFileUpload
+          ? await onFileUpload(file)
+          : await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = e => resolve(e.target?.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+        images.push({ src, alt: original.name.replace(/\.[^.]+$/, '') });
+        setUploading(n => n - 1);
+      }
+    } catch (e) {
+      console.error('image upload failed', e);
+      setImageError(t('Některou fotku se nepodařilo nahrát. Zkus to prosím znovu.', 'A photo could not be uploaded. Please try again.'));
+    } finally {
+      setUploading(0);
+    }
+    if (images.length === 1) {
+      editor.chain().focus().setImage({ src: images[0].src, alt: images[0].alt }).run();
+    } else if (images.length > 1) {
+      editor.chain().focus().insertContent({ type: 'gallery', attrs: { images, layout: 'grid' } }).run();
+    }
+  }, [editor, onFileUpload, t, plural]);
+  insertImagesRef.current = insertImages;
 
   if (!editor) return null;
 
@@ -261,10 +323,10 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
           <Link2 className="h-4 w-4" />
         </ToolBtn>
 
-        {/* Obrázek */}
+        {/* Fotky — víc najednou = galerie */}
         <ToolBtn
           onClick={() => fileInputRef.current?.click()}
-          title={t('Vložit obrázek', 'Insert picture')}
+          title={t(`Vložit fotky (můžeš vybrat víc najednou, max ${MAX_PAGE_IMAGES} na stránku)`, `Insert photos (pick several at once, max ${MAX_PAGE_IMAGES} per page)`)}
         >
           <ImageIcon className="h-4 w-4" />
         </ToolBtn>
@@ -272,14 +334,27 @@ export default function RichEditor({ content, onChange, onFileUpload }: RichEdit
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) insertImage(file);
+            const files = Array.from(e.target.files ?? []);
             e.target.value = '';
+            insertImages(files);
           }}
         />
+        {uploading > 0 && (
+          <span className="ml-2 flex items-center gap-1.5 text-xs text-blue-700">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            {t(`Upravuji a nahrávám fotky… (${uploading})`, `Optimising and uploading photos… (${uploading})`)}
+          </span>
+        )}
       </div>
+      {imageError && (
+        <div className="flex items-center justify-between gap-2 border-b bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+          <span>{imageError}</span>
+          <button type="button" onClick={() => setImageError(null)} className="text-amber-700 hover:text-amber-900">✕</button>
+        </div>
+      )}
 
       {/* Editor area */}
       <EditorContent editor={editor} />
